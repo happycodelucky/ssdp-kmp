@@ -1,0 +1,149 @@
+# mise — toolchain pins and task surface for the ssdp-kmp repo.
+# Run `mise install` to provision tools; `mise tasks` to list runnable tasks.
+#
+# Keep this file in sync with:
+#   gradle/libs.versions.toml                 (jdk target, AGP, Kotlin)
+#   gradle/wrapper/gradle-wrapper.properties  (distributionUrl)
+#
+# Single source of truth for non-Gradle build deps. Versions for Kotlin,
+# AGP, SKIE, KMMBridge, ktlint-gradle, etc. live in gradle/libs.versions.toml
+# (CLAUDE.md §3, §12) — mise must not duplicate them.
+#
+# Bootstrap on a fresh machine:
+#   brew install mise
+#   mise trust
+#   mise install
+#
+# Xcode is NOT managed by mise. Install the latest stable Xcode that SKIE
+# supports.
+
+[tools]
+java   = "temurin-21.0.11+10.0.LTS"   # CLAUDE.md §3 — JDK 21 LTS, Apple Silicon aarch64.
+gradle = "9.5.1"                       # Matches gradle/wrapper/gradle-wrapper.properties.
+gh     = "2.94.0"                       # release.yml (deferred) uses `gh release create`.
+
+# Deliberately NOT pinned here:
+#   - kotlin: gradle/libs.versions.toml owns it (CLAUDE.md §3).
+#   - cocoapods: forbidden (CLAUDE.md §12).
+#   - node: not used in this repo.
+#   - xcodegen / swiftlint / swiftformat: sample apps are deferred (CLAUDE.md §4).
+
+# ---------------------------------------------------------------------------
+# Tasks. Naming: `domain:action`, colon-separated, lowercase.
+# Lowercase ios/macos in task names is fine — these are CLI tokens, not
+# source-identifier symbols. The Apple-casing rule (CLAUDE.md §3) still
+# applies to file names, types, and comments.
+# ---------------------------------------------------------------------------
+
+# --- check / lint / format -------------------------------------------------
+
+# Both published modules are listed explicitly. Gradle's `check` is
+# per-project — `:ssdp:check` alone never runs `:ssdp-testing`'s test suite.
+[tasks.check]
+description = "Run ktlint + detekt + every unit test in both published modules (iOS simulator, macOS, Android host, JVM)."
+run = "./gradlew :ssdp:check :ssdp-testing:check"
+
+[tasks.test]
+description = "Alias for `check`."
+depends = ["check"]
+
+[tasks."test:jvm"]
+description = "JVM unit tests only — the fast inner loop (covers all commonMain/commonTest logic)."
+run = "./gradlew :ssdp:jvmTest :ssdp-testing:jvmTest"
+
+[tasks.lint]
+description = "ktlint + detekt only (no tests), both published modules."
+run = "./gradlew :ssdp:ktlintCheck :ssdp:detekt :ssdp-testing:ktlintCheck :ssdp-testing:detekt"
+
+[tasks.format]
+description = "ktlint auto-fix, both published modules."
+run = "./gradlew :ssdp:ktlintFormat :ssdp-testing:ktlintFormat"
+
+# --- build -----------------------------------------------------------------
+
+[tasks.build]
+description = "Assemble the release Ssdp.xcframework (sample-app local SPM)."
+run = "./gradlew :ssdp:assembleSsdpXCFramework"
+
+[tasks."build:ios"]
+description = "Link debug iOS framework slices (device + Apple Silicon simulator)."
+run = """
+./gradlew :ssdp:linkDebugFrameworkIosArm64 \
+          :ssdp:linkDebugFrameworkIosSimulatorArm64
+"""
+
+[tasks."build:macos"]
+description = "Link the debug macOS framework slice (Apple Silicon)."
+run = "./gradlew :ssdp:linkDebugFrameworkMacosArm64"
+
+[tasks."build:android"]
+description = "Assemble the Android AAR."
+run = "./gradlew :ssdp:assembleAndroidMain"
+
+[tasks."build:jvm"]
+description = "Compile + jar the JVM desktop/server target."
+run = "./gradlew :ssdp:jvmJar"
+
+[tasks.xcframework]
+description = "Alias for `build` — produces the release Ssdp.xcframework."
+depends = ["build"]
+
+# --- apps ------------------------------------------------------------------
+
+[tasks."app:cli"]
+description = "Run the JVM CLI discovery harness: search ssdp:all on the local network, print devices + fetched descriptions. Pass a duration like `mise run app:cli -- 20`."
+run = "./gradlew :jvm-cli:run --args=\"{{arg(name='seconds', default='15')}}\""
+
+# --- iteration helpers -----------------------------------------------------
+
+[tasks."spm:dev"]
+description = "Rebuild the debug Ssdp.xcframework and point /Package.swift at it (local dev mode)."
+# KMMBridge's `spmDevBuild` builds the debug XCFramework and REWRITES the root
+# /Package.swift to a `.binaryTarget(path: …)` pointing at
+# ssdp/build/XCFrameworks/debug/Ssdp.xcframework. After the first tagged release
+# the committed Package.swift is the *released* form (a remote
+# `.binaryTarget(url:checksum:)`). The local-dev rewrite is working-tree-only:
+# do NOT commit it. `mise run spm:restore` puts the committed version back.
+run = "./gradlew :ssdp:spmDevBuild"
+
+[tasks."spm:restore"]
+description = "Restore the committed (released) /Package.swift after spm:dev rewrote it."
+run = "git restore Package.swift"
+
+[tasks."xcodeproj:ios"]
+description = "Generate apps/ios/iOSApp.xcodeproj from project.yml (needs `brew install xcodegen`)."
+dir = "apps/ios"
+run = "xcodegen generate --spec project.yml"
+
+[tasks."xcodeproj:macos"]
+description = "Generate apps/macos/macOSApp.xcodeproj from project.yml."
+dir = "apps/macos"
+run = "xcodegen generate --spec project.yml"
+
+[tasks."open:ios"]
+description = "spm:dev + xcodegen + open apps/ios in Xcode."
+depends = ["spm:dev", "xcodeproj:ios"]
+dir = "apps/ios"
+run = "open iOSApp.xcodeproj"
+
+[tasks."open:macos"]
+description = "spm:dev + xcodegen + open apps/macos in Xcode."
+depends = ["spm:dev", "xcodeproj:macos"]
+dir = "apps/macos"
+run = "open macOSApp.xcodeproj"
+
+[tasks."open:android"]
+description = "Open apps/android in Android Studio."
+run = "open -a 'Android Studio' apps/android"
+
+# --- docs ------------------------------------------------------------------
+
+[tasks.docs]
+description = "Generate the Dokka API-reference HTML (output under build/dokka/html)."
+run = "./gradlew dokkaGenerate"
+
+# --- housekeeping ----------------------------------------------------------
+
+[tasks.clean]
+description = "Gradle clean."
+run = "./gradlew clean"

@@ -1,0 +1,50 @@
+# ssdp-kmp — macOSApp sample (Xcode project spec for `xcodegen`).
+#
+# Run `mise run xcodeproj:macos` (or `xcodegen generate` here) to emit
+# macOSApp.xcodeproj. The .xcodeproj is gitignored — the spec is the source of
+# truth. Same local-SPM iteration loop as the iOS sample (`mise run spm:dev`).
+#
+# macOS is the easiest Apple target to run/verify: no simulator/device, and —
+# unlike iOS — joining the SSDP multicast group needs NO special entitlement.
+# The App Sandbox just needs the outgoing-network client capability (for both
+# the multicast socket and the description HTTP fetch).
+
+name: macOSApp
+
+options:
+  bundleIdPrefix: com.happycodelucky.ssdp.example
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+packages:
+  Ssdp:
+    path: ../../
+
+targets:
+  macOSApp:
+    type: application
+    platform: macOS
+    sources:
+      - path: macOSApp
+      - path: ../shared
+    info:
+      path: macOSApp/Info.plist
+      properties:
+        CFBundleDisplayName: SSDP Scanner
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSApplicationCategoryType: public.app-category.developer-tools
+        NSLocalNetworkUsageDescription: "SSDP Scanner discovers UPnP devices on your local network."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.happycodelucky.ssdp.example.macos
+        PRODUCT_NAME: "SSDP Scanner"
+        SWIFT_VERSION: "5.10"
+        ENABLE_PREVIEWS: "YES"
+        CODE_SIGN_ENTITLEMENTS: macOSApp/macOSApp.entitlements
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - package: Ssdp

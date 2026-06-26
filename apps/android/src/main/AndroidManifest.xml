@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ssdp-kmp — apps/android sample manifest.
+
+  INTERNET / ACCESS_WIFI_STATE / CHANGE_WIFI_MULTICAST_STATE merge in from the
+  `:ssdp` library's manifest (the library needs them for the multicast socket +
+  MulticastLock), so they aren't redeclared here. NEARBY_WIFI_DEVICES is added
+  by the app: on Android 13+ (API 33) it's required to receive multicast/Wi-Fi
+  peer traffic without location permission. `usesPermissionFlags="neverForLocation"`
+  asserts we don't derive location from it.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <application
+        android:allowBackup="false"
+        android:label="SSDP Scanner"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

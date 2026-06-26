@@ -1,0 +1,73 @@
+# ssdp-kmp — iOSApp sample (Xcode project spec for `xcodegen`).
+#
+# Run `mise run xcodeproj:ios` (or `xcodegen generate` from this dir) to emit
+# iOSApp.xcodeproj from this spec. The .xcodeproj is gitignored, so the spec is
+# the single source of truth.
+#
+# The app declares a local Swift Package dependency at `../../` (the repo root
+# Package.swift). `mise run spm:dev` rewrites that Package.swift to point at the
+# locally-built debug Ssdp.xcframework, so iOS engineers iterate by re-running
+# spm:dev and rebuilding in Xcode — no Gradle inside Xcode.
+#
+# SSDP-specific setup (vs the reachable sample):
+#   - the multicast entitlement (com.apple.developer.networking.multicast) is
+#     REQUIRED to join 239.255.255.250 on iOS — Apple gates it behind a request
+#     form, so this won't run on a free personal team until that's granted.
+#   - NSLocalNetworkUsageDescription prompts the user for local-network access.
+#   - ATS NSAllowsLocalNetworking lets the description fetch hit plain-http LAN
+#     LOCATION URLs.
+
+name: iOSApp
+
+options:
+  bundleIdPrefix: com.happycodelucky.ssdp.example
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  Ssdp:
+    path: ../../
+
+targets:
+  iOSApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOSApp
+      - path: ../shared
+    info:
+      path: iOSApp/Info.plist
+      properties:
+        CFBundleDisplayName: SSDP Scanner
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        # Prompt shown when the app first accesses the local network (iOS 14+).
+        NSLocalNetworkUsageDescription: "SSDP Scanner discovers UPnP devices on your local network."
+        # Allow the description fetch to reach plain-http LAN LOCATION URLs.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: iOSApp/iOSApp.entitlements
+      properties:
+        com.apple.developer.networking.multicast: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.happycodelucky.ssdp.example.ios
+        PRODUCT_NAME: "SSDP Scanner"
+        SWIFT_VERSION: "5.10"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_PREVIEWS: "YES"
+        CODE_SIGN_STYLE: Automatic
+        # The Ssdp.xcframework simulator slice is arm64-only (the library is
+        # ARM-only — CLAUDE.md §1 ships no x86_64 native slice). On an Apple
+        # Silicon Mac the iOS Simulator runs arm64, so exclude the x86_64
+        # simulator arch — otherwise a `generic/platform=iOS Simulator` build
+        # tries to compile for x86_64, finds no matching framework slice, and
+        # fails with "no member 'search'"-style errors on that arch.
+        EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+    dependencies:
+      - package: Ssdp

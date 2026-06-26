@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ssdp-kmp — Android library manifest.
+
+  Declares the permissions SSDP discovery needs. The Android Manifest Merger
+  pulls these into any consuming app's manifest at build time, so consumers do
+  not need to add them themselves. All three are normal-protection permissions
+  (not "dangerous"), so no runtime grant is required at any API level.
+
+    - INTERNET — open the UDP multicast socket and send M-SEARCH datagrams.
+    - ACCESS_WIFI_STATE — required to obtain the WifiManager used to create the
+      multicast lock.
+    - CHANGE_WIFI_MULTICAST_STATE — required to acquire a WifiManager
+      .MulticastLock. Without the lock, Android's Wi-Fi stack drops inbound
+      multicast packets to save power and discovery hears no responses.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+</manifest>

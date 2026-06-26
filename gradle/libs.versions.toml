@@ -1,0 +1,175 @@
+# =============================================================================
+# ssdp-kmp — single source of truth for dependency versions (CLAUDE.md §10).
+#
+# IMPORTANT (CLAUDE.md §2 / §12): before bumping any version, web-search the
+# latest stable. Versions in training data go stale fast. Stable only on `main`
+# (no EAP / RC / Beta). The Kotlin pin is bounded above by SKIE's supported
+# range — do not bump Kotlin past what SKIE supports.
+#
+# This catalog mirrors the sibling `reachable` repo's pins (the structural
+# template) and adds the two things SSDP needs that reachable lacks: a `jvm`
+# target (so the catalog carries no jvm-only knobs, but the convention plugin
+# declares jvm()), and a dependency on the published `reachable` artifact.
+# =============================================================================
+
+[versions]
+
+# --- Toolchain --------------------------------------------------------------
+# Kotlin 2.3.21 is the highest version SKIE 0.10.12 supports. CLAUDE.md §8:
+# "If SKIE doesn't yet support a Kotlin version, we wait. Don't bump Kotlin
+# past SKIE's supported range."
+kotlin = "2.3.21"
+agp = "9.2.1"                  # com.android.kotlin.multiplatform.library variant (CLAUDE.md §2).
+skie = "0.10.12"               # Supports Kotlin 2.3.21.
+kmmbridge = "1.2.1"            # XCFramework → GitHub Release asset → SPM (CLAUDE.md §9).
+dokka = "2.2.0"                # Kotlin API doc generator; Dokka v2 task layout.
+# vanniktech's gradle-maven-publish-plugin — publishes signed artifacts to the
+# Sonatype Central Portal (central.sonatype.com). 0.36.0 pins the JDK17 /
+# Gradle 9 / AGP 9 floor and supports com.android.kotlin.multiplatform.library
+# publications. Coexists with KMMBridge — each plugin owns its own repository
+# and publish-umbrella task, so there's no cross-contamination.
+mavenPublish = "0.36.0"
+
+# --- Android SDK ------------------------------------------------------------
+android-compile-sdk = "36"
+android-min-sdk = "30"         # arm64-v8a only (CLAUDE.md §1).
+jvm-target = "21"              # CLAUDE.md §2.
+
+# --- Apple deployment targets ----------------------------------------------
+ios-deployment-target = "18.0"
+macos-deployment-target = "15.0"
+
+# --- kotlinx ----------------------------------------------------------------
+kotlinx-coroutines = "1.11.0"
+kotlinx-atomicfu = "0.33.0"
+# kotlinx-io — multiplatform byte buffers used by the SSDP datagram parser in
+# commonMain, so the wire-format code never reaches for java.* (CLAUDE.md §5).
+kotlinx-io = "0.9.0"
+# kotlinx-serialization — drives xmlutil's @Serializable codegen for the UPnP
+# description wire types (v1.1 description-XML feature). 1.11.0 is latest stable;
+# xmlutil 0.91.x floors at 1.9.x and is binary-compatible. Verified on Maven
+# Central 2026-06-26.
+kotlinx-serialization = "1.11.0"
+
+# --- HTTP + XML (v1.1 description-XML fetch + cache) -------------------------
+# Ktor client for the description-XML HTTP GET. 3.5.1 is latest stable; the CIO
+# engine is multiplatform (iosArm64/iosSimulatorArm64/macosArm64/android/jvm),
+# so one engine covers every target with zero expect/actual (CLAUDE.md §4).
+# Verified on Maven Central 2026-06-26.
+ktor = "3.5.1"
+# xmlutil — kotlinx.serialization-based multiplatform XML parser for the UPnP
+# device description document. 0.91.3 is latest STABLE; 1.0.0-rc3 exists but RCs
+# are banned on main (CLAUDE.md §3). Verified on Maven Central 2026-06-26.
+xmlutil = "0.91.3"
+
+# --- Reachable (sibling library) --------------------------------------------
+# `reachable` supplies the network-change *signal* (Reachability.status) that
+# SSDP uses to reset its device registry when the LAN changes (plan decision 4).
+# 0.14.0 is the FLOOR: it is the first reachable release to publish a `jvm`
+# slice (reachable-jvm), which this repo's jvm() target needs to resolve its
+# transitive dependency. Earlier releases have no JVM artifact and would fail
+# resolution on the jvm target. Verified on Maven Central:
+#   https://repo1.maven.org/maven2/com/happycodelucky/reachable/reachable-jvm/
+reachable = "0.14.0"
+
+# --- Sample-app deps (apps/android only — iOS/macOS consume via SPM) ---------
+# Versions mirror the sibling `reachable` repo's Android sample.
+androidx-activity-compose = "1.13.0"
+androidx-lifecycle-runtime-compose = "2.10.0"
+androidx-compose-bom = "2026.05.01"
+
+# --- Testing ----------------------------------------------------------------
+turbine = "1.2.1"
+# Kotest — property-based tests for the parser round-trips (ST/NT rawValue,
+# header case-insensitivity). Assertions/property engine only; runner is
+# kotlin.test (CLAUDE.md §11).
+kotest = "6.1.11"
+
+# --- Lint ------------------------------------------------------------------
+ktlint = "1.8.0"               # The ktlint tool itself.
+ktlintGradle = "14.2.0"        # The org.jlleitschuh.gradle.ktlint Gradle plugin.
+# detekt 1.23.8 is the latest stable; the 2.x line is alpha-only and CLAUDE.md
+# §2 bans pre-stable on main.
+detekt = "1.23.8"
+
+
+[libraries]
+
+# --- kotlinx ----------------------------------------------------------------
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
+kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
+
+# --- HTTP + XML (v1.1 description-XML fetch + cache) -------------------------
+# All `implementation` in :ssdp — the public API returns ssdp's own
+# DescriptionResult/DeviceDescription, never a Ktor or xmlutil type.
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+# ktor-client-mock — test-only engine so commonTest drives the description fetch
+# under runTest with no real HTTP.
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
+
+# --- Reachable --------------------------------------------------------------
+reachable = { module = "com.happycodelucky.reachable:reachable", version.ref = "reachable" }
+reachable-testing = { module = "com.happycodelucky.reachable:reachable-testing", version.ref = "reachable" }
+
+# --- Gradle plugin artifacts (build-logic only) ------------------------------
+# Compile-classpath dependencies for the precompiled convention plugins under
+# /gradle/plugins. Same version refs as the [plugins] aliases below, so the
+# main build and gradle/plugins can never apply different plugin versions.
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+skie-gradle-plugin = { module = "co.touchlab.skie:co.touchlab.skie.gradle.plugin", version.ref = "skie" }
+dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
+vanniktech-maven-publish-gradle-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+
+# --- Sample-app deps (apps/android only) ------------------------------------
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle-runtime-compose" }
+# lifecycle-viewmodel-compose — provides the `viewModel { }` composable. From the
+# same lifecycle BOM line as runtime-compose; version pinned to match.
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle-runtime-compose" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidx-compose-bom" }
+# These come from the BOM — no version refs.
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+
+# --- Testing ----------------------------------------------------------------
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+
+
+[plugins]
+
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+# kotlin-serialization — applied in :ssdp for xmlutil's @Serializable codegen on
+# the UPnP description wire types. Pinned to the Kotlin version (the plugin ships
+# with Kotlin).
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+# Standard AGP application plugin for the Android sample app (separate from the
+# multiplatform-library variant used by :ssdp).
+android-application = { id = "com.android.application", version.ref = "agp" }
+# Compose Compiler plugin shipped by Kotlin since 2.0; pin matches `kotlin`.
+# Applied in the Android sample. AGP 9.0+ ships Kotlin support built in, so no
+# separate kotlin.android alias.
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+skie = { id = "co.touchlab.skie", version.ref = "skie" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+# kmmbridge-github — applied in ssdp/build.gradle.kts. Publishes the
+# SKIE-enhanced Ssdp.xcframework zip as a GitHub *Release* asset (public,
+# unauthenticated download) and regenerates the root Package.swift to reference
+# it by URL + checksum. The .github variant is a superset of the core plugin in
+# 1.2.x — applying both produces a duplicate-extension error.
+kmmbridge-github = { id = "co.touchlab.kmmbridge.github", version.ref = "kmmbridge" }
+# Vanniktech Maven Publish — Maven Central Portal upload + GPG signing.
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }

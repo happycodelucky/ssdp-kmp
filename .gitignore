@@ -1,0 +1,40 @@
+# --- Gradle ---
+.gradle
+build/
+**/build/
+
+# --- Kotlin ---
+.kotlin
+
+# --- IDE: IntelliJ / Android Studio ---
+.idea/
+*.iml
+*.ipr
+*.iws
+local.properties
+captures/
+
+# --- IDE: Xcode ---
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xcscmblueprint
+*.xccheckout
+
+# --- Sample apps: Xcode projects are generated from project.yml via xcodegen ---
+apps/ios/iOSApp.xcodeproj/
+apps/macos/macOSApp.xcodeproj/
+
+# --- mise: per-user version overrides ---
+.mise.local.toml
+
+# --- macOS ---
+.DS_Store
+
+# --- Native build outputs ---
+*.framework.dSYM
+*.xcframework
+.build/
+
+# --- KMMBridge transient outputs ---
+spm/

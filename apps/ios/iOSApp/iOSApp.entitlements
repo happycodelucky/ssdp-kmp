@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ssdp-kmp — iOS sample entitlements.
+
+  The multicast entitlement is REQUIRED on iOS to join the SSDP multicast group
+  (239.255.255.250). Apple gates it behind a manual request form:
+    https://developer.apple.com/contact/request/networking-multicast
+  Until granted for your team, the app will fail to join the group
+  (SsdpError.MulticastJoinFailed). The macOS sample needs no such entitlement.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.networking.multicast</key>
+    <true/>
+</dict>
+</plist>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ssdp-kmp — macOS sample entitlements.
+
+  App Sandbox is on (default for Mac App Store-eligible apps). SSDP discovery
+  needs BOTH network capabilities:
+
+    - network.client — make outbound connections (the description HTTP fetch,
+      and sending M-SEARCH datagrams).
+    - network.server — bind()/listen on a local socket. SSDP MUST bind UDP port
+      1900 to receive unsolicited NOTIFY broadcasts and unicast M-SEARCH replies.
+      Without this, bind() fails with EPERM (errno 1) under the sandbox, even
+      though the same code runs fine unsandboxed (e.g. the JVM CLI).
+
+  macOS needs no multicast-specific entitlement to join 239.255.255.250 (unlike
+  iOS, which requires com.apple.developer.networking.multicast).
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+</dict>
+</plist>
