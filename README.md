@@ -44,8 +44,9 @@ scanners on every platform.
 ### Kotlin
 
 ```kotlin
-// Apple / JVM: no arguments. Android: SsdpClient(context).
-val client: SsdpClient = SsdpClient()
+// One factory on every platform. On Android it captures the application Context
+// at startup, so no argument is needed (emulators: see "Emulator bridge" below).
+val client: SsdpClient = Ssdp.createClient()
 
 // Search every SSDP target; stop broadcasting after 6s (passive listening and
 // the discovered devices persist). Omit `timeout` to broadcast indefinitely.
@@ -120,34 +121,43 @@ case .parseFailed(let p): log(p.message)
   (outbound) **and** `com.apple.security.network.server` (the sandbox treats
   `bind()` on port 1900 as a server op). No multicast entitlement needed.
 - **Android** — the library manifest contributes
-  `INTERNET` / `ACCESS_WIFI_STATE` / `CHANGE_WIFI_MULTICAST_STATE`. Prefer
-  `SsdpClient(context)` so the transport can hold a `WifiManager.MulticastLock`;
-  without it Android drops inbound multicast. Apps on Android 13+ also declare
-  `NEARBY_WIFI_DEVICES`.
+  `INTERNET` / `ACCESS_WIFI_STATE` / `CHANGE_WIFI_MULTICAST_STATE`. Use
+  `Ssdp.createClient()` — the library captures the application `Context` at
+  startup (an androidx.startup `SsdpInitializer`) and holds a
+  `WifiManager.MulticastLock` for you, so no `Context` argument is needed. (The
+  explicit `SsdpClient(context)` factory remains for callers who disable
+  androidx.startup.) Without the lock Android drops inbound multicast. Apps on
+  Android 13+ also declare `NEARBY_WIFI_DEVICES`.
 - **Android emulators** — emulators sit behind a user-mode NAT and **never
   receive inbound UDP multicast**, so normal discovery hears nothing there. Run
-  the bridge daemon on your host (`mise run app:bridge`) and construct the client
-  with `SsdpClient.bridged()` — it tunnels SSDP over TCP to the daemon, which does
-  the real multicast on the host LAN. The client is otherwise identical (same
-  registry, retransmit, `search`/`description`). The library does **not**
-  auto-detect emulators; the app chooses (the Android sample does, via a `Build`
-  check). See [Emulator bridge](#emulator-bridge).
+  the bridge daemon on your host (`mise run app:bridge`) and build the client with
+  `Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())` — on an
+  emulator it tunnels SSDP over TCP to the daemon (which does the real multicast
+  on the host LAN); on a device it's a normal multicast client. The client is
+  otherwise identical (same registry, retransmit, `search`/`description`). The
+  library never silently swaps transport — you pass the flag — but it exposes
+  `isSsdpBridgeNeeded()` so you don't re-derive the emulator check, and logs a
+  warning if you build a multicast client on a likely emulator. See
+  [Emulator bridge](#emulator-bridge).
 - **JVM** — plain `MulticastSocket`; on multi-homed hosts pass `bindInterface`.
 
 ### Emulator bridge
 
 ```kotlin
-// In the app — pick the transport; the library never swaps it silently.
-val client = if (isEmulator()) SsdpClient.bridged() else SsdpClient(context)
+// Android: one line — bridge on an emulator, multicast on a device.
+val client = Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())
 ```
 
-`SsdpClient.bridged(host = "10.0.2.2", port = 1901)` connects to the host bridge
-daemon at the emulator's host-loopback alias. Start the daemon first:
+Start the host daemon first (it does the real multicast on your LAN):
 
 ```sh
 mise run app:bridge            # listen on 1901
 mise run app:bridge -- 1901    # explicit port
 ```
+
+`createBridgeAwareClient(useBridge = true, host = "10.0.2.2", port = 1901)`
+connects to the daemon at the emulator's host-loopback alias; the lower-level
+`SsdpClient.bridged(host, port)` is the building block it delegates to.
 
 The daemon is a **dumb pipe**: the app keeps owning retransmit and the registry,
 so the emulator path is byte-identical to a physical device — only the wire hop

@@ -77,11 +77,12 @@ public actual fun SsdpClient(bindInterface: String?): SsdpClient =
  * client is otherwise identical to a normal one — the registry, retransmit, and
  * `search()`/`description()` semantics are unchanged; only the transport differs.
  *
- * The library does NOT auto-detect emulators (CLAUDE.md "no surprises"): the app
- * decides when to call this, e.g.
+ * The library does NOT auto-switch transport: you choose. For the common case
+ * prefer [Ssdp.createBridgeAwareClient] driven by [isSsdpBridgeNeeded]:
  * ```
- * val client = if (isEmulator()) SsdpClient.bridged() else SsdpClient(context)
+ * val client = Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())
  * ```
+ * This `bridged()` factory is the lower-level building block it delegates to.
  *
  * No [Context] is needed (there is no multicast, hence no `MulticastLock`).
  * The per-network registry reset is disabled — the emulator's NAT network never

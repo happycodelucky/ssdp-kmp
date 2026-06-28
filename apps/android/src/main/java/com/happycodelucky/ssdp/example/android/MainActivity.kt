@@ -6,15 +6,16 @@
  * Tapping a device fetches its description document via client.description() and
  * shows manufacturer / model / services / icons.
  *
- * On a physical device it uses the real multicast client SsdpClient(context). On
- * an EMULATOR — which can't receive inbound UDP multicast — it instead uses
- * SsdpClient.bridged(), which tunnels SSDP over TCP to a host-side bridge daemon.
- * Start the daemon on your dev machine first: `mise run app:bridge`. The library
- * does NOT auto-detect emulators; the choice is made here in the app.
+ * Client construction is one line: `Ssdp.createBridgeAwareClient(useBridge =
+ * isSsdpBridgeNeeded())`. On a physical device that's a normal multicast client;
+ * on an EMULATOR — which can't receive inbound UDP multicast — it tunnels over
+ * TCP to a host-side bridge daemon (start it first: `mise run app:bridge`). The
+ * library captures the application Context at startup (SsdpInitializer), so no
+ * Context is threaded here, and emulator detection lives in the library
+ * (`isSsdpBridgeNeeded()`).
  */
 package com.happycodelucky.ssdp.example.android
 
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,25 +30,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.happycodelucky.ssdp.SsdpClient
-import com.happycodelucky.ssdp.bridged
+import com.happycodelucky.ssdp.Ssdp
+import com.happycodelucky.ssdp.isSsdpBridgeNeeded
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Application context drives the WifiManager MulticastLock the client
-        // holds while listening — without it Android drops inbound multicast.
-        val appContext = applicationContext
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val model: ScannerViewModel =
                         viewModel {
-                            // Emulators can't receive inbound UDP multicast, so
-                            // bridge over TCP to the host daemon; physical devices
-                            // use the real multicast client.
-                            val client =
-                                if (isProbablyEmulator()) SsdpClient.bridged() else SsdpClient(appContext)
+                            // On an emulator this bridges over TCP to the host
+                            // daemon; on a physical device it's normal multicast.
+                            val client = Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())
                             ScannerViewModel(client)
                         }
                     ScannerApp(model)
@@ -56,22 +52,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-/**
- * Best-effort Android-emulator detection. The standard emulator runs the
- * `ranchu`/`goldfish` virtual hardware and ships `generic`/`sdk_gphone` build
- * fingerprints. This is app-side policy, not a library feature — the library
- * never swaps transport on its own.
- */
-private fun isProbablyEmulator(): Boolean =
-    Build.HARDWARE in setOf("ranchu", "goldfish") ||
-        Build.FINGERPRINT.contains("generic") ||
-        Build.FINGERPRINT.startsWith("unknown") ||
-        Build.MODEL.contains("Emulator") ||
-        Build.MODEL.contains("Android SDK built for") ||
-        Build.PRODUCT.startsWith("sdk") ||
-        Build.PRODUCT.contains("emulator") ||
-        Build.PRODUCT.contains("simulator")
 
 /** Top-level navigation between the scanner list and a device detail screen. */
 @Composable
