@@ -77,10 +77,10 @@ public actual fun SsdpClient(bindInterface: String?): SsdpClient =
  * client is otherwise identical to a normal one — the registry, retransmit, and
  * `search()`/`description()` semantics are unchanged; only the transport differs.
  *
- * The library does NOT auto-switch transport: you choose. For the common case
- * prefer [Ssdp.createBridgeAwareClient] driven by [isSsdpBridgeNeeded]:
+ * Most callers should prefer [Ssdp.createBridgeAwareClient], whose `useBridge`
+ * defaults to [isSsdpBridgeNeeded] — so the common case is zero-arg:
  * ```
- * val client = Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())
+ * val client = Ssdp.createBridgeAwareClient()
  * ```
  * This `bridged()` factory is the lower-level building block it delegates to.
  *

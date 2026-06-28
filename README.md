@@ -131,21 +131,22 @@ case .parseFailed(let p): log(p.message)
 - **Android emulators** — emulators sit behind a user-mode NAT and **never
   receive inbound UDP multicast**, so normal discovery hears nothing there. Run
   the bridge daemon on your host (`mise run app:bridge`) and build the client with
-  `Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())` — on an
-  emulator it tunnels SSDP over TCP to the daemon (which does the real multicast
-  on the host LAN); on a device it's a normal multicast client. The client is
-  otherwise identical (same registry, retransmit, `search`/`description`). The
-  library never silently swaps transport — you pass the flag — but it exposes
-  `isSsdpBridgeNeeded()` so you don't re-derive the emulator check, and logs a
-  warning if you build a multicast client on a likely emulator. See
+  `Ssdp.createBridgeAwareClient()` — its `useBridge` defaults to
+  `isSsdpBridgeNeeded()`, so on an emulator it tunnels SSDP over TCP to the daemon
+  (which does the real multicast on the host LAN) and on a device it's a normal
+  multicast client. The client is otherwise identical (same registry, retransmit,
+  `search`/`description`). The library never silently swaps transport on a plain
+  `createClient()` — but `createBridgeAwareClient()` opts into the auto-decision,
+  pass `useBridge = false`/`true` to override, and either way it logs a warning if
+  you build a multicast client on a likely emulator. See
   [Emulator bridge](#emulator-bridge).
 - **JVM** — plain `MulticastSocket`; on multi-homed hosts pass `bindInterface`.
 
 ### Emulator bridge
 
 ```kotlin
-// Android: one line — bridge on an emulator, multicast on a device.
-val client = Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())
+// Android: one line, zero args — bridge on an emulator, multicast on a device.
+val client = Ssdp.createBridgeAwareClient()
 ```
 
 Start the host daemon first (it does the real multicast on your LAN):
@@ -155,9 +156,10 @@ mise run app:bridge            # listen on 1901
 mise run app:bridge -- 1901    # explicit port
 ```
 
-`createBridgeAwareClient(useBridge = true, host = "10.0.2.2", port = 1901)`
-connects to the daemon at the emulator's host-loopback alias; the lower-level
-`SsdpClient.bridged(host, port)` is the building block it delegates to.
+`createBridgeAwareClient(useBridge = isSsdpBridgeNeeded(), host = "10.0.2.2", port = 1901)`
+is the full signature; `useBridge` and the host/port all default, so the common
+call takes no arguments. The lower-level `SsdpClient.bridged(host, port)` is the
+building block it delegates to.
 
 The daemon is a **dumb pipe**: the app keeps owning retransmit and the registry,
 so the emulator path is byte-identical to a physical device — only the wire hop

@@ -9,9 +9,10 @@
  * `createBridgeAwareClient(useBridge)` is the Android-only extra: when `useBridge`
  * is true it tunnels discovery through the host bridge daemon (for emulators);
  * when false it behaves like `createClient()` (and still warns on a likely
- * emulator). Pair it with `isSsdpBridgeNeeded()` for the common case:
+ * emulator). `useBridge` defaults to `isSsdpBridgeNeeded()`, so the common case
+ * is zero-arg:
  *
- *   val client = Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())
+ *   val client = Ssdp.createBridgeAwareClient()
  */
 package com.happycodelucky.ssdp
 
@@ -53,11 +54,14 @@ public object Ssdp {
      * when [useBridge] is true (required on Android emulators, which NAT inbound
      * UDP multicast away).
      *
-     * When false, behaves like [createClient] (normal multicast) and warns if the
-     * device looks like an emulator. Pair with [isSsdpBridgeNeeded].
+     * [useBridge] defaults to [isSsdpBridgeNeeded], so the zero-arg
+     * `createBridgeAwareClient()` does the right thing automatically — bridge on
+     * an emulator, normal multicast on a physical device. Pass it explicitly to
+     * override (e.g. `useBridge = false` to force multicast; it then warns if the
+     * device still looks like an emulator).
      *
      * @param useBridge true to tunnel over TCP to the host daemon; false for
-     *   normal multicast.
+     *   normal multicast. Defaults to [isSsdpBridgeNeeded].
      * @param host the daemon's address from inside the emulator (default
      *   [EMULATOR_HOST_LOOPBACK], `10.0.2.2`).
      * @param port the daemon's TCP port (default `1901`).
@@ -65,7 +69,7 @@ public object Ssdp {
      */
     @Throws(SsdpError::class)
     public fun createBridgeAwareClient(
-        useBridge: Boolean = true,
+        useBridge: Boolean = isSsdpBridgeNeeded(),
         host: String = EMULATOR_HOST_LOOPBACK,
         port: Int = 1901,
     ): SsdpClient =

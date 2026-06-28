@@ -15,9 +15,9 @@ a device to fetch and view its UPnP description document.
 The **bridge daemon** is not a scanner — it runs on your host so an **Android
 emulator** (which can't receive inbound UDP multicast) can discover real LAN
 devices. Start it, then build the Android sample on an emulator: it constructs
-its client with `Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())`,
-so on an emulator it tunnels to the daemon and on a physical device it uses the
-normal multicast client (the bridge unused).
+its client with `Ssdp.createBridgeAwareClient()` (whose `useBridge` defaults to
+`isSsdpBridgeNeeded()`), so on an emulator it tunnels to the daemon and on a
+physical device it uses the normal multicast client (the bridge unused).
 
 All three GUI apps show the same scanner → detail flow: a list of discovered
 devices (grouped by **UDN**, so a device's many service-USNs collapse to one
@@ -61,6 +61,6 @@ working-tree-only — both are gitignored / restored, never committed.
 A Gradle subproject (`:androidApp`) using Jetpack Compose. Depends on `:ssdp`
 directly. The library manifest contributes the multicast permissions; the app
 adds `NEARBY_WIFI_DEVICES` (Android 13+). Constructs its client with
-`Ssdp.createBridgeAwareClient(useBridge = isSsdpBridgeNeeded())` — no Context
-threading (the library captures it via `SsdpInitializer` at startup) and no
-hand-rolled emulator check.
+`Ssdp.createBridgeAwareClient()` (zero-arg; `useBridge` defaults to
+`isSsdpBridgeNeeded()`) — no Context threading (the library captures it via
+`SsdpInitializer` at startup) and no hand-rolled emulator check.
