@@ -62,6 +62,20 @@ ktor = "3.5.1"
 # are banned on main (CLAUDE.md §3). Verified on Maven Central 2026-06-26.
 xmlutil = "0.91.3"
 
+# --- Logging ----------------------------------------------------------------
+# Kermit — multiplatform logging (CLAUDE.md §5). 2.1.0 is latest stable with all
+# our native slices (iosArm64/iosSimulatorArm64/macosArm64/jvm). Verified on
+# Maven Central 2026-06-28.
+kermit = "2.1.0"
+
+# --- Android startup --------------------------------------------------------
+# androidx.startup — hosts the bundled `SsdpInitializer` that captures the
+# application Context during the ContentProvider startup pass (before
+# Application.onCreate), so the Android `Ssdp.createClient()` factory needs no
+# Context argument. Same version reachable pins. Consumed only in :ssdp's
+# androidMain. Verified on Maven Central 2026-06-28.
+androidx-startup = "1.2.0"
+
 # --- Reachable (sibling library) --------------------------------------------
 # `reachable` supplies the network-change *signal* (Reachability.status) that
 # SSDP uses to reset its device registry when the LAN changes (plan decision 4).
@@ -112,6 +126,28 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 # under runTest with no real HTTP.
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
+
+# --- TCP (emulator host-bridge) ---------------------------------------------
+# ktor-network — multiplatform raw TCP sockets used by the Android-emulator host
+# bridge: BridgeMulticastSocket (commonMain TCP client) and the jvmMain bridge
+# daemon (TCP server). Emulators can't receive inbound UDP multicast, so the app
+# tunnels SSDP over TCP to a host daemon that does the real multicast (CLAUDE.md
+# §9). Same `ktor` 3.5.1 pin as the client deps. Publishes iosArm64 /
+# iosSimulatorArm64 / macosArm64 / jvm slices; Android resolves the -jvm variant
+# (there is no ktor-network-android artifact, by design). Verified on Maven
+# Central 2026-06-27.
+ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
+
+# --- Logging ----------------------------------------------------------------
+# Kermit logger — used by the library for diagnostics (e.g. the Android-emulator
+# bridge warning). `implementation` in :ssdp commonMain; no Kermit type crosses
+# the public API.
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+
+# --- Android startup --------------------------------------------------------
+# androidx.startup runtime — consumed in :ssdp's androidMain to host the bundled
+# `SsdpInitializer` (captures the application Context). See `androidx-startup`.
+androidx-startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "androidx-startup" }
 
 # --- Reachable --------------------------------------------------------------
 reachable = { module = "com.happycodelucky.reachable:reachable", version.ref = "reachable" }

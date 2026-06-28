@@ -1,10 +1,18 @@
 /*
  * ssdp-kmp — Android sample: SSDP device scanner + description detail.
  *
- * Constructs the real SsdpClient(context), scans for all SSDP targets, and
- * lists discovered devices grouped by UDN (so a device's many service-USNs
- * collapse to one row). Tapping a device fetches its description document via
- * client.description() and shows manufacturer / model / services / icons.
+ * Constructs the SsdpClient, scans for all SSDP targets, and lists discovered
+ * devices grouped by UDN (so a device's many service-USNs collapse to one row).
+ * Tapping a device fetches its description document via client.description() and
+ * shows manufacturer / model / services / icons.
+ *
+ * Client construction is one line: `Ssdp.createBridgeAwareClient()`. Its
+ * `useBridge` defaults to the library's `isSsdpBridgeNeeded()`, so on a physical
+ * device that's a normal multicast client; on an EMULATOR — which can't receive
+ * inbound UDP multicast — it tunnels over TCP to a host-side bridge daemon (start
+ * it first: `mise run app:bridge`). The library captures the application Context
+ * at startup (SsdpInitializer), so no Context is threaded here, and emulator
+ * detection lives in the library.
  */
 package com.happycodelucky.ssdp.example.android
 
@@ -22,18 +30,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.happycodelucky.ssdp.SsdpClient
+import com.happycodelucky.ssdp.Ssdp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Application context drives the WifiManager MulticastLock the client
-        // holds while listening — without it Android drops inbound multicast.
-        val appContext = applicationContext
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val model: ScannerViewModel = viewModel { ScannerViewModel(SsdpClient(appContext)) }
+                    val model: ScannerViewModel =
+                        viewModel {
+                            // Zero-arg: useBridge defaults to isSsdpBridgeNeeded(),
+                            // so this bridges over TCP on an emulator and uses
+                            // normal multicast on a physical device.
+                            val client = Ssdp.createBridgeAwareClient()
+                            ScannerViewModel(client)
+                        }
                     ScannerApp(model)
                 }
             }

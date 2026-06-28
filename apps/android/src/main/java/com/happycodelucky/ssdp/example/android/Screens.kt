@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -67,8 +69,12 @@ fun ScannerScreen(
         if (devices.isEmpty()) {
             EmptyState(scanning, padding)
         } else {
+            // Apply the Scaffold's `padding` (top-app-bar + system-bar insets) to
+            // the list, or it renders UNDER the app bar and the top cards become
+            // clipped/unreachable. `contentPadding` then adds the inner 16dp gutter
+            // on top of those insets.
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -139,7 +145,14 @@ fun DeviceDetailScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    // A device with many services (e.g. Sonos ~20) overflows the
+                    // viewport — make the detail column scrollable.
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             DetailRow("Address", device.hostPort ?: "—")

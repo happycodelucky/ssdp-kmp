@@ -2,22 +2,49 @@
 <!--
   ssdp-kmp — Android library manifest.
 
-  Declares the permissions SSDP discovery needs. The Android Manifest Merger
-  pulls these into any consuming app's manifest at build time, so consumers do
-  not need to add them themselves. All three are normal-protection permissions
-  (not "dangerous"), so no runtime grant is required at any API level.
+  Two responsibilities:
 
-    - INTERNET — open the UDP multicast socket and send M-SEARCH datagrams.
-    - ACCESS_WIFI_STATE — required to obtain the WifiManager used to create the
-      multicast lock.
-    - CHANGE_WIFI_MULTICAST_STATE — required to acquire a WifiManager
-      .MulticastLock. Without the lock, Android's Wi-Fi stack drops inbound
-      multicast packets to save power and discovery hears no responses.
+  1. Declare the permissions SSDP discovery needs. The Android Manifest Merger
+     pulls these into any consuming app's manifest at build time, so consumers do
+     not need to add them themselves. All three are normal-protection permissions
+     (not "dangerous"), so no runtime grant is required at any API level.
+
+       - INTERNET — open the UDP multicast socket and send M-SEARCH datagrams.
+       - ACCESS_WIFI_STATE — required to obtain the WifiManager used to create the
+         multicast lock.
+       - CHANGE_WIFI_MULTICAST_STATE — required to acquire a WifiManager
+         .MulticastLock. Without the lock, Android's Wi-Fi stack drops inbound
+         multicast packets to save power and discovery hears no responses.
+
+  2. Register `SsdpInitializer` with androidx.startup's `InitializationProvider`
+     so the library captures the application Context during the ContentProvider
+     startup pass — before `Application.onCreate`. The Context-free
+     `Ssdp.createClient()` factory then acquires the MulticastLock without the
+     caller passing a Context.
+
+     `tools:node="merge"` is critical: reachable also declares
+     `InitializationProvider` at the same authority, and without the merge node
+     two providers at one authority produce a "duplicate provider" build error.
+     With it, the merger unions the `<meta-data>` children (ours + reachable's +
+     any consumer's).
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+    <application>
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="com.happycodelucky.ssdp.SsdpInitializer"
+                android:value="androidx.startup" />
+        </provider>
+    </application>
 
 </manifest>

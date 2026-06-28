@@ -81,3 +81,11 @@ project(":androidApp").projectDir = file("apps/android")
 // in the library check gate.
 include(":jvm-cli")
 project(":jvm-cli").projectDir = file("apps/jvm-cli")
+
+// SSDP bridge daemon — runs on the host so an Android emulator (which can't
+// receive inbound UDP multicast) can discover real LAN devices over TCP. Plain
+// kotlin("jvm") app, a thin shell over :ssdp's runSsdpBridgeDaemon. Lives at the
+// repo root (not under apps/) since it's a distributable host tool, not a sample.
+// Not published, not in the library check gate.
+include(":ssdp-bridge")
+project(":ssdp-bridge").projectDir = file("ssdp-bridge")

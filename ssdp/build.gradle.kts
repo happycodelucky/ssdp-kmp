@@ -46,6 +46,16 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.cio)
             implementation(libs.xmlutil.serialization)
+            // ktor-network: raw multiplatform TCP for the Android-emulator host
+            // bridge. BridgeMulticastSocket (commonMain) tunnels SSDP over TCP to
+            // the jvmMain bridge daemon, which does the real multicast on the host
+            // LAN. Emulators can't receive inbound UDP multicast; physical devices
+            // never touch this path. Gradle resolves the -jvm variant on Android
+            // (no ktor-network-android artifact), native slices on Apple.
+            implementation(libs.ktor.network)
+            // Kermit — multiplatform logging (CLAUDE.md §5). Used for library
+            // diagnostics such as the Android-emulator bridge warning.
+            implementation(libs.kermit)
         }
 
         commonTest.dependencies {
@@ -67,6 +77,10 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
+            // androidx.startup hosts the bundled SsdpInitializer, which captures
+            // the application Context at process startup so the Android
+            // Ssdp.createClient() factory needs no Context argument.
+            implementation(libs.androidx.startup.runtime)
         }
 
         // androidHostTest source set is created by the convention plugin's
