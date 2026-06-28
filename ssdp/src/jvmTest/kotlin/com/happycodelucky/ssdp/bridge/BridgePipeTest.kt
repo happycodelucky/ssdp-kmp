@@ -5,7 +5,7 @@
  * transport.send, and transport.incoming datagrams → client DATAGRAM_IN frames.
  * Tested here (in the gated :ssdp jvmTest) with an in-memory DuplexConnection +
  * the shared FakeMulticastSocket, so no real TCP and no real multicast. The
- * :jvm-bridge module stays a thin untested shell.
+ * :ssdp-bridge module stays a thin untested shell.
  */
 package com.happycodelucky.ssdp.bridge
 

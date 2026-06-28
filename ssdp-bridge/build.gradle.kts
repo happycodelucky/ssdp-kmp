@@ -7,8 +7,9 @@
  * which connects via `SsdpClient.bridged()`. See ssdp/.../bridge/BridgeDaemon.kt.
  *
  * A thin shell over `runSsdpBridgeDaemon` in :ssdp's jvmMain (where the pipe
- * logic is unit-tested). Not a published artifact — excluded from the library
- * lint/check gate, exactly like :jvm-cli.
+ * logic is unit-tested). Lives at the repo root (not under apps/) since it's a
+ * distributable host tool rather than a UI sample. Not a published artifact —
+ * excluded from the library lint/check gate, like :jvm-cli.
  */
 plugins {
     // Version omitted: the Kotlin plugin is already on the build classpath from

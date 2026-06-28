@@ -185,7 +185,7 @@ withFakeSsdpClient { fake ->
 | App | Run |
 |-----|-----|
 | JVM CLI | `mise run app:cli` |
-| JVM bridge daemon (for Android emulators) | `mise run app:bridge` |
+| SSDP bridge daemon (for Android emulators; `ssdp-bridge` at the repo root) | `mise run app:bridge` |
 | Android | `mise run open:android` |
 | iOS | `mise run open:ios` |
 | macOS | `mise run open:macos` |

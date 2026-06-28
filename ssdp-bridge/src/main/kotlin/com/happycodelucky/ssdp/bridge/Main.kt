@@ -7,7 +7,7 @@
  *
  *   mise run app:bridge            # listen on the default port (1901)
  *   mise run app:bridge -- 1901    # explicit port
- *   ./gradlew :jvm-bridge:run --args="1901 192.168.1.5"   # port + multicast iface
+ *   ./gradlew :ssdp-bridge:run --args="1901 192.168.1.5"   # port + multicast iface
  *
  * The emulator app then connects with `SsdpClient.bridged()` (default 10.0.2.2:1901).
  */
