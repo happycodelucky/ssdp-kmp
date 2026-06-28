@@ -27,6 +27,7 @@ package com.happycodelucky.ssdp.internal.bridge
 
 import com.happycodelucky.ssdp.internal.Datagram
 import com.happycodelucky.ssdp.internal.MulticastSocket
+import com.happycodelucky.ssdp.internal.ssdpLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -97,12 +98,23 @@ internal class BridgeMulticastSocket(
      * Connect → pump both directions → on drop, backoff and reconnect. Runs for
      * the life of the socket (until [close] cancels the scope). The first
      * successful frame read resets the backoff.
+     *
+     * Logging is de-duped to one line per outage: the first failed connect of a
+     * disconnected stretch warns (the daemon is probably not running), the retry
+     * spam is silent, and a successful (re)connect after an outage logs an info
+     * line. So a developer who forgot `mise run app:bridge` sees one clear hint in
+     * logcat instead of either nothing or hundreds of lines.
      */
     private suspend fun connectionLoop() {
         var backoff = INITIAL_BACKOFF
+        var loggedOutage = false
         while (scope.isActive) {
             try {
                 val conn = connect.connect(host, port)
+                if (loggedOutage) {
+                    ssdpLog.i { "SSDP bridge connected to $host:$port" }
+                    loggedOutage = false
+                }
                 try {
                     backoff = INITIAL_BACKOFF // connected — reset
                     pump(conn)
@@ -114,7 +126,15 @@ internal class BridgeMulticastSocket(
             } catch (_: Throwable) {
                 // Daemon absent or connection dropped — no exception surfaces to
                 // the app (the "no surprises" ethos); devices just stays empty
-                // until the daemon appears. Back off and retry.
+                // until the daemon appears. Warn once per outage (not per retry),
+                // then back off and retry silently.
+                if (!loggedOutage) {
+                    loggedOutage = true
+                    ssdpLog.w {
+                        "SSDP bridge daemon unreachable at $host:$port — is it running? " +
+                            "Start it with `mise run app:bridge`. Retrying…"
+                    }
+                }
             }
             if (!scope.isActive) break
             delay(backoff)

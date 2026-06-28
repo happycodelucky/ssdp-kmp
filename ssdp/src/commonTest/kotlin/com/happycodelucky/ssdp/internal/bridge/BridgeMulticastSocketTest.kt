@@ -13,6 +13,9 @@
 package com.happycodelucky.ssdp.internal.bridge
 
 import app.cash.turbine.test
+import co.touchlab.kermit.LogWriter
+import co.touchlab.kermit.Logger
+import co.touchlab.kermit.Severity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
@@ -163,4 +166,81 @@ class BridgeMulticastSocketTest {
             runCurrent()
             socket.close()
         }
+
+    @Test
+    fun warnsOnceWhileDaemonDownThenInfoOnReconnect() =
+        runTest {
+            val capture = CapturingLogWriter()
+            withGlobalLogWriter(capture) {
+                // Fail the first 3 connects (daemon down), then succeed.
+                var attempts = 0
+                val conn = FakeDuplexConnection()
+                val connector =
+                    Connect { _, _ ->
+                        if (attempts++ < 3) error("connection refused") else conn
+                    }
+                val socket =
+                    BridgeMulticastSocket(
+                        host = "10.0.2.2",
+                        port = 1901,
+                        connect = connector,
+                        parentScope = backgroundScope,
+                    )
+                // Drive through the 3 failed attempts (backoff 200ms, 400ms, 800ms).
+                repeat(4) {
+                    runCurrent()
+                    advanceTimeBy(1_000.milliseconds)
+                }
+                runCurrent()
+
+                // Exactly ONE warning for the whole outage (not one per retry),
+                // and one info line once it finally connected.
+                assertEquals(
+                    1,
+                    capture.warnings.count { it.contains("bridge daemon unreachable") },
+                    "expected a single de-duped outage warning, got: ${capture.warnings}",
+                )
+                assertEquals(
+                    1,
+                    capture.infos.count { it.contains("bridge connected") },
+                    "expected one reconnect info line, got: ${capture.infos}",
+                )
+
+                socket.close()
+            }
+        }
+
+    /** Captures log lines emitted to Kermit's global logger during a test. */
+    private class CapturingLogWriter : LogWriter() {
+        val warnings = mutableListOf<String>()
+        val infos = mutableListOf<String>()
+
+        override fun log(
+            severity: Severity,
+            message: String,
+            tag: String,
+            throwable: Throwable?,
+        ) {
+            when (severity) {
+                Severity.Warn -> warnings.add(message)
+                Severity.Info -> infos.add(message)
+                else -> Unit
+            }
+        }
+    }
+
+    /** Run [block] with [writer] attached to the global Kermit logger, then restore. */
+    private inline fun withGlobalLogWriter(
+        writer: LogWriter,
+        block: () -> Unit,
+    ) {
+        Logger.addLogWriter(writer)
+        try {
+            block()
+        } finally {
+            // Restore the default platform writer so the capture doesn't leak
+            // into other tests (Kermit's global config is process-wide).
+            Logger.setLogWriters(co.touchlab.kermit.platformLogWriter())
+        }
+    }
 }
