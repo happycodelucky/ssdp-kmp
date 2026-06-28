@@ -124,7 +124,35 @@ case .parseFailed(let p): log(p.message)
   `SsdpClient(context)` so the transport can hold a `WifiManager.MulticastLock`;
   without it Android drops inbound multicast. Apps on Android 13+ also declare
   `NEARBY_WIFI_DEVICES`.
+- **Android emulators** — emulators sit behind a user-mode NAT and **never
+  receive inbound UDP multicast**, so normal discovery hears nothing there. Run
+  the bridge daemon on your host (`mise run app:bridge`) and construct the client
+  with `SsdpClient.bridged()` — it tunnels SSDP over TCP to the daemon, which does
+  the real multicast on the host LAN. The client is otherwise identical (same
+  registry, retransmit, `search`/`description`). The library does **not**
+  auto-detect emulators; the app chooses (the Android sample does, via a `Build`
+  check). See [Emulator bridge](#emulator-bridge).
 - **JVM** — plain `MulticastSocket`; on multi-homed hosts pass `bindInterface`.
+
+### Emulator bridge
+
+```kotlin
+// In the app — pick the transport; the library never swaps it silently.
+val client = if (isEmulator()) SsdpClient.bridged() else SsdpClient(context)
+```
+
+`SsdpClient.bridged(host = "10.0.2.2", port = 1901)` connects to the host bridge
+daemon at the emulator's host-loopback alias. Start the daemon first:
+
+```sh
+mise run app:bridge            # listen on 1901
+mise run app:bridge -- 1901    # explicit port
+```
+
+The daemon is a **dumb pipe**: the app keeps owning retransmit and the registry,
+so the emulator path is byte-identical to a physical device — only the wire hop
+differs. It connects over TCP, frames each M-SEARCH to the daemon, and the daemon
+streams every reply/NOTIFY it sees back.
 
 ## Testing support
 
@@ -147,6 +175,7 @@ withFakeSsdpClient { fake ->
 | App | Run |
 |-----|-----|
 | JVM CLI | `mise run app:cli` |
+| JVM bridge daemon (for Android emulators) | `mise run app:bridge` |
 | Android | `mise run open:android` |
 | iOS | `mise run open:ios` |
 | macOS | `mise run open:macos` |

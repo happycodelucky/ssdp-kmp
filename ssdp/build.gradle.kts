@@ -46,6 +46,13 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.cio)
             implementation(libs.xmlutil.serialization)
+            // ktor-network: raw multiplatform TCP for the Android-emulator host
+            // bridge. BridgeMulticastSocket (commonMain) tunnels SSDP over TCP to
+            // the jvmMain bridge daemon, which does the real multicast on the host
+            // LAN. Emulators can't receive inbound UDP multicast; physical devices
+            // never touch this path. Gradle resolves the -jvm variant on Android
+            // (no ktor-network-android artifact), native slices on Apple.
+            implementation(libs.ktor.network)
         }
 
         commonTest.dependencies {

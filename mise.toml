@@ -94,6 +94,10 @@ depends = ["build"]
 description = "Run the JVM CLI discovery harness: search ssdp:all on the local network, print devices + fetched descriptions. Pass a duration like `mise run app:cli -- 20`."
 run = "./gradlew :jvm-cli:run --args=\"{{arg(name='seconds', default='15')}}\""
 
+[tasks."app:bridge"]
+description = "Run the host SSDP bridge daemon so an Android emulator can discover real LAN devices. Listens on TCP; the emulator app connects via SsdpClient.bridged(). Pass a port like `mise run app:bridge -- 1901`."
+run = "./gradlew :jvm-bridge:run --args=\"{{arg(name='port', default='1901')}}\""
+
 # --- iteration helpers -----------------------------------------------------
 
 [tasks."spm:dev"]
@@ -133,8 +137,15 @@ dir = "apps/macos"
 run = "open macOSApp.xcodeproj"
 
 [tasks."open:android"]
-description = "Open apps/android in Android Studio."
-run = "open -a 'Android Studio' apps/android"
+# Open the REPO ROOT, not apps/android: the Gradle settings root (with
+# settings.gradle.kts declaring :androidApp / :ssdp / :jvm-bridge / …) is the
+# repo root. apps/android has only a build.gradle.kts and is NOT a standalone
+# Gradle build, so opening it directly makes Android Studio sync against an
+# ambiguous root and fail with "Task 'prepareKotlinBuildScriptModel' not found
+# in project ':androidApp'". Opening the root gives AS the real multi-module
+# model; the :androidApp run config is available from there.
+description = "Open the project (repo root) in Android Studio — run/debug the :androidApp module from there."
+run = "open -a 'Android Studio' ."
 
 # --- docs ------------------------------------------------------------------
 

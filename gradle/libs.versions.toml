@@ -113,6 +113,17 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
 
+# --- TCP (emulator host-bridge) ---------------------------------------------
+# ktor-network — multiplatform raw TCP sockets used by the Android-emulator host
+# bridge: BridgeMulticastSocket (commonMain TCP client) and the jvmMain bridge
+# daemon (TCP server). Emulators can't receive inbound UDP multicast, so the app
+# tunnels SSDP over TCP to a host daemon that does the real multicast (CLAUDE.md
+# §9). Same `ktor` 3.5.1 pin as the client deps. Publishes iosArm64 /
+# iosSimulatorArm64 / macosArm64 / jvm slices; Android resolves the -jvm variant
+# (there is no ktor-network-android artifact, by design). Verified on Maven
+# Central 2026-06-27.
+ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
+
 # --- Reachable --------------------------------------------------------------
 reachable = { module = "com.happycodelucky.reachable:reachable", version.ref = "reachable" }
 reachable-testing = { module = "com.happycodelucky.reachable:reachable-testing", version.ref = "reachable" }
