@@ -34,10 +34,20 @@ scanners on every platform.
 
 ## Modules
 
+Published to Maven Central:
+
 | Module | Coordinate | What it is |
 |--------|-----------|-----------|
 | `:ssdp` | `com.happycodelucky.ssdp:ssdp` | The library. |
 | `:ssdp-testing` | `com.happycodelucky.ssdp:ssdp-testing` | `FakeSsdpClient` + `withFakeSsdpClient { }` for tests. |
+
+Not published — repo tools and samples (excluded from the publish/check gate):
+
+| Module | What it is |
+|--------|-----------|
+| `:ssdp-bridge` | Host-side daemon that relays SSDP to an Android emulator over TCP (see [Emulator bridge](#emulator-bridge)). Run with `mise run app:bridge`. |
+| `:jvm-cli` | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run app:cli`. |
+| `:androidApp` | The Android Compose sample scanner (see [apps/](apps/)). |
 
 ## Quick example
 
