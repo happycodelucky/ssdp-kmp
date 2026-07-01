@@ -60,6 +60,27 @@ class FakeSsdpClientTest {
         }
 
     @Test
+    fun clearDevicesEmptiesAndEmitsCleared() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                fake.emitFound(device("usn-1"))
+                fake.emitFound(device("usn-2"))
+                fake.changes.test {
+                    fake.clearDevices()
+                    val first = awaitItem()
+                    assertTrue(first is DeviceChange.Removed)
+                    assertEquals(DeviceChange.Removed.Reason.Cleared, first.reason)
+                    val second = awaitItem()
+                    assertTrue(second is DeviceChange.Removed)
+                    assertEquals(DeviceChange.Removed.Reason.Cleared, second.reason)
+                    cancelAndIgnoreRemainingEvents()
+                }
+                assertTrue(fake.devices.value.isEmpty())
+                assertEquals(1, fake.clearDevicesCallCount)
+            }
+        }
+
+    @Test
     fun recordsSearchCalls() =
         runTest {
             withFakeSsdpClient { fake ->

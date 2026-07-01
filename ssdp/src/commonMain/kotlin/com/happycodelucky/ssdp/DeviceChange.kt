@@ -34,7 +34,8 @@ public sealed interface DeviceChange {
 
     /**
      * A device left the registry. [reason] distinguishes an explicit
-     * `ssdp:byebye` from a silent cache-control expiry from a network reset.
+     * `ssdp:byebye` from a silent cache-control expiry from a network reset
+     * from a manual clear.
      */
     public data class Removed(
         override val device: DiscoveredDevice,
@@ -50,6 +51,9 @@ public sealed interface DeviceChange {
 
             /** The active network changed; the registry was cleared (plan decision 4). */
             NetworkChanged,
+
+            /** The consumer explicitly cleared the registry via [SsdpClient.clearDevices]. */
+            Cleared,
         }
     }
 }

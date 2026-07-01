@@ -72,9 +72,16 @@ final class ScannerModel: ObservableObject {
     /// bridge cleanly (it surfaces as `Any?`), so the idiomatic Swift path is an
     /// explicit stopSearch(). Passive listening continues after stopSearch, so
     /// late responders still appear.
+    ///
+    /// We clear the registry first so refresh visibly empties the list and then
+    /// re-populates — stale devices that have gone but not yet hit their max-age
+    /// deadline drop immediately. The `devices` projection updates reactively:
+    /// clearDevices() empties client.devices → the `for await` loop fires with an
+    /// empty map → the list clears; then search responses stream Found events in.
     func scan() {
         Task {
             scanning = true
+            try? await client.clearDevices()
             // SearchTarget.All is a Kotlin `data object` → SKIE flattens it to the
             // top-level `SearchTargetAll.shared` singleton (not a nested `.All`).
             try? await client.search(

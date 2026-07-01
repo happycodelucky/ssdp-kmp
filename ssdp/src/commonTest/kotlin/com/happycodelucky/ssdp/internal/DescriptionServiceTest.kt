@@ -30,6 +30,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -231,5 +232,37 @@ class DescriptionServiceTest {
             val service = newService(client)
             val result = service.describe(device())
             assertTrue(result is DescriptionResult.ParseFailed)
+            // A genuinely-XML-but-broken body keeps the parser's detail (the xmlutil
+            // message), so the friendly "not an XML document" wording must NOT apply.
+            assertFalse(result.message.contains("not an XML document"))
+        }
+
+    @Test
+    fun nonXmlBodyYieldsClearParseFailedWithoutHittingParser() =
+        runTest {
+            // 200 OK, body is not XML at all (a status endpoint). Content-Type is
+            // text/xml (the mock always sets it), so this proves the sniff catches
+            // it on the body, independent of the — often unreliable — header.
+            val (client, _) = countingClient(body = DescriptionFixtures.NOT_XML)
+            val service = newService(client)
+            val result = service.describe(device())
+            assertTrue(result is DescriptionResult.ParseFailed)
+            // Friendly, actionable message that echoes what came back — not the raw
+            // "1:10 - Non-whitespace text where not expected" from xmlutil.
+            assertTrue(result.message.contains("not an XML document"))
+            assertTrue(result.message.contains("status=ok"))
+            assertFalse(result.message.contains("Non-whitespace text"))
+        }
+
+    @Test
+    fun bomPrefixedXmlStillParses() =
+        runTest {
+            // A valid description with a leading UTF-8 BOM + blank line must NOT be
+            // mistaken for non-XML by the content sniff (regression guard).
+            val (client, _) = countingClient(body = DescriptionFixtures.BOM_PREFIXED_XML)
+            val service = newService(client)
+            val result = service.describe(device())
+            assertTrue(result is DescriptionResult.Success)
+            assertEquals("Sonos Arc Ultra", result.description.device.modelName)
         }
 }

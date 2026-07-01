@@ -63,6 +63,11 @@ class ScannerViewModel(
     fun scan() {
         viewModelScope.launch {
             _scanning.value = true
+            // Clear first so refresh visibly empties the list and then re-populates;
+            // stale devices that have gone but not yet hit their max-age deadline
+            // drop immediately. The `devices` projection reacts to client.devices
+            // becoming empty, then refills as search responses arrive.
+            client.clearDevices()
             // Bounded — broadcasting stops after the window; passive listening
             // continues so late responders still appear.
             client.search(setOf(SearchTarget.All), timeout = SEARCH_WINDOW)

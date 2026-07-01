@@ -167,6 +167,11 @@ internal class SsdpClientImpl(
         searchMutex.withLock { cancelRetransmitLocked() }
     }
 
+    override suspend fun clearDevices() {
+        if (closed.value) return
+        registry.reset(DeviceChange.Removed.Reason.Cleared)
+    }
+
     override suspend fun description(device: DiscoveredDevice): DescriptionResult =
         if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device)
 

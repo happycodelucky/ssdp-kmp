@@ -150,4 +150,21 @@ internal object DescriptionFixtures {
             <deviceType>urn:schemas-upnp-org:device:ZonePlayer:1</deviceType>
             <friendlyName>truncated
         """.trimIndent()
+
+    /**
+     * A 200 body that is NOT XML at all — what a path-less LOCATION or a health
+     * endpoint can return (observed in the field from a gld4tv set-top box whose
+     * LOCATION is `http://host:9080`). Must surface a clear ParseFailed, not the
+     * raw xmlutil "Non-whitespace text where not expected" error.
+     */
+    const val NOT_XML = "status=ok"
+
+    /**
+     * A valid description prefixed with a UTF-8 BOM, immediately before the `<?xml`
+     * prolog as real BOM-emitting devices send it — the content sniff must still
+     * recognize this as XML and parse it (no false-negative). Per the XML spec the
+     * prolog must be the first content, so a BOM is allowed here but intervening
+     * whitespace would not be; the sniff deliberately does not repair such input.
+     */
+    val BOM_PREFIXED_XML = "\uFEFF" + SONOS_ZONEPLAYER
 }

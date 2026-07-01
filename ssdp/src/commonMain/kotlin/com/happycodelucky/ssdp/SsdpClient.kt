@@ -47,9 +47,9 @@ import kotlin.time.Duration
  *
  * [devices] is the always-current set keyed by USN; [changes] is the live delta
  * stream (found / updated / removed). Devices are removed on `ssdp:byebye`, on
- * `CACHE-CONTROL: max-age` expiry, or when the active network changes (the
- * registry resets, since SSDP devices are LAN-scoped). Call [close] when done;
- * it is idempotent.
+ * `CACHE-CONTROL: max-age` expiry, when the active network changes (the registry
+ * resets, since SSDP devices are LAN-scoped), or when the consumer calls
+ * [clearDevices]. Call [close] when done; it is idempotent.
  */
 public interface SsdpClient : AutoCloseable {
     /** The always-current set of discovered devices, keyed by USN. */
@@ -95,6 +95,20 @@ public interface SsdpClient : AutoCloseable {
 
     /** Stop active M-SEARCH retransmission. Passive NOTIFY listening continues. */
     public suspend fun stopSearch()
+
+    /**
+     * Clear the device registry: drop every currently-tracked device and emit a
+     * [DeviceChange.Removed] with reason [DeviceChange.Removed.Reason.Cleared]
+     * for each. [devices] becomes empty.
+     *
+     * Use this to force a fresh enumeration — e.g. a manual "refresh" that should
+     * visibly empty the list and then re-populate from a new [search]. Devices
+     * that have left but not yet hit their `CACHE-CONTROL: max-age` deadline
+     * disappear immediately. Neither passive NOTIFY listening nor any active
+     * search is affected; the registry simply refills as responses arrive. From
+     * Swift this is `try await client.clearDevices()`.
+     */
+    public suspend fun clearDevices()
 
     /**
      * Fetch (or return cached) the device's UPnP description document — the XML
