@@ -147,9 +147,38 @@ internal class DescriptionService(
             runCancellable({ response.bodyAsText() }) { e ->
                 return DescriptionResult.FetchFailed(statusCode = null, message = e.message ?: "read error")
             }
+        // Many LAN devices answer a path-less LOCATION (or a health endpoint) with
+        // a 200 that is NOT an XML description — e.g. a plain `status=ok`. Handing
+        // that to the XML parser yields a cryptic "1:N - Non-whitespace text..."
+        // error. Sniff first: a UPnP description always opens with `<` (a BOM and
+        // leading whitespace aside). If it doesn't, report a clear ParseFailed and
+        // skip the parse; a genuinely-XML body still flows through, so a real
+        // malformed document keeps the parser's line:col detail (useful to debug).
+        if (!looksLikeXml(body)) {
+            return DescriptionResult.ParseFailed(
+                message = "response was not an XML document (got: ${snippet(body)})",
+            )
+        }
         return runCancellable({ DescriptionResult.Success(parser.parse(body, sourceUrl = location)) }) { e ->
             DescriptionResult.ParseFailed(message = e.message ?: "invalid description XML")
         }
+    }
+
+    /**
+     * True if [body]'s first meaningful character is `<` — i.e. it looks like an
+     * XML document. Tolerates a leading UTF-8 BOM and any leading whitespace
+     * (some devices emit a blank line or BOM before the `<?xml` prolog).
+     */
+    private fun looksLikeXml(body: String): Boolean =
+        body
+            .removePrefix(BOM)
+            .trimStart()
+            .startsWith('<')
+
+    /** A short, single-line excerpt of [body] for an error message. */
+    private fun snippet(body: String): String {
+        val oneLine = body.removePrefix(BOM).trim().replace(Regex("\\s+"), " ")
+        return if (oneLine.length > SNIPPET_MAX) oneLine.take(SNIPPET_MAX) + "…" else oneLine
     }
 
     /**
@@ -201,5 +230,13 @@ internal class DescriptionService(
             val result: DescriptionResult,
             val expiresAt: Instant,
         ) : Entry
+    }
+
+    private companion object {
+        /** Max characters of a non-XML body echoed back in a [DescriptionResult.ParseFailed]. */
+        const val SNIPPET_MAX = 40
+
+        /** UTF-8 byte-order mark some devices prepend to the description document. */
+        const val BOM = "\uFEFF"
     }
 }

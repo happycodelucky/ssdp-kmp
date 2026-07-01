@@ -4,8 +4,9 @@
  * The piece swift-ssdp deliberately left to the consumer (plan decision 1).
  * Folds parsed M-SEARCH responses and NOTIFY advertisements into a deduplicated,
  * lifecycle-tracked map exposed as a StateFlow, and emits delta events on a
- * SharedFlow. Handles the three removal paths: explicit ssdp:byebye, silent
- * cache-control (max-age) expiry, and a full network-change reset.
+ * SharedFlow. Handles the four removal paths: explicit ssdp:byebye, silent
+ * cache-control (max-age) expiry, a full network-change reset, and an explicit
+ * consumer-initiated clear.
  *
  * Concurrency: all map mutations happen on a single-threaded confinement via the
  * registry's own coroutine actor-like loop is overkill here; instead mutations
@@ -111,11 +112,15 @@ internal class DeviceRegistry(
     }
 
     /**
-     * Clear every tracked device — used when the active network changes
-     * (plan decision 4). Emits a [DeviceChange.Removed] with reason
-     * [DeviceChange.Removed.Reason.NetworkChanged] for each evicted device.
+     * Clear every tracked device. Used both when the active network changes
+     * (plan decision 4) and when a consumer explicitly clears the registry.
+     * Emits a [DeviceChange.Removed] with [reason] for each evicted device.
+     *
+     * @param reason why the devices are being removed — defaults to
+     *   [DeviceChange.Removed.Reason.NetworkChanged] (the network-change caller);
+     *   a manual clear passes [DeviceChange.Removed.Reason.Cleared].
      */
-    suspend fun reset() {
+    suspend fun reset(reason: DeviceChange.Removed.Reason = DeviceChange.Removed.Reason.NetworkChanged) {
         mutex
             .withLock {
                 val evicted = devices.value.values.toList()
@@ -123,7 +128,7 @@ internal class DeviceRegistry(
                 devices.value = emptyMap()
                 evicted
             }.forEach { device ->
-                _changes.emit(DeviceChange.Removed(device, DeviceChange.Removed.Reason.NetworkChanged))
+                _changes.emit(DeviceChange.Removed(device, reason))
             }
     }
 

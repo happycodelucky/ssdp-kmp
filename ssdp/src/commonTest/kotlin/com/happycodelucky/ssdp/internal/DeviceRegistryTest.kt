@@ -1,9 +1,10 @@
 /*
  * ssdp-kmp — device registry lifecycle tests, all under runTest virtual time.
  *
- * Covers the four removal/transition paths the registry adds over swift-ssdp:
+ * Covers the transition/removal paths the registry adds over swift-ssdp:
  * Found on first sight, Updated on a material change (bootId), Removed on
- * byebye, Removed on max-age expiry, and a full NetworkChanged reset.
+ * byebye, Removed on max-age expiry, a full NetworkChanged reset, and a
+ * Cleared reset (consumer-initiated clear).
  */
 package com.happycodelucky.ssdp.internal
 
@@ -155,6 +156,23 @@ class DeviceRegistryTest {
                 val change = awaitItem()
                 assertTrue(change is DeviceChange.Removed)
                 assertEquals(DeviceChange.Removed.Reason.NetworkChanged, change.reason)
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertTrue(registry.deviceSet.value.isEmpty())
+        }
+
+    @Test
+    fun resetWithClearedReasonEvictsAllAsCleared() =
+        runTest {
+            val registry = newRegistry()
+            registry.changes.test {
+                ingestAlive(registry)
+                assertTrue(awaitItem() is DeviceChange.Found)
+
+                registry.reset(DeviceChange.Removed.Reason.Cleared)
+                val change = awaitItem()
+                assertTrue(change is DeviceChange.Removed)
+                assertEquals(DeviceChange.Removed.Reason.Cleared, change.reason)
                 cancelAndIgnoreRemainingEvents()
             }
             assertTrue(registry.deviceSet.value.isEmpty())

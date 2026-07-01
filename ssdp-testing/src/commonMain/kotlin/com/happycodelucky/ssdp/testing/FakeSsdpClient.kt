@@ -62,6 +62,7 @@ public class FakeSsdpClient : SsdpClient {
 
     private val _searchCallCount = atomic(0)
     private val _stopSearchCallCount = atomic(0)
+    private val _clearDevicesCallCount = atomic(0)
     private val _closeCallCount = atomic(0)
 
     /** Targets passed to each [search] call, in order. */
@@ -75,6 +76,9 @@ public class FakeSsdpClient : SsdpClient {
 
     /** Number of [stopSearch] invocations. */
     public val stopSearchCallCount: Int get() = _stopSearchCallCount.value
+
+    /** Number of [clearDevices] invocations. */
+    public val clearDevicesCallCount: Int get() = _clearDevicesCallCount.value
 
     /** Number of [close] invocations. */
     public val closeCallCount: Int get() = _closeCallCount.value
@@ -152,6 +156,15 @@ public class FakeSsdpClient : SsdpClient {
 
     override suspend fun stopSearch() {
         _stopSearchCallCount.incrementAndGet()
+    }
+
+    override suspend fun clearDevices() {
+        _clearDevicesCallCount.incrementAndGet()
+        val evicted = _devices.value.values.toList()
+        _devices.value = emptyMap()
+        evicted.forEach { device ->
+            _changes.emit(DeviceChange.Removed(device, DeviceChange.Removed.Reason.Cleared))
+        }
     }
 
     override suspend fun description(device: DiscoveredDevice): DescriptionResult = recordAndResolve(device.usn)

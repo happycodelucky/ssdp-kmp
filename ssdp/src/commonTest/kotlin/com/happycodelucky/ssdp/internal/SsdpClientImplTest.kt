@@ -194,6 +194,28 @@ class SsdpClientImplTest {
         }
 
     @Test
+    fun clearDevicesEmptiesRegistryWithClearedReason() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+
+            client.changes.test {
+                socket.deliver(Fixtures.NOTIFY_ALIVE_ROKU)
+                runCurrent()
+                assertTrue(awaitItem() is DeviceChange.Found)
+
+                client.clearDevices()
+                val change = awaitItem()
+                assertTrue(change is DeviceChange.Removed)
+                assertEquals(DeviceChange.Removed.Reason.Cleared, change.reason)
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertTrue(client.devices.value.isEmpty())
+            client.close()
+        }
+
+    @Test
     fun closeClosesSocket() =
         runTest {
             val socket = FakeMulticastSocket()
