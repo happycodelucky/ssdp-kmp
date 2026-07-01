@@ -46,7 +46,7 @@ Not published — repo tools and samples (excluded from the publish/check gate):
 | Module | What it is |
 |--------|-----------|
 | `:ssdp-bridge` | Host-side daemon that relays SSDP to an Android emulator over TCP (see [Emulator bridge](#emulator-bridge)). Run with `mise run app:bridge`. |
-| `:jvm-cli` | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run app:cli`. |
+| `:jvm-cli` | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run cli`. |
 | `:androidApp` | The Android Compose sample scanner (see [apps/](apps/)). |
 
 ## Quick example
@@ -196,7 +196,7 @@ withFakeSsdpClient { fake ->
 
 | App | Run |
 |-----|-----|
-| JVM CLI | `mise run app:cli` |
+| JVM CLI | `mise run cli` |
 | SSDP bridge daemon (for Android emulators; `ssdp-bridge` at the repo root) | `mise run app:bridge` |
 | Android | `mise run open:android` |
 | iOS | `mise run open:ios` |
@@ -214,8 +214,8 @@ tasks:
 ```sh
 mise run check      # ktlint + detekt + all unit tests (iOS sim, macOS, Android host, JVM)
 mise run test:jvm   # JVM-only — the fast inner loop
-mise run app:cli    # live LAN discovery harness
-mise run build      # assemble the release Ssdp.xcframework
+mise run cli        # live LAN discovery harness
+mise run build:xcframework  # assemble the release Ssdp.xcframework
 mise run open:macos # generate + open the macOS sample in Xcode
 ```
 

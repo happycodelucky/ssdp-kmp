@@ -84,8 +84,8 @@ run = "./gradlew :ssdp:ktlintFormat :ssdp-testing:ktlintFormat"
 
 # --- build -----------------------------------------------------------------
 
-[tasks.build]
-description = "Assemble the release Ssdp.xcframework (sample-app local SPM)."
+[tasks."build:xcframework"]
+description = "Assemble the release Ssdp.xcframework (all slices — iosArm64, iosSimulatorArm64, macosArm64; sample-app local SPM + CI)."
 run = "./gradlew :ssdp:assembleSsdpXCFramework"
 
 [tasks."build:ios"]
@@ -107,14 +107,6 @@ run = "./gradlew :ssdp:assembleAndroidMain"
 description = "Compile + jar the JVM desktop/server target."
 run = "./gradlew :ssdp:jvmJar"
 
-[tasks.xcframework]
-description = "Alias for `build` — produces the release Ssdp.xcframework."
-depends = ["build"]
-
-[tasks."build:xcframework"]
-description = "Build the release Ssdp.xcframework (all slices — iosArm64, iosSimulatorArm64, macosArm64). Alias used by CI."
-depends = ["build"]
-
 # --- public API / ABI ------------------------------------------------------
 # The committed dump under ssdp/api/ is the reference for the public surface.
 # `checkKotlinAbi` runs as part of `check` (and CI) — it fails if the public API
@@ -132,8 +124,8 @@ run = "./gradlew :ssdp:updateKotlinAbi"
 
 # --- apps ------------------------------------------------------------------
 
-[tasks."app:cli"]
-description = "Run the JVM CLI discovery harness: search ssdp:all on the local network, print devices + fetched descriptions. Pass a duration like `mise run app:cli -- 20`."
+[tasks.cli]
+description = "Run the JVM CLI discovery harness: search ssdp:all on the local network, print devices + fetched descriptions. Pass a duration like `mise run cli -- 20`."
 run = "./gradlew :jvm-cli:run --args=\"{{arg(name='seconds', default='15')}}\""
 
 [tasks."app:bridge"]

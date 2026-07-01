@@ -134,7 +134,7 @@ All shared logic gets `commonTest` coverage with `runTest` virtual time (never
 native test compile, LESSONS B-007). A `TestClock`/`TestTimeSource` reading the
 test scheduler keeps `now` and `delay` in lockstep. Parser fixtures are real
 device captures (eero, Sonos). Tasks (mise): `mise run test:jvm` (fast loop),
-`mise run check` (full gate, all targets + ktlint + detekt), `mise run run:cli`
+`mise run check` (full gate, all targets + ktlint + detekt), `mise run cli`
 (live LAN discovery harness). The full `:ssdp:check`/`:ssdp-testing:check` —
 which compiles *test* sources for every target and runs detekt — is the real
 done gate; a JVM-only run hides native-test-compile and detekt failures
