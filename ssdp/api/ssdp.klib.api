@@ -1,0 +1,514 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, macosArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <com.happycodelucky.ssdp:ssdp>
+abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { // com.happycodelucky.ssdp/SsdpClient|null[0]
+    abstract val changes // com.happycodelucky.ssdp/SsdpClient.changes|{}changes[0]
+        abstract fun <get-changes>(): kotlinx.coroutines.flow/SharedFlow<com.happycodelucky.ssdp/DeviceChange> // com.happycodelucky.ssdp/SsdpClient.changes.<get-changes>|<get-changes>(){}[0]
+    abstract val devices // com.happycodelucky.ssdp/SsdpClient.devices|{}devices[0]
+        abstract fun <get-devices>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, com.happycodelucky.ssdp/DiscoveredDevice>> // com.happycodelucky.ssdp/SsdpClient.devices.<get-devices>|<get-devices>(){}[0]
+
+    abstract fun close() // com.happycodelucky.ssdp/SsdpClient.close|close(){}[0]
+    abstract suspend fun clearDevices() // com.happycodelucky.ssdp/SsdpClient.clearDevices|clearDevices(){}[0]
+    abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+    abstract suspend fun description(kotlin/String): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String){}[0]
+    abstract suspend fun search(kotlin.collections/Set<com.happycodelucky.ssdp/SearchTarget>, kotlin/Int = ..., kotlin.time/Duration? = ...) // com.happycodelucky.ssdp/SsdpClient.search|search(kotlin.collections.Set<com.happycodelucky.ssdp.SearchTarget>;kotlin.Int;kotlin.time.Duration?){}[0]
+    abstract suspend fun stopSearch() // com.happycodelucky.ssdp/SsdpClient.stopSearch|stopSearch(){}[0]
+
+    final object Companion { // com.happycodelucky.ssdp/SsdpClient.Companion|null[0]
+        final const val DEFAULT_MAX_WAIT_SECONDS // com.happycodelucky.ssdp/SsdpClient.Companion.DEFAULT_MAX_WAIT_SECONDS|{}DEFAULT_MAX_WAIT_SECONDS[0]
+            final fun <get-DEFAULT_MAX_WAIT_SECONDS>(): kotlin/Int // com.happycodelucky.ssdp/SsdpClient.Companion.DEFAULT_MAX_WAIT_SECONDS.<get-DEFAULT_MAX_WAIT_SECONDS>|<get-DEFAULT_MAX_WAIT_SECONDS>(){}[0]
+    }
+}
+
+sealed interface com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult|null[0]
+    final class FetchFailed : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.FetchFailed|null[0]
+        constructor <init>(kotlin/Int?, kotlin/String) // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.<init>|<init>(kotlin.Int?;kotlin.String){}[0]
+
+        final val message // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.message|{}message[0]
+            final fun <get-message>(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.message.<get-message>|<get-message>(){}[0]
+        final val statusCode // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.statusCode|{}statusCode[0]
+            final fun <get-statusCode>(): kotlin/Int? // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.statusCode.<get-statusCode>|<get-statusCode>(){}[0]
+
+        final fun component1(): kotlin/Int? // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.component1|component1(){}[0]
+        final fun component2(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.component2|component2(){}[0]
+        final fun copy(kotlin/Int? = ..., kotlin/String = ...): com.happycodelucky.ssdp/DescriptionResult.FetchFailed // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.copy|copy(kotlin.Int?;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.toString|toString(){}[0]
+    }
+
+    final class ParseFailed : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.ParseFailed|null[0]
+        constructor <init>(kotlin/String) // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.<init>|<init>(kotlin.String){}[0]
+
+        final val message // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.message|{}message[0]
+            final fun <get-message>(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.message.<get-message>|<get-message>(){}[0]
+
+        final fun component1(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): com.happycodelucky.ssdp/DescriptionResult.ParseFailed // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.toString|toString(){}[0]
+    }
+
+    final class Success : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.Success|null[0]
+        constructor <init>(com.happycodelucky.ssdp/DeviceDescription) // com.happycodelucky.ssdp/DescriptionResult.Success.<init>|<init>(com.happycodelucky.ssdp.DeviceDescription){}[0]
+
+        final val description // com.happycodelucky.ssdp/DescriptionResult.Success.description|{}description[0]
+            final fun <get-description>(): com.happycodelucky.ssdp/DeviceDescription // com.happycodelucky.ssdp/DescriptionResult.Success.description.<get-description>|<get-description>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/DeviceDescription // com.happycodelucky.ssdp/DescriptionResult.Success.component1|component1(){}[0]
+        final fun copy(com.happycodelucky.ssdp/DeviceDescription = ...): com.happycodelucky.ssdp/DescriptionResult.Success // com.happycodelucky.ssdp/DescriptionResult.Success.copy|copy(com.happycodelucky.ssdp.DeviceDescription){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.Success.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.Success.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.Success.toString|toString(){}[0]
+    }
+
+    final object NotFound : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.NotFound|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.NotFound.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.NotFound.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.NotFound.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.happycodelucky.ssdp/DeviceChange { // com.happycodelucky.ssdp/DeviceChange|null[0]
+    abstract val device // com.happycodelucky.ssdp/DeviceChange.device|{}device[0]
+        abstract fun <get-device>(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.device.<get-device>|<get-device>(){}[0]
+
+    final class Found : com.happycodelucky.ssdp/DeviceChange { // com.happycodelucky.ssdp/DeviceChange.Found|null[0]
+        constructor <init>(com.happycodelucky.ssdp/DiscoveredDevice) // com.happycodelucky.ssdp/DeviceChange.Found.<init>|<init>(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+
+        final val device // com.happycodelucky.ssdp/DeviceChange.Found.device|{}device[0]
+            final fun <get-device>(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.Found.device.<get-device>|<get-device>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.Found.component1|component1(){}[0]
+        final fun copy(com.happycodelucky.ssdp/DiscoveredDevice = ...): com.happycodelucky.ssdp/DeviceChange.Found // com.happycodelucky.ssdp/DeviceChange.Found.copy|copy(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DeviceChange.Found.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DeviceChange.Found.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DeviceChange.Found.toString|toString(){}[0]
+    }
+
+    final class Removed : com.happycodelucky.ssdp/DeviceChange { // com.happycodelucky.ssdp/DeviceChange.Removed|null[0]
+        constructor <init>(com.happycodelucky.ssdp/DiscoveredDevice, com.happycodelucky.ssdp/DeviceChange.Removed.Reason) // com.happycodelucky.ssdp/DeviceChange.Removed.<init>|<init>(com.happycodelucky.ssdp.DiscoveredDevice;com.happycodelucky.ssdp.DeviceChange.Removed.Reason){}[0]
+
+        final val device // com.happycodelucky.ssdp/DeviceChange.Removed.device|{}device[0]
+            final fun <get-device>(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.Removed.device.<get-device>|<get-device>(){}[0]
+        final val reason // com.happycodelucky.ssdp/DeviceChange.Removed.reason|{}reason[0]
+            final fun <get-reason>(): com.happycodelucky.ssdp/DeviceChange.Removed.Reason // com.happycodelucky.ssdp/DeviceChange.Removed.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.Removed.component1|component1(){}[0]
+        final fun component2(): com.happycodelucky.ssdp/DeviceChange.Removed.Reason // com.happycodelucky.ssdp/DeviceChange.Removed.component2|component2(){}[0]
+        final fun copy(com.happycodelucky.ssdp/DiscoveredDevice = ..., com.happycodelucky.ssdp/DeviceChange.Removed.Reason = ...): com.happycodelucky.ssdp/DeviceChange.Removed // com.happycodelucky.ssdp/DeviceChange.Removed.copy|copy(com.happycodelucky.ssdp.DiscoveredDevice;com.happycodelucky.ssdp.DeviceChange.Removed.Reason){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DeviceChange.Removed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DeviceChange.Removed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DeviceChange.Removed.toString|toString(){}[0]
+
+        final enum class Reason : kotlin/Enum<com.happycodelucky.ssdp/DeviceChange.Removed.Reason> { // com.happycodelucky.ssdp/DeviceChange.Removed.Reason|null[0]
+            enum entry Byebye // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.Byebye|null[0]
+            enum entry Cleared // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.Cleared|null[0]
+            enum entry Expired // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.Expired|null[0]
+            enum entry NetworkChanged // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.NetworkChanged|null[0]
+
+            final val entries // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<com.happycodelucky.ssdp/DeviceChange.Removed.Reason> // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+            final fun valueOf(kotlin/String): com.happycodelucky.ssdp/DeviceChange.Removed.Reason // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<com.happycodelucky.ssdp/DeviceChange.Removed.Reason> // com.happycodelucky.ssdp/DeviceChange.Removed.Reason.values|values#static(){}[0]
+        }
+    }
+
+    final class Updated : com.happycodelucky.ssdp/DeviceChange { // com.happycodelucky.ssdp/DeviceChange.Updated|null[0]
+        constructor <init>(com.happycodelucky.ssdp/DiscoveredDevice) // com.happycodelucky.ssdp/DeviceChange.Updated.<init>|<init>(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+
+        final val device // com.happycodelucky.ssdp/DeviceChange.Updated.device|{}device[0]
+            final fun <get-device>(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.Updated.device.<get-device>|<get-device>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/DiscoveredDevice // com.happycodelucky.ssdp/DeviceChange.Updated.component1|component1(){}[0]
+        final fun copy(com.happycodelucky.ssdp/DiscoveredDevice = ...): com.happycodelucky.ssdp/DeviceChange.Updated // com.happycodelucky.ssdp/DeviceChange.Updated.copy|copy(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DeviceChange.Updated.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DeviceChange.Updated.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DeviceChange.Updated.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.happycodelucky.ssdp/Notification { // com.happycodelucky.ssdp/Notification|null[0]
+    abstract val advertisement // com.happycodelucky.ssdp/Notification.advertisement|{}advertisement[0]
+        abstract fun <get-advertisement>(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.advertisement.<get-advertisement>|<get-advertisement>(){}[0]
+    open val notificationTarget // com.happycodelucky.ssdp/Notification.notificationTarget|{}notificationTarget[0]
+        open fun <get-notificationTarget>(): com.happycodelucky.ssdp/SearchTarget // com.happycodelucky.ssdp/Notification.notificationTarget.<get-notificationTarget>|<get-notificationTarget>(){}[0]
+
+    final class Alive : com.happycodelucky.ssdp/Notification { // com.happycodelucky.ssdp/Notification.Alive|null[0]
+        constructor <init>(com.happycodelucky.ssdp/Advertisement) // com.happycodelucky.ssdp/Notification.Alive.<init>|<init>(com.happycodelucky.ssdp.Advertisement){}[0]
+
+        final val advertisement // com.happycodelucky.ssdp/Notification.Alive.advertisement|{}advertisement[0]
+            final fun <get-advertisement>(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.Alive.advertisement.<get-advertisement>|<get-advertisement>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.Alive.component1|component1(){}[0]
+        final fun copy(com.happycodelucky.ssdp/Advertisement = ...): com.happycodelucky.ssdp/Notification.Alive // com.happycodelucky.ssdp/Notification.Alive.copy|copy(com.happycodelucky.ssdp.Advertisement){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Notification.Alive.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Notification.Alive.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/Notification.Alive.toString|toString(){}[0]
+    }
+
+    final class Byebye : com.happycodelucky.ssdp/Notification { // com.happycodelucky.ssdp/Notification.Byebye|null[0]
+        constructor <init>(com.happycodelucky.ssdp/Advertisement) // com.happycodelucky.ssdp/Notification.Byebye.<init>|<init>(com.happycodelucky.ssdp.Advertisement){}[0]
+
+        final val advertisement // com.happycodelucky.ssdp/Notification.Byebye.advertisement|{}advertisement[0]
+            final fun <get-advertisement>(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.Byebye.advertisement.<get-advertisement>|<get-advertisement>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.Byebye.component1|component1(){}[0]
+        final fun copy(com.happycodelucky.ssdp/Advertisement = ...): com.happycodelucky.ssdp/Notification.Byebye // com.happycodelucky.ssdp/Notification.Byebye.copy|copy(com.happycodelucky.ssdp.Advertisement){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Notification.Byebye.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Notification.Byebye.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/Notification.Byebye.toString|toString(){}[0]
+    }
+
+    final class Update : com.happycodelucky.ssdp/Notification { // com.happycodelucky.ssdp/Notification.Update|null[0]
+        constructor <init>(com.happycodelucky.ssdp/Advertisement) // com.happycodelucky.ssdp/Notification.Update.<init>|<init>(com.happycodelucky.ssdp.Advertisement){}[0]
+
+        final val advertisement // com.happycodelucky.ssdp/Notification.Update.advertisement|{}advertisement[0]
+            final fun <get-advertisement>(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.Update.advertisement.<get-advertisement>|<get-advertisement>(){}[0]
+
+        final fun component1(): com.happycodelucky.ssdp/Advertisement // com.happycodelucky.ssdp/Notification.Update.component1|component1(){}[0]
+        final fun copy(com.happycodelucky.ssdp/Advertisement = ...): com.happycodelucky.ssdp/Notification.Update // com.happycodelucky.ssdp/Notification.Update.copy|copy(com.happycodelucky.ssdp.Advertisement){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Notification.Update.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Notification.Update.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/Notification.Update.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget|null[0]
+    abstract val rawValue // com.happycodelucky.ssdp/SearchTarget.rawValue|{}rawValue[0]
+        abstract fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+
+    final class DeviceType : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.DeviceType|null[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/Int) // com.happycodelucky.ssdp/SearchTarget.DeviceType.<init>|<init>(kotlin.String;kotlin.String;kotlin.Int){}[0]
+
+        final val deviceType // com.happycodelucky.ssdp/SearchTarget.DeviceType.deviceType|{}deviceType[0]
+            final fun <get-deviceType>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.DeviceType.deviceType.<get-deviceType>|<get-deviceType>(){}[0]
+        final val rawValue // com.happycodelucky.ssdp/SearchTarget.DeviceType.rawValue|{}rawValue[0]
+            final fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.DeviceType.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+        final val schema // com.happycodelucky.ssdp/SearchTarget.DeviceType.schema|{}schema[0]
+            final fun <get-schema>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.DeviceType.schema.<get-schema>|<get-schema>(){}[0]
+        final val version // com.happycodelucky.ssdp/SearchTarget.DeviceType.version|{}version[0]
+            final fun <get-version>(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.DeviceType.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.DeviceType.component1|component1(){}[0]
+        final fun component2(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.DeviceType.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.DeviceType.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/Int = ...): com.happycodelucky.ssdp/SearchTarget.DeviceType // com.happycodelucky.ssdp/SearchTarget.DeviceType.copy|copy(kotlin.String;kotlin.String;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SearchTarget.DeviceType.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.DeviceType.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.DeviceType.toString|toString(){}[0]
+    }
+
+    final class ServiceType : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.ServiceType|null[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/Int) // com.happycodelucky.ssdp/SearchTarget.ServiceType.<init>|<init>(kotlin.String;kotlin.String;kotlin.Int){}[0]
+
+        final val rawValue // com.happycodelucky.ssdp/SearchTarget.ServiceType.rawValue|{}rawValue[0]
+            final fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.ServiceType.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+        final val schema // com.happycodelucky.ssdp/SearchTarget.ServiceType.schema|{}schema[0]
+            final fun <get-schema>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.ServiceType.schema.<get-schema>|<get-schema>(){}[0]
+        final val serviceType // com.happycodelucky.ssdp/SearchTarget.ServiceType.serviceType|{}serviceType[0]
+            final fun <get-serviceType>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.ServiceType.serviceType.<get-serviceType>|<get-serviceType>(){}[0]
+        final val version // com.happycodelucky.ssdp/SearchTarget.ServiceType.version|{}version[0]
+            final fun <get-version>(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.ServiceType.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.ServiceType.component1|component1(){}[0]
+        final fun component2(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.ServiceType.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.ServiceType.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/Int = ...): com.happycodelucky.ssdp/SearchTarget.ServiceType // com.happycodelucky.ssdp/SearchTarget.ServiceType.copy|copy(kotlin.String;kotlin.String;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SearchTarget.ServiceType.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.ServiceType.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.ServiceType.toString|toString(){}[0]
+    }
+
+    final class Uuid : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.Uuid|null[0]
+        constructor <init>(kotlin/String) // com.happycodelucky.ssdp/SearchTarget.Uuid.<init>|<init>(kotlin.String){}[0]
+
+        final val id // com.happycodelucky.ssdp/SearchTarget.Uuid.id|{}id[0]
+            final fun <get-id>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Uuid.id.<get-id>|<get-id>(){}[0]
+        final val rawValue // com.happycodelucky.ssdp/SearchTarget.Uuid.rawValue|{}rawValue[0]
+            final fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Uuid.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+
+        final fun component1(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Uuid.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): com.happycodelucky.ssdp/SearchTarget.Uuid // com.happycodelucky.ssdp/SearchTarget.Uuid.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SearchTarget.Uuid.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.Uuid.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Uuid.toString|toString(){}[0]
+    }
+
+    final object All : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.All|null[0]
+        final val rawValue // com.happycodelucky.ssdp/SearchTarget.All.rawValue|{}rawValue[0]
+            final fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.All.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SearchTarget.All.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.All.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.All.toString|toString(){}[0]
+    }
+
+    final object Companion { // com.happycodelucky.ssdp/SearchTarget.Companion|null[0]
+        final const val UPNP_ORG_SCHEMA // com.happycodelucky.ssdp/SearchTarget.Companion.UPNP_ORG_SCHEMA|{}UPNP_ORG_SCHEMA[0]
+            final fun <get-UPNP_ORG_SCHEMA>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Companion.UPNP_ORG_SCHEMA.<get-UPNP_ORG_SCHEMA>|<get-UPNP_ORG_SCHEMA>(){}[0]
+
+        final fun parse(kotlin/String): com.happycodelucky.ssdp/SearchTarget? // com.happycodelucky.ssdp/SearchTarget.Companion.parse|parse(kotlin.String){}[0]
+    }
+
+    final object RootDevice : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.RootDevice|null[0]
+        final val rawValue // com.happycodelucky.ssdp/SearchTarget.RootDevice.rawValue|{}rawValue[0]
+            final fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.RootDevice.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SearchTarget.RootDevice.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.RootDevice.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.RootDevice.toString|toString(){}[0]
+    }
+}
+
+final class com.happycodelucky.ssdp/Advertisement { // com.happycodelucky.ssdp/Advertisement|null[0]
+    constructor <init>(com.happycodelucky.ssdp/SearchTarget, kotlin/String, kotlin/String?, kotlin/String?, kotlin.time/Duration?, kotlin/Int?, kotlin/Int?, kotlin/Int?, com.happycodelucky.ssdp/SsdpHeaders) // com.happycodelucky.ssdp/Advertisement.<init>|<init>(com.happycodelucky.ssdp.SearchTarget;kotlin.String;kotlin.String?;kotlin.String?;kotlin.time.Duration?;kotlin.Int?;kotlin.Int?;kotlin.Int?;com.happycodelucky.ssdp.SsdpHeaders){}[0]
+
+    final val bootId // com.happycodelucky.ssdp/Advertisement.bootId|{}bootId[0]
+        final fun <get-bootId>(): kotlin/Int? // com.happycodelucky.ssdp/Advertisement.bootId.<get-bootId>|<get-bootId>(){}[0]
+    final val cacheControl // com.happycodelucky.ssdp/Advertisement.cacheControl|{}cacheControl[0]
+        final fun <get-cacheControl>(): kotlin.time/Duration? // com.happycodelucky.ssdp/Advertisement.cacheControl.<get-cacheControl>|<get-cacheControl>(){}[0]
+    final val configId // com.happycodelucky.ssdp/Advertisement.configId|{}configId[0]
+        final fun <get-configId>(): kotlin/Int? // com.happycodelucky.ssdp/Advertisement.configId.<get-configId>|<get-configId>(){}[0]
+    final val location // com.happycodelucky.ssdp/Advertisement.location|{}location[0]
+        final fun <get-location>(): kotlin/String? // com.happycodelucky.ssdp/Advertisement.location.<get-location>|<get-location>(){}[0]
+    final val nextBootId // com.happycodelucky.ssdp/Advertisement.nextBootId|{}nextBootId[0]
+        final fun <get-nextBootId>(): kotlin/Int? // com.happycodelucky.ssdp/Advertisement.nextBootId.<get-nextBootId>|<get-nextBootId>(){}[0]
+    final val notificationTarget // com.happycodelucky.ssdp/Advertisement.notificationTarget|{}notificationTarget[0]
+        final fun <get-notificationTarget>(): com.happycodelucky.ssdp/SearchTarget // com.happycodelucky.ssdp/Advertisement.notificationTarget.<get-notificationTarget>|<get-notificationTarget>(){}[0]
+    final val otherHeaders // com.happycodelucky.ssdp/Advertisement.otherHeaders|{}otherHeaders[0]
+        final fun <get-otherHeaders>(): com.happycodelucky.ssdp/SsdpHeaders // com.happycodelucky.ssdp/Advertisement.otherHeaders.<get-otherHeaders>|<get-otherHeaders>(){}[0]
+    final val server // com.happycodelucky.ssdp/Advertisement.server|{}server[0]
+        final fun <get-server>(): kotlin/String? // com.happycodelucky.ssdp/Advertisement.server.<get-server>|<get-server>(){}[0]
+    final val usn // com.happycodelucky.ssdp/Advertisement.usn|{}usn[0]
+        final fun <get-usn>(): kotlin/String // com.happycodelucky.ssdp/Advertisement.usn.<get-usn>|<get-usn>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Advertisement.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Advertisement.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/Advertisement.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/Device { // com.happycodelucky.ssdp/Device|null[0]
+    constructor <init>(kotlin/String, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String, kotlin/String?, kotlin/String?, kotlin.collections/List<com.happycodelucky.ssdp/Icon> = ..., kotlin.collections/List<com.happycodelucky.ssdp/Service> = ..., kotlin.collections/List<com.happycodelucky.ssdp/Device> = ...) // com.happycodelucky.ssdp/Device.<init>|<init>(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String;kotlin.String?;kotlin.String?;kotlin.collections.List<com.happycodelucky.ssdp.Icon>;kotlin.collections.List<com.happycodelucky.ssdp.Service>;kotlin.collections.List<com.happycodelucky.ssdp.Device>){}[0]
+
+    final val deviceType // com.happycodelucky.ssdp/Device.deviceType|{}deviceType[0]
+        final fun <get-deviceType>(): kotlin/String // com.happycodelucky.ssdp/Device.deviceType.<get-deviceType>|<get-deviceType>(){}[0]
+    final val embeddedDevices // com.happycodelucky.ssdp/Device.embeddedDevices|{}embeddedDevices[0]
+        final fun <get-embeddedDevices>(): kotlin.collections/List<com.happycodelucky.ssdp/Device> // com.happycodelucky.ssdp/Device.embeddedDevices.<get-embeddedDevices>|<get-embeddedDevices>(){}[0]
+    final val friendlyName // com.happycodelucky.ssdp/Device.friendlyName|{}friendlyName[0]
+        final fun <get-friendlyName>(): kotlin/String? // com.happycodelucky.ssdp/Device.friendlyName.<get-friendlyName>|<get-friendlyName>(){}[0]
+    final val icons // com.happycodelucky.ssdp/Device.icons|{}icons[0]
+        final fun <get-icons>(): kotlin.collections/List<com.happycodelucky.ssdp/Icon> // com.happycodelucky.ssdp/Device.icons.<get-icons>|<get-icons>(){}[0]
+    final val manufacturer // com.happycodelucky.ssdp/Device.manufacturer|{}manufacturer[0]
+        final fun <get-manufacturer>(): kotlin/String? // com.happycodelucky.ssdp/Device.manufacturer.<get-manufacturer>|<get-manufacturer>(){}[0]
+    final val manufacturerUrl // com.happycodelucky.ssdp/Device.manufacturerUrl|{}manufacturerUrl[0]
+        final fun <get-manufacturerUrl>(): kotlin/String? // com.happycodelucky.ssdp/Device.manufacturerUrl.<get-manufacturerUrl>|<get-manufacturerUrl>(){}[0]
+    final val modelDescription // com.happycodelucky.ssdp/Device.modelDescription|{}modelDescription[0]
+        final fun <get-modelDescription>(): kotlin/String? // com.happycodelucky.ssdp/Device.modelDescription.<get-modelDescription>|<get-modelDescription>(){}[0]
+    final val modelName // com.happycodelucky.ssdp/Device.modelName|{}modelName[0]
+        final fun <get-modelName>(): kotlin/String? // com.happycodelucky.ssdp/Device.modelName.<get-modelName>|<get-modelName>(){}[0]
+    final val modelNumber // com.happycodelucky.ssdp/Device.modelNumber|{}modelNumber[0]
+        final fun <get-modelNumber>(): kotlin/String? // com.happycodelucky.ssdp/Device.modelNumber.<get-modelNumber>|<get-modelNumber>(){}[0]
+    final val modelUrl // com.happycodelucky.ssdp/Device.modelUrl|{}modelUrl[0]
+        final fun <get-modelUrl>(): kotlin/String? // com.happycodelucky.ssdp/Device.modelUrl.<get-modelUrl>|<get-modelUrl>(){}[0]
+    final val presentationUrl // com.happycodelucky.ssdp/Device.presentationUrl|{}presentationUrl[0]
+        final fun <get-presentationUrl>(): kotlin/String? // com.happycodelucky.ssdp/Device.presentationUrl.<get-presentationUrl>|<get-presentationUrl>(){}[0]
+    final val serialNumber // com.happycodelucky.ssdp/Device.serialNumber|{}serialNumber[0]
+        final fun <get-serialNumber>(): kotlin/String? // com.happycodelucky.ssdp/Device.serialNumber.<get-serialNumber>|<get-serialNumber>(){}[0]
+    final val services // com.happycodelucky.ssdp/Device.services|{}services[0]
+        final fun <get-services>(): kotlin.collections/List<com.happycodelucky.ssdp/Service> // com.happycodelucky.ssdp/Device.services.<get-services>|<get-services>(){}[0]
+    final val udn // com.happycodelucky.ssdp/Device.udn|{}udn[0]
+        final fun <get-udn>(): kotlin/String // com.happycodelucky.ssdp/Device.udn.<get-udn>|<get-udn>(){}[0]
+    final val upc // com.happycodelucky.ssdp/Device.upc|{}upc[0]
+        final fun <get-upc>(): kotlin/String? // com.happycodelucky.ssdp/Device.upc.<get-upc>|<get-upc>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Device.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Device.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/Device.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/DeviceDescription { // com.happycodelucky.ssdp/DeviceDescription|null[0]
+    constructor <init>(com.happycodelucky.ssdp/SpecVersion, kotlin/String?, com.happycodelucky.ssdp/Device, kotlin/String) // com.happycodelucky.ssdp/DeviceDescription.<init>|<init>(com.happycodelucky.ssdp.SpecVersion;kotlin.String?;com.happycodelucky.ssdp.Device;kotlin.String){}[0]
+
+    final val device // com.happycodelucky.ssdp/DeviceDescription.device|{}device[0]
+        final fun <get-device>(): com.happycodelucky.ssdp/Device // com.happycodelucky.ssdp/DeviceDescription.device.<get-device>|<get-device>(){}[0]
+    final val sourceUrl // com.happycodelucky.ssdp/DeviceDescription.sourceUrl|{}sourceUrl[0]
+        final fun <get-sourceUrl>(): kotlin/String // com.happycodelucky.ssdp/DeviceDescription.sourceUrl.<get-sourceUrl>|<get-sourceUrl>(){}[0]
+    final val specVersion // com.happycodelucky.ssdp/DeviceDescription.specVersion|{}specVersion[0]
+        final fun <get-specVersion>(): com.happycodelucky.ssdp/SpecVersion // com.happycodelucky.ssdp/DeviceDescription.specVersion.<get-specVersion>|<get-specVersion>(){}[0]
+    final val urlBase // com.happycodelucky.ssdp/DeviceDescription.urlBase|{}urlBase[0]
+        final fun <get-urlBase>(): kotlin/String? // com.happycodelucky.ssdp/DeviceDescription.urlBase.<get-urlBase>|<get-urlBase>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DeviceDescription.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DeviceDescription.hashCode|hashCode(){}[0]
+    final fun resolveUrl(kotlin/String): kotlin/String // com.happycodelucky.ssdp/DeviceDescription.resolveUrl|resolveUrl(kotlin.String){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/DeviceDescription.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/DiscoveredDevice { // com.happycodelucky.ssdp/DiscoveredDevice|null[0]
+    constructor <init>(kotlin/String, com.happycodelucky.ssdp/SearchTarget, kotlin/String?, kotlin/String?, kotlin.time/Duration?, kotlin/Int?, kotlin/Int?, kotlin.time/Instant, kotlin.time/Instant, kotlin.time/Instant?, com.happycodelucky.ssdp/SsdpHeaders) // com.happycodelucky.ssdp/DiscoveredDevice.<init>|<init>(kotlin.String;com.happycodelucky.ssdp.SearchTarget;kotlin.String?;kotlin.String?;kotlin.time.Duration?;kotlin.Int?;kotlin.Int?;kotlin.time.Instant;kotlin.time.Instant;kotlin.time.Instant?;com.happycodelucky.ssdp.SsdpHeaders){}[0]
+
+    final val bootId // com.happycodelucky.ssdp/DiscoveredDevice.bootId|{}bootId[0]
+        final fun <get-bootId>(): kotlin/Int? // com.happycodelucky.ssdp/DiscoveredDevice.bootId.<get-bootId>|<get-bootId>(){}[0]
+    final val cacheControl // com.happycodelucky.ssdp/DiscoveredDevice.cacheControl|{}cacheControl[0]
+        final fun <get-cacheControl>(): kotlin.time/Duration? // com.happycodelucky.ssdp/DiscoveredDevice.cacheControl.<get-cacheControl>|<get-cacheControl>(){}[0]
+    final val configId // com.happycodelucky.ssdp/DiscoveredDevice.configId|{}configId[0]
+        final fun <get-configId>(): kotlin/Int? // com.happycodelucky.ssdp/DiscoveredDevice.configId.<get-configId>|<get-configId>(){}[0]
+    final val expiresAt // com.happycodelucky.ssdp/DiscoveredDevice.expiresAt|{}expiresAt[0]
+        final fun <get-expiresAt>(): kotlin.time/Instant? // com.happycodelucky.ssdp/DiscoveredDevice.expiresAt.<get-expiresAt>|<get-expiresAt>(){}[0]
+    final val firstSeen // com.happycodelucky.ssdp/DiscoveredDevice.firstSeen|{}firstSeen[0]
+        final fun <get-firstSeen>(): kotlin.time/Instant // com.happycodelucky.ssdp/DiscoveredDevice.firstSeen.<get-firstSeen>|<get-firstSeen>(){}[0]
+    final val lastSeen // com.happycodelucky.ssdp/DiscoveredDevice.lastSeen|{}lastSeen[0]
+        final fun <get-lastSeen>(): kotlin.time/Instant // com.happycodelucky.ssdp/DiscoveredDevice.lastSeen.<get-lastSeen>|<get-lastSeen>(){}[0]
+    final val location // com.happycodelucky.ssdp/DiscoveredDevice.location|{}location[0]
+        final fun <get-location>(): kotlin/String? // com.happycodelucky.ssdp/DiscoveredDevice.location.<get-location>|<get-location>(){}[0]
+    final val otherHeaders // com.happycodelucky.ssdp/DiscoveredDevice.otherHeaders|{}otherHeaders[0]
+        final fun <get-otherHeaders>(): com.happycodelucky.ssdp/SsdpHeaders // com.happycodelucky.ssdp/DiscoveredDevice.otherHeaders.<get-otherHeaders>|<get-otherHeaders>(){}[0]
+    final val server // com.happycodelucky.ssdp/DiscoveredDevice.server|{}server[0]
+        final fun <get-server>(): kotlin/String? // com.happycodelucky.ssdp/DiscoveredDevice.server.<get-server>|<get-server>(){}[0]
+    final val target // com.happycodelucky.ssdp/DiscoveredDevice.target|{}target[0]
+        final fun <get-target>(): com.happycodelucky.ssdp/SearchTarget // com.happycodelucky.ssdp/DiscoveredDevice.target.<get-target>|<get-target>(){}[0]
+    final val usn // com.happycodelucky.ssdp/DiscoveredDevice.usn|{}usn[0]
+        final fun <get-usn>(): kotlin/String // com.happycodelucky.ssdp/DiscoveredDevice.usn.<get-usn>|<get-usn>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DiscoveredDevice.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DiscoveredDevice.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/DiscoveredDevice.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/Icon { // com.happycodelucky.ssdp/Icon|null[0]
+    constructor <init>(kotlin/String?, kotlin/Int?, kotlin/Int?, kotlin/Int?, kotlin/String?) // com.happycodelucky.ssdp/Icon.<init>|<init>(kotlin.String?;kotlin.Int?;kotlin.Int?;kotlin.Int?;kotlin.String?){}[0]
+
+    final val depth // com.happycodelucky.ssdp/Icon.depth|{}depth[0]
+        final fun <get-depth>(): kotlin/Int? // com.happycodelucky.ssdp/Icon.depth.<get-depth>|<get-depth>(){}[0]
+    final val height // com.happycodelucky.ssdp/Icon.height|{}height[0]
+        final fun <get-height>(): kotlin/Int? // com.happycodelucky.ssdp/Icon.height.<get-height>|<get-height>(){}[0]
+    final val mimeType // com.happycodelucky.ssdp/Icon.mimeType|{}mimeType[0]
+        final fun <get-mimeType>(): kotlin/String? // com.happycodelucky.ssdp/Icon.mimeType.<get-mimeType>|<get-mimeType>(){}[0]
+    final val url // com.happycodelucky.ssdp/Icon.url|{}url[0]
+        final fun <get-url>(): kotlin/String? // com.happycodelucky.ssdp/Icon.url.<get-url>|<get-url>(){}[0]
+    final val width // com.happycodelucky.ssdp/Icon.width|{}width[0]
+        final fun <get-width>(): kotlin/Int? // com.happycodelucky.ssdp/Icon.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Icon.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Icon.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/Icon.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/MSearchResponse { // com.happycodelucky.ssdp/MSearchResponse|null[0]
+    constructor <init>(kotlin.time/Duration?, kotlin/String?, kotlin/Boolean, kotlin/String, kotlin/String?, com.happycodelucky.ssdp/SearchTarget, kotlin/String, com.happycodelucky.ssdp/SsdpHeaders) // com.happycodelucky.ssdp/MSearchResponse.<init>|<init>(kotlin.time.Duration?;kotlin.String?;kotlin.Boolean;kotlin.String;kotlin.String?;com.happycodelucky.ssdp.SearchTarget;kotlin.String;com.happycodelucky.ssdp.SsdpHeaders){}[0]
+
+    final val cacheControl // com.happycodelucky.ssdp/MSearchResponse.cacheControl|{}cacheControl[0]
+        final fun <get-cacheControl>(): kotlin.time/Duration? // com.happycodelucky.ssdp/MSearchResponse.cacheControl.<get-cacheControl>|<get-cacheControl>(){}[0]
+    final val date // com.happycodelucky.ssdp/MSearchResponse.date|{}date[0]
+        final fun <get-date>(): kotlin/String? // com.happycodelucky.ssdp/MSearchResponse.date.<get-date>|<get-date>(){}[0]
+    final val ext // com.happycodelucky.ssdp/MSearchResponse.ext|{}ext[0]
+        final fun <get-ext>(): kotlin/Boolean // com.happycodelucky.ssdp/MSearchResponse.ext.<get-ext>|<get-ext>(){}[0]
+    final val location // com.happycodelucky.ssdp/MSearchResponse.location|{}location[0]
+        final fun <get-location>(): kotlin/String // com.happycodelucky.ssdp/MSearchResponse.location.<get-location>|<get-location>(){}[0]
+    final val otherHeaders // com.happycodelucky.ssdp/MSearchResponse.otherHeaders|{}otherHeaders[0]
+        final fun <get-otherHeaders>(): com.happycodelucky.ssdp/SsdpHeaders // com.happycodelucky.ssdp/MSearchResponse.otherHeaders.<get-otherHeaders>|<get-otherHeaders>(){}[0]
+    final val searchTarget // com.happycodelucky.ssdp/MSearchResponse.searchTarget|{}searchTarget[0]
+        final fun <get-searchTarget>(): com.happycodelucky.ssdp/SearchTarget // com.happycodelucky.ssdp/MSearchResponse.searchTarget.<get-searchTarget>|<get-searchTarget>(){}[0]
+    final val server // com.happycodelucky.ssdp/MSearchResponse.server|{}server[0]
+        final fun <get-server>(): kotlin/String? // com.happycodelucky.ssdp/MSearchResponse.server.<get-server>|<get-server>(){}[0]
+    final val usn // com.happycodelucky.ssdp/MSearchResponse.usn|{}usn[0]
+        final fun <get-usn>(): kotlin/String // com.happycodelucky.ssdp/MSearchResponse.usn.<get-usn>|<get-usn>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/MSearchResponse.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/MSearchResponse.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/MSearchResponse.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/Service { // com.happycodelucky.ssdp/Service|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String?, kotlin/String?, kotlin/String?) // com.happycodelucky.ssdp/Service.<init>|<init>(kotlin.String;kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?){}[0]
+
+    final val controlUrl // com.happycodelucky.ssdp/Service.controlUrl|{}controlUrl[0]
+        final fun <get-controlUrl>(): kotlin/String? // com.happycodelucky.ssdp/Service.controlUrl.<get-controlUrl>|<get-controlUrl>(){}[0]
+    final val eventSubUrl // com.happycodelucky.ssdp/Service.eventSubUrl|{}eventSubUrl[0]
+        final fun <get-eventSubUrl>(): kotlin/String? // com.happycodelucky.ssdp/Service.eventSubUrl.<get-eventSubUrl>|<get-eventSubUrl>(){}[0]
+    final val scpdUrl // com.happycodelucky.ssdp/Service.scpdUrl|{}scpdUrl[0]
+        final fun <get-scpdUrl>(): kotlin/String? // com.happycodelucky.ssdp/Service.scpdUrl.<get-scpdUrl>|<get-scpdUrl>(){}[0]
+    final val serviceId // com.happycodelucky.ssdp/Service.serviceId|{}serviceId[0]
+        final fun <get-serviceId>(): kotlin/String // com.happycodelucky.ssdp/Service.serviceId.<get-serviceId>|<get-serviceId>(){}[0]
+    final val serviceType // com.happycodelucky.ssdp/Service.serviceType|{}serviceType[0]
+        final fun <get-serviceType>(): kotlin/String // com.happycodelucky.ssdp/Service.serviceType.<get-serviceType>|<get-serviceType>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/Service.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/Service.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/Service.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/SpecVersion { // com.happycodelucky.ssdp/SpecVersion|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int) // com.happycodelucky.ssdp/SpecVersion.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    final val major // com.happycodelucky.ssdp/SpecVersion.major|{}major[0]
+        final fun <get-major>(): kotlin/Int // com.happycodelucky.ssdp/SpecVersion.major.<get-major>|<get-major>(){}[0]
+    final val minor // com.happycodelucky.ssdp/SpecVersion.minor|{}minor[0]
+        final fun <get-minor>(): kotlin/Int // com.happycodelucky.ssdp/SpecVersion.minor.<get-minor>|<get-minor>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SpecVersion.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SpecVersion.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/SpecVersion.toString|toString(){}[0]
+}
+
+final class com.happycodelucky.ssdp/SsdpHeaders { // com.happycodelucky.ssdp/SsdpHeaders|null[0]
+    final val asMap // com.happycodelucky.ssdp/SsdpHeaders.asMap|{}asMap[0]
+        final fun <get-asMap>(): kotlin.collections/Map<kotlin/String, kotlin/String> // com.happycodelucky.ssdp/SsdpHeaders.asMap.<get-asMap>|<get-asMap>(){}[0]
+    final val isEmpty // com.happycodelucky.ssdp/SsdpHeaders.isEmpty|{}isEmpty[0]
+        final fun <get-isEmpty>(): kotlin/Boolean // com.happycodelucky.ssdp/SsdpHeaders.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val size // com.happycodelucky.ssdp/SsdpHeaders.size|{}size[0]
+        final fun <get-size>(): kotlin/Int // com.happycodelucky.ssdp/SsdpHeaders.size.<get-size>|<get-size>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SsdpHeaders.equals|equals(kotlin.Any?){}[0]
+    final fun get(kotlin/String): kotlin/String? // com.happycodelucky.ssdp/SsdpHeaders.get|get(kotlin.String){}[0]
+    final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SsdpHeaders.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.happycodelucky.ssdp/SsdpHeaders.toString|toString(){}[0]
+
+    final object Companion { // com.happycodelucky.ssdp/SsdpHeaders.Companion|null[0]
+        final val EMPTY // com.happycodelucky.ssdp/SsdpHeaders.Companion.EMPTY|{}EMPTY[0]
+            final fun <get-EMPTY>(): com.happycodelucky.ssdp/SsdpHeaders // com.happycodelucky.ssdp/SsdpHeaders.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
+
+        final fun of(kotlin.collections/Map<kotlin/String, kotlin/String>): com.happycodelucky.ssdp/SsdpHeaders // com.happycodelucky.ssdp/SsdpHeaders.Companion.of|of(kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    }
+}
+
+sealed class com.happycodelucky.ssdp/SsdpError : kotlin/Exception { // com.happycodelucky.ssdp/SsdpError|null[0]
+    final class InvalidResponse : com.happycodelucky.ssdp/SsdpError { // com.happycodelucky.ssdp/SsdpError.InvalidResponse|null[0]
+        constructor <init>(kotlin/String) // com.happycodelucky.ssdp/SsdpError.InvalidResponse.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // com.happycodelucky.ssdp/SsdpError.InvalidResponse.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // com.happycodelucky.ssdp/SsdpError.InvalidResponse.reason.<get-reason>|<get-reason>(){}[0]
+    }
+
+    final class MulticastEntitlementMissing : com.happycodelucky.ssdp/SsdpError { // com.happycodelucky.ssdp/SsdpError.MulticastEntitlementMissing|null[0]
+        constructor <init>() // com.happycodelucky.ssdp/SsdpError.MulticastEntitlementMissing.<init>|<init>(){}[0]
+    }
+
+    final class MulticastJoinFailed : com.happycodelucky.ssdp/SsdpError { // com.happycodelucky.ssdp/SsdpError.MulticastJoinFailed|null[0]
+        constructor <init>(kotlin/String, kotlin/Throwable? = ...) // com.happycodelucky.ssdp/SsdpError.MulticastJoinFailed.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+
+        final val details // com.happycodelucky.ssdp/SsdpError.MulticastJoinFailed.details|{}details[0]
+            final fun <get-details>(): kotlin/String // com.happycodelucky.ssdp/SsdpError.MulticastJoinFailed.details.<get-details>|<get-details>(){}[0]
+    }
+
+    final class TransportFailed : com.happycodelucky.ssdp/SsdpError { // com.happycodelucky.ssdp/SsdpError.TransportFailed|null[0]
+        constructor <init>(kotlin/String, kotlin/Throwable? = ...) // com.happycodelucky.ssdp/SsdpError.TransportFailed.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+
+        final val details // com.happycodelucky.ssdp/SsdpError.TransportFailed.details|{}details[0]
+            final fun <get-details>(): kotlin/String // com.happycodelucky.ssdp/SsdpError.TransportFailed.details.<get-details>|<get-details>(){}[0]
+    }
+}
+
+final object com.happycodelucky.ssdp/Ssdp { // com.happycodelucky.ssdp/Ssdp|null[0]
+    final fun createClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/Ssdp.createClient|createClient(kotlin.String?){}[0]
+}
+
+final fun com.happycodelucky.ssdp/SsdpClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/SsdpClient|SsdpClient(kotlin.String?){}[0]

@@ -27,6 +27,7 @@ import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 plugins {
@@ -127,6 +128,38 @@ kotlin {
                     jvmTarget.set(JvmTarget.JVM_21)
                 }
             }
+        }
+    }
+
+    // --- Public-API / ABI validation (CLAUDE.md §8) -------------------------
+    // The Kotlin Gradle plugin's built-in ABI validation tracks the public API
+    // surface across ALL targets (JVM + KLib/native) in one checked-in dump
+    // under <module>/api/. `checkKotlinAbi` (wired into `check`, so it runs in
+    // CI and `mise run check`) fails if the public surface changes without an
+    // explicit `mise run api:dump` — so breaking changes to these published
+    // libraries are always deliberate and reviewed.
+    //
+    // When the host can't compile every target (e.g. a Linux box can't build the
+    // Apple slices), the plugin infers their ABI from the prior dump instead of
+    // failing — so the checked-in dump stays complete. The Apple-target ABI is
+    // verified on the macOS leg of CI, which can build those slices.
+    //
+    // Scoped to `:ssdp` only — NOT `:ssdp-testing`. The testing module is test
+    // infrastructure (FakeSsdpClient + withFakeSsdpClient); its surface is
+    // expected to churn alongside the tests that use it, and locking it behind a
+    // committed dump would add ceremony (api:dump on every test-helper tweak)
+    // without the consumer-stability payoff that justifies ABI tracking for the
+    // real library. `:ssdp-testing` re-exports `:ssdp`'s already-locked API, so
+    // the surface consumers actually depend on is still covered.
+    // Kotlin 2.4.0 changed the enable model: calling `abiValidation { }` IS the
+    // enable (the old `enabled` property is deprecated). To keep `:ssdp-testing`
+    // OUT of ABI validation we simply DON'T invoke the block for it — the shared
+    // convention plugin conditions on the module name.
+    if (name != "ssdp-testing") {
+        @OptIn(ExperimentalAbiValidation::class)
+        abiValidation {
+            // Defaults are fine: tracks the public API across all targets into
+            // <module>/api/. `checkKotlinAbi` joins `check`.
         }
     }
 }

@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref — a new push to a PR makes the previous
+# run's result irrelevant, so don't burn runner minutes finishing it. `main`
+# pushes use a per-SHA group so release-adjacent runs aren't cancelled.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # --- Fast leg: everything that doesn't need a Mac ---------------------------
+  # commonTest runs on the JVM without a simulator/Xcode, so the bulk of the
+  # suite — lint, detekt, JVM + Android tests, and dependency hygiene — runs
+  # here on cheap Ubuntu in ~2–3 min and fails fast.
+  fast:
+    name: Lint + JVM/Android tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      # mise pins the JDK, Gradle bootstrap binary, gh, and python (see
+      # /mise.toml). One install gives CI and local dev the same toolchain.
+      - name: Set up mise toolchain
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+
+      # Pinned at v5: v6 moved caching to a commercially-licensed component. v5
+      # keeps the freely-licensed caching and runs on Node 24. cache-read-only on
+      # fork PRs (which run without secrets and can't safely populate the shared
+      # cache) prevents cache poisoning.
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+
+      # Lint + detekt + JVM/Android tests. No Apple targets here — those need a
+      # Mac and run in the `apple` job.
+      #
+      # `mise run dependencies:analyze` (buildHealth) is intentionally OMITTED:
+      # dependency-analysis 3.16.0 can't read Kotlin 2.4.0's bytecode metadata, so
+      # analysis is gated off in build.gradle.kts (see the `enableDependencyAnalysis`
+      # gate + DAGP issue #1724). With the gate off it's a no-op; running it here
+      # would only imply a hygiene check that isn't happening. Re-add the line
+      # below (and flip the build.gradle.kts gate on) once DAGP supports 2.4.0.
+      - name: Lint, JVM + Android tests
+        run: |
+          mise run lint
+          mise run test:jvm
+          mise run test:android
+          # mise run dependencies:analyze   # re-enable with the DAGP gate (issue #1724)
+
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fast-reports
+          path: |
+            ssdp/build/reports/
+            ssdp-testing/build/reports/
+            build/reports/dependency-analysis/
+          if-no-files-found: ignore
+
+  # --- Apple leg: the expensive Mac-only verification ------------------------
+  # Keep the costly macOS runner focused: the full `check` (which adds the Apple
+  # test targets + the cross-target ABI check) and the release XCFramework link.
+  apple:
+    name: Apple build + full check
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up mise toolchain
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+
+      # Read major.minor from the in-tree fallback literal in build.gradle.kts
+      # (the `getOrElse("X.Y.0-SNAPSHOT")` argument) and stamp the patch with the
+      # CI run number. Humans bump major/minor in build.gradle.kts; CI never
+      # writes back.
+      - name: Compute version
+        id: version
+        run: |
+          MAJOR_MINOR=$(grep -oE 'getOrElse\("[0-9]+\.[0-9]+' build.gradle.kts | head -1 | cut -d'"' -f2)
+          if [[ -z "$MAJOR_MINOR" ]]; then
+            echo "Could not parse major.minor from build.gradle.kts" >&2
+            exit 1
+          fi
+          VERSION="${MAJOR_MINOR}.0-ci.${GITHUB_RUN_NUMBER}"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Computed CI version: $VERSION"
+
+      # `mise run check` runs ktlint + detekt + the public-API/ABI check + every
+      # unit-test target (iosSimulatorArm64Test, macosArm64Test,
+      # testAndroidHostTest, jvmTest). `mise run build:xcframework` builds the
+      # KMMBridge-consumable artifact. The CI version stamp is passed through via
+      # ORG_GRADLE_PROJECT_version — the env-var form of `-Pversion=…`.
+      - name: Full check + assemble XCFramework
+        env:
+          ORG_GRADLE_PROJECT_version: ${{ steps.version.outputs.VERSION }}
+        run: |
+          mise run check
+          mise run build:xcframework
+
+      - name: Upload XCFramework
+        uses: actions/upload-artifact@v7
+        with:
+          name: ssdp-kmp-${{ steps.version.outputs.VERSION }}.xcframework
+          path: ssdp/build/XCFrameworks/release/Ssdp.xcframework
+          if-no-files-found: error
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-${{ steps.version.outputs.VERSION }}
+          path: |
+            ssdp/build/reports/tests/
+            ssdp/build/reports/ktlint/
+          if-no-files-found: ignore

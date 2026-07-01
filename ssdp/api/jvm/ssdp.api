@@ -1,0 +1,407 @@
+public final class com/happycodelucky/ssdp/Advertisement {
+	public synthetic fun <init> (Lcom/happycodelucky/ssdp/SearchTarget;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;Lcom/happycodelucky/ssdp/SsdpHeaders;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBootId ()Ljava/lang/Integer;
+	public final fun getCacheControl-FghU774 ()Lkotlin/time/Duration;
+	public final fun getConfigId ()Ljava/lang/Integer;
+	public final fun getLocation ()Ljava/lang/String;
+	public final fun getNextBootId ()Ljava/lang/Integer;
+	public final fun getNotificationTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+	public final fun getOtherHeaders ()Lcom/happycodelucky/ssdp/SsdpHeaders;
+	public final fun getServer ()Ljava/lang/String;
+	public final fun getUsn ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/happycodelucky/ssdp/DescriptionResult {
+}
+
+public final class com/happycodelucky/ssdp/DescriptionResult$FetchFailed : com/happycodelucky/ssdp/DescriptionResult {
+	public fun <init> (Ljava/lang/Integer;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/Integer;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/Integer;Ljava/lang/String;)Lcom/happycodelucky/ssdp/DescriptionResult$FetchFailed;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/DescriptionResult$FetchFailed;Ljava/lang/Integer;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/DescriptionResult$FetchFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun getStatusCode ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DescriptionResult$NotFound : com/happycodelucky/ssdp/DescriptionResult {
+	public static final field INSTANCE Lcom/happycodelucky/ssdp/DescriptionResult$NotFound;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DescriptionResult$ParseFailed : com/happycodelucky/ssdp/DescriptionResult {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/happycodelucky/ssdp/DescriptionResult$ParseFailed;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/DescriptionResult$ParseFailed;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/DescriptionResult$ParseFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DescriptionResult$Success : com/happycodelucky/ssdp/DescriptionResult {
+	public fun <init> (Lcom/happycodelucky/ssdp/DeviceDescription;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/DeviceDescription;
+	public final fun copy (Lcom/happycodelucky/ssdp/DeviceDescription;)Lcom/happycodelucky/ssdp/DescriptionResult$Success;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/DescriptionResult$Success;Lcom/happycodelucky/ssdp/DeviceDescription;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/DescriptionResult$Success;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDescription ()Lcom/happycodelucky/ssdp/DeviceDescription;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/Device {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDeviceType ()Ljava/lang/String;
+	public final fun getEmbeddedDevices ()Ljava/util/List;
+	public final fun getFriendlyName ()Ljava/lang/String;
+	public final fun getIcons ()Ljava/util/List;
+	public final fun getManufacturer ()Ljava/lang/String;
+	public final fun getManufacturerUrl ()Ljava/lang/String;
+	public final fun getModelDescription ()Ljava/lang/String;
+	public final fun getModelName ()Ljava/lang/String;
+	public final fun getModelNumber ()Ljava/lang/String;
+	public final fun getModelUrl ()Ljava/lang/String;
+	public final fun getPresentationUrl ()Ljava/lang/String;
+	public final fun getSerialNumber ()Ljava/lang/String;
+	public final fun getServices ()Ljava/util/List;
+	public final fun getUdn ()Ljava/lang/String;
+	public final fun getUpc ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/happycodelucky/ssdp/DeviceChange {
+	public abstract fun getDevice ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+}
+
+public final class com/happycodelucky/ssdp/DeviceChange$Found : com/happycodelucky/ssdp/DeviceChange {
+	public fun <init> (Lcom/happycodelucky/ssdp/DiscoveredDevice;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+	public final fun copy (Lcom/happycodelucky/ssdp/DiscoveredDevice;)Lcom/happycodelucky/ssdp/DeviceChange$Found;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/DeviceChange$Found;Lcom/happycodelucky/ssdp/DiscoveredDevice;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/DeviceChange$Found;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDevice ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DeviceChange$Removed : com/happycodelucky/ssdp/DeviceChange {
+	public fun <init> (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+	public final fun component2 ()Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public final fun copy (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;)Lcom/happycodelucky/ssdp/DeviceChange$Removed;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/DeviceChange$Removed;Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/DeviceChange$Removed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDevice ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+	public final fun getReason ()Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DeviceChange$Removed$Reason : java/lang/Enum {
+	public static final field Byebye Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public static final field Cleared Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public static final field Expired Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public static final field NetworkChanged Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+	public static fun values ()[Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;
+}
+
+public final class com/happycodelucky/ssdp/DeviceChange$Updated : com/happycodelucky/ssdp/DeviceChange {
+	public fun <init> (Lcom/happycodelucky/ssdp/DiscoveredDevice;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+	public final fun copy (Lcom/happycodelucky/ssdp/DiscoveredDevice;)Lcom/happycodelucky/ssdp/DeviceChange$Updated;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/DeviceChange$Updated;Lcom/happycodelucky/ssdp/DiscoveredDevice;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/DeviceChange$Updated;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDevice ()Lcom/happycodelucky/ssdp/DiscoveredDevice;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DeviceDescription {
+	public fun <init> (Lcom/happycodelucky/ssdp/SpecVersion;Ljava/lang/String;Lcom/happycodelucky/ssdp/Device;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDevice ()Lcom/happycodelucky/ssdp/Device;
+	public final fun getSourceUrl ()Ljava/lang/String;
+	public final fun getSpecVersion ()Lcom/happycodelucky/ssdp/SpecVersion;
+	public final fun getUrlBase ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun resolveUrl (Ljava/lang/String;)Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DiscoveredDevice {
+	public synthetic fun <init> (Ljava/lang/String;Lcom/happycodelucky/ssdp/SearchTarget;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/Integer;Ljava/lang/Integer;Lkotlin/time/Instant;Lkotlin/time/Instant;Lkotlin/time/Instant;Lcom/happycodelucky/ssdp/SsdpHeaders;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBootId ()Ljava/lang/Integer;
+	public final fun getCacheControl-FghU774 ()Lkotlin/time/Duration;
+	public final fun getConfigId ()Ljava/lang/Integer;
+	public final fun getExpiresAt ()Lkotlin/time/Instant;
+	public final fun getFirstSeen ()Lkotlin/time/Instant;
+	public final fun getLastSeen ()Lkotlin/time/Instant;
+	public final fun getLocation ()Ljava/lang/String;
+	public final fun getOtherHeaders ()Lcom/happycodelucky/ssdp/SsdpHeaders;
+	public final fun getServer ()Ljava/lang/String;
+	public final fun getTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+	public final fun getUsn ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/Icon {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDepth ()Ljava/lang/Integer;
+	public final fun getHeight ()Ljava/lang/Integer;
+	public final fun getMimeType ()Ljava/lang/String;
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun getWidth ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/MSearchResponse {
+	public synthetic fun <init> (Lkotlin/time/Duration;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Lcom/happycodelucky/ssdp/SearchTarget;Ljava/lang/String;Lcom/happycodelucky/ssdp/SsdpHeaders;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCacheControl-FghU774 ()Lkotlin/time/Duration;
+	public final fun getDate ()Ljava/lang/String;
+	public final fun getExt ()Z
+	public final fun getLocation ()Ljava/lang/String;
+	public final fun getOtherHeaders ()Lcom/happycodelucky/ssdp/SsdpHeaders;
+	public final fun getSearchTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+	public final fun getServer ()Ljava/lang/String;
+	public final fun getUsn ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/happycodelucky/ssdp/Notification {
+	public abstract fun getAdvertisement ()Lcom/happycodelucky/ssdp/Advertisement;
+	public fun getNotificationTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+}
+
+public final class com/happycodelucky/ssdp/Notification$Alive : com/happycodelucky/ssdp/Notification {
+	public fun <init> (Lcom/happycodelucky/ssdp/Advertisement;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/Advertisement;
+	public final fun copy (Lcom/happycodelucky/ssdp/Advertisement;)Lcom/happycodelucky/ssdp/Notification$Alive;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/Notification$Alive;Lcom/happycodelucky/ssdp/Advertisement;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/Notification$Alive;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAdvertisement ()Lcom/happycodelucky/ssdp/Advertisement;
+	public fun getNotificationTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/Notification$Byebye : com/happycodelucky/ssdp/Notification {
+	public fun <init> (Lcom/happycodelucky/ssdp/Advertisement;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/Advertisement;
+	public final fun copy (Lcom/happycodelucky/ssdp/Advertisement;)Lcom/happycodelucky/ssdp/Notification$Byebye;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/Notification$Byebye;Lcom/happycodelucky/ssdp/Advertisement;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/Notification$Byebye;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAdvertisement ()Lcom/happycodelucky/ssdp/Advertisement;
+	public fun getNotificationTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/Notification$DefaultImpls {
+	public static fun getNotificationTarget (Lcom/happycodelucky/ssdp/Notification;)Lcom/happycodelucky/ssdp/SearchTarget;
+}
+
+public final class com/happycodelucky/ssdp/Notification$Update : com/happycodelucky/ssdp/Notification {
+	public fun <init> (Lcom/happycodelucky/ssdp/Advertisement;)V
+	public final fun component1 ()Lcom/happycodelucky/ssdp/Advertisement;
+	public final fun copy (Lcom/happycodelucky/ssdp/Advertisement;)Lcom/happycodelucky/ssdp/Notification$Update;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/Notification$Update;Lcom/happycodelucky/ssdp/Advertisement;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/Notification$Update;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAdvertisement ()Lcom/happycodelucky/ssdp/Advertisement;
+	public fun getNotificationTarget ()Lcom/happycodelucky/ssdp/SearchTarget;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/happycodelucky/ssdp/SearchTarget {
+	public static final field Companion Lcom/happycodelucky/ssdp/SearchTarget$Companion;
+	public static final field UPNP_ORG_SCHEMA Ljava/lang/String;
+	public abstract fun getRawValue ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$All : com/happycodelucky/ssdp/SearchTarget {
+	public static final field INSTANCE Lcom/happycodelucky/ssdp/SearchTarget$All;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getRawValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$Companion {
+	public static final field UPNP_ORG_SCHEMA Ljava/lang/String;
+	public final fun parse (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SearchTarget;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$DeviceType : com/happycodelucky/ssdp/SearchTarget {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;I)Lcom/happycodelucky/ssdp/SearchTarget$DeviceType;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/SearchTarget$DeviceType;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/happycodelucky/ssdp/SearchTarget$DeviceType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDeviceType ()Ljava/lang/String;
+	public fun getRawValue ()Ljava/lang/String;
+	public final fun getSchema ()Ljava/lang/String;
+	public final fun getVersion ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$RootDevice : com/happycodelucky/ssdp/SearchTarget {
+	public static final field INSTANCE Lcom/happycodelucky/ssdp/SearchTarget$RootDevice;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getRawValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$ServiceType : com/happycodelucky/ssdp/SearchTarget {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;I)Lcom/happycodelucky/ssdp/SearchTarget$ServiceType;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/SearchTarget$ServiceType;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/happycodelucky/ssdp/SearchTarget$ServiceType;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getRawValue ()Ljava/lang/String;
+	public final fun getSchema ()Ljava/lang/String;
+	public final fun getServiceType ()Ljava/lang/String;
+	public final fun getVersion ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$Uuid : com/happycodelucky/ssdp/SearchTarget {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SearchTarget$Uuid;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/SearchTarget$Uuid;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SearchTarget$Uuid;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId ()Ljava/lang/String;
+	public fun getRawValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/Service {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getControlUrl ()Ljava/lang/String;
+	public final fun getEventSubUrl ()Ljava/lang/String;
+	public final fun getScpdUrl ()Ljava/lang/String;
+	public final fun getServiceId ()Ljava/lang/String;
+	public final fun getServiceType ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SpecVersion {
+	public fun <init> (II)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMajor ()I
+	public final fun getMinor ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/Ssdp {
+	public static final field INSTANCE Lcom/happycodelucky/ssdp/Ssdp;
+	public final fun createClient (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SsdpClient;
+	public static synthetic fun createClient$default (Lcom/happycodelucky/ssdp/Ssdp;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SsdpClient;
+}
+
+public abstract interface class com/happycodelucky/ssdp/SsdpClient : java/lang/AutoCloseable {
+	public static final field Companion Lcom/happycodelucky/ssdp/SsdpClient$Companion;
+	public static final field DEFAULT_MAX_WAIT_SECONDS I
+	public abstract fun clearDevices (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun close ()V
+	public abstract fun description (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun description (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getChanges ()Lkotlinx/coroutines/flow/SharedFlow;
+	public abstract fun getDevices ()Lkotlinx/coroutines/flow/StateFlow;
+	public abstract fun search-5_5nbZA (Ljava/util/Set;ILkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun search-5_5nbZA$default (Lcom/happycodelucky/ssdp/SsdpClient;Ljava/util/Set;ILkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun stopSearch (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/happycodelucky/ssdp/SsdpClient$Companion {
+	public static final field DEFAULT_MAX_WAIT_SECONDS I
+}
+
+public final class com/happycodelucky/ssdp/SsdpClient$DefaultImpls {
+	public static synthetic fun search-5_5nbZA$default (Lcom/happycodelucky/ssdp/SsdpClient;Ljava/util/Set;ILkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/happycodelucky/ssdp/SsdpClient_jvmKt {
+	public static final fun SsdpClient (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SsdpClient;
+	public static synthetic fun SsdpClient$default (Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SsdpClient;
+}
+
+public abstract class com/happycodelucky/ssdp/SsdpError : java/lang/Exception {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class com/happycodelucky/ssdp/SsdpError$InvalidResponse : com/happycodelucky/ssdp/SsdpError {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getReason ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SsdpError$MulticastEntitlementMissing : com/happycodelucky/ssdp/SsdpError {
+	public fun <init> ()V
+}
+
+public final class com/happycodelucky/ssdp/SsdpError$MulticastJoinFailed : com/happycodelucky/ssdp/SsdpError {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDetails ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SsdpError$TransportFailed : com/happycodelucky/ssdp/SsdpError {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDetails ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SsdpHeaders {
+	public static final field Companion Lcom/happycodelucky/ssdp/SsdpHeaders$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun get (Ljava/lang/String;)Ljava/lang/String;
+	public final fun getAsMap ()Ljava/util/Map;
+	public final fun getSize ()I
+	public fun hashCode ()I
+	public final fun isEmpty ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/SsdpHeaders$Companion {
+	public final fun getEMPTY ()Lcom/happycodelucky/ssdp/SsdpHeaders;
+	public final fun of (Ljava/util/Map;)Lcom/happycodelucky/ssdp/SsdpHeaders;
+}
+
+public final class com/happycodelucky/ssdp/bridge/BridgeDaemonKt {
+	public static final field DEFAULT_BRIDGE_PORT I
+	public static final fun runSsdpBridgeDaemon (ILjava/lang/String;)V
+	public static synthetic fun runSsdpBridgeDaemon$default (ILjava/lang/String;ILjava/lang/Object;)V
+}
+
