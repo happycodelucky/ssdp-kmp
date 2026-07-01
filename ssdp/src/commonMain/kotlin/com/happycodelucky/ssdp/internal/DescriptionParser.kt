@@ -50,10 +50,16 @@ internal object XmlDescriptionParser : DescriptionParser {
     private const val UPNP_NS = "urn:schemas-upnp-org:device-1-0"
 
     private val xml =
-        XML {
+        // xmlutil 1.0.0 deprecated the bare `XML { }` constructor and the compat/
+        // unversioned factories in favour of the version-pinned `XML.v1` companion
+        // (its @Deprecated ReplaceWith points here) — this locks the 1.0 serialized
+        // format so a future xmlutil bump can't silently change how device XML is
+        // read. The parser's real-device fixtures (eero/Sonos captures in
+        // DescriptionParserTest) guard that behaviour is preserved.
+        XML.v1 {
             // Tolerate the unknown/vendor elements real devices emit. Without
             // this, a single <X_Rhapsody-Extension> or <roomName> fails the parse.
-            defaultPolicy {
+            recommended_1_0_0 {
                 ignoreUnknownChildren()
             }
         }

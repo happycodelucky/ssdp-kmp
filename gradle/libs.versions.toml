@@ -15,12 +15,15 @@
 [versions]
 
 # --- Toolchain --------------------------------------------------------------
-# Kotlin 2.3.21 is the highest version SKIE 0.10.12 supports. CLAUDE.md §8:
+# Kotlin 2.4.0 is the highest version SKIE 0.10.13 supports. CLAUDE.md §8:
 # "If SKIE doesn't yet support a Kotlin version, we wait. Don't bump Kotlin
-# past SKIE's supported range."
-kotlin = "2.3.21"
+# past SKIE's supported range." SKIE 0.10.13 added 2.4.0 (changelog 2026-06-24);
+# these two move in lockstep. NOTE: dependency-analysis 3.16.0 can't read Kotlin
+# 2.4.0 bytecode metadata, so `buildHealth` is gated off until DAGP catches up
+# (see build.gradle.kts `enableDependencyAnalysis` + upstream issue #1724).
+kotlin = "2.4.0"
 agp = "9.2.1"                  # com.android.kotlin.multiplatform.library variant (CLAUDE.md §2).
-skie = "0.10.12"               # Supports Kotlin 2.3.21.
+skie = "0.10.13"               # Supports Kotlin 2.4.0 (changelog 2026-06-24).
 kmmbridge = "1.2.1"            # XCFramework → GitHub Release asset → SPM (CLAUDE.md §9).
 dokka = "2.2.0"                # Kotlin API doc generator; Dokka v2 task layout.
 # vanniktech's gradle-maven-publish-plugin — publishes signed artifacts to the
@@ -58,9 +61,10 @@ kotlinx-serialization = "1.11.0"
 # Verified on Maven Central 2026-06-26.
 ktor = "3.5.1"
 # xmlutil — kotlinx.serialization-based multiplatform XML parser for the UPnP
-# device description document. 0.91.3 is latest STABLE; 1.0.0-rc3 exists but RCs
-# are banned on main (CLAUDE.md §3). Verified on Maven Central 2026-06-26.
-xmlutil = "0.91.3"
+# device description document. 1.0.0 is the first STABLE 1.x (final shipped
+# 2026-06-28, built against Kotlin 2.4.0 — aligns with this repo's toolchain);
+# supersedes the 1.0.0-rc line. Verified via GitHub releases 2026-06-30.
+xmlutil = "1.0.0"
 
 # --- Logging ----------------------------------------------------------------
 # Kermit — multiplatform logging (CLAUDE.md §5). 2.1.0 is latest stable with all
@@ -87,17 +91,19 @@ androidx-startup = "1.2.0"
 reachable = "0.14.0"
 
 # --- Sample-app deps (apps/android only — iOS/macOS consume via SPM) ---------
-# Versions mirror the sibling `reachable` repo's Android sample.
+# Versions mirror the sibling `reachable` repo's Android sample. lifecycle 2.11.0
+# + compose-bom 2026.06.00 are latest stable (verified 2026-06-30).
 androidx-activity-compose = "1.13.0"
-androidx-lifecycle-runtime-compose = "2.10.0"
-androidx-compose-bom = "2026.05.01"
+androidx-lifecycle-runtime-compose = "2.11.0"
+androidx-compose-bom = "2026.06.00"
 
 # --- Testing ----------------------------------------------------------------
 turbine = "1.2.1"
 # Kotest — property-based tests for the parser round-trips (ST/NT rawValue,
 # header case-insensitivity). Assertions/property engine only; runner is
-# kotlin.test (CLAUDE.md §11).
-kotest = "6.1.11"
+# kotlin.test (CLAUDE.md §11). 6.2.1 latest stable (verified kotest releases
+# 2026-06-30; matches the kmp-template pin).
+kotest = "6.2.1"
 
 # --- Lint ------------------------------------------------------------------
 ktlint = "1.8.0"               # The ktlint tool itself.
@@ -105,6 +111,17 @@ ktlintGradle = "14.2.0"        # The org.jlleitschuh.gradle.ktlint Gradle plugin
 # detekt 1.23.8 is the latest stable; the 2.x line is alpha-only and CLAUDE.md
 # §2 bans pre-stable on main.
 detekt = "1.23.8"
+
+# --- Build health & dependency hygiene --------------------------------------
+# Applied at the root build (not via the convention plugin) — they register
+# root tasks: `buildHealth` (dependency-analysis), `dependencyUpdates`
+# (ben-manes), `versionCatalogUpdate` (littlerobots). Drive the mise
+# dependencies:* / build:doctor tasks. All four verified latest-stable on
+# plugins.gradle.org 2026-06-29.
+benManesVersions = "0.54.0"        # com.github.ben-manes.versions — reports newer stable deps.
+versionCatalogUpdate = "1.1.0"     # nl.littlerobots.version-catalog-update — rewrites this catalog.
+dependencyAnalysis = "3.16.0"      # com.autonomousapps.dependency-analysis — unused/misused/transitive advice.
+gradleDoctor = "0.12.0"            # com.osacky.doctor — slow-config / JVM-mismatch / cache-miss warnings.
 
 
 [libraries]
@@ -209,3 +226,9 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kmmbridge-github = { id = "co.touchlab.kmmbridge.github", version.ref = "kmmbridge" }
 # Vanniktech Maven Publish — Maven Central Portal upload + GPG signing.
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
+# Dependency-update tooling (mise dependencies:outdated / dependencies:update).
+ben-manes-versions = { id = "com.github.ben-manes.versions", version.ref = "benManesVersions" }
+version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }
+# Build-health tooling (mise dependencies:analyze / build:doctor).
+dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysis" }
+gradle-doctor = { id = "com.osacky.doctor", version.ref = "gradleDoctor" }

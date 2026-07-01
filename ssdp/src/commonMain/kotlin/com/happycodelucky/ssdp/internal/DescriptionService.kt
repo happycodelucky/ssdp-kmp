@@ -98,7 +98,7 @@ internal class DescriptionService(
                     }
 
                     null -> {
-                        Unit
+                        // No cache entry — fall through to start a fetch below.
                     }
                 }
 

@@ -1,0 +1,7 @@
+# Copy to local.properties (gitignored) and point sdk.dir at your Android SDK.
+# Required by the Android KMP library plugin and the apps/android sample.
+#
+#   cp local.properties.example local.properties
+#
+# macOS default:
+sdk.dir=/Users/YOUR_USER/Library/Android/sdk

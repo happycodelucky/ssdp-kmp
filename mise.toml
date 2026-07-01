@@ -51,6 +51,29 @@ depends = ["check"]
 description = "JVM unit tests only — the fast inner loop (covers all commonMain/commonTest logic)."
 run = "./gradlew :ssdp:jvmTest :ssdp-testing:jvmTest"
 
+[tasks."test:ios"]
+description = "iOS simulator arm64 tests (slower — boots a simulator), both modules."
+run = "./gradlew :ssdp:iosSimulatorArm64Test :ssdp-testing:iosSimulatorArm64Test"
+
+[tasks."test:macos"]
+description = "macOS arm64 tests, both modules (native commonTest on the host arch)."
+run = "./gradlew :ssdp:macosArm64Test :ssdp-testing:macosArm64Test"
+
+[tasks."test:android"]
+description = "Android host unit tests, both modules."
+run = "./gradlew :ssdp:testAndroidHostTest :ssdp-testing:testAndroidHostTest"
+
+# NOTE: these aggregate the LEAF test tasks directly, NOT the `test` alias —
+# `test` maps to `check` here (ktlint + detekt + every target), so depending on
+# it would turn `test:apple` into a full check. Keep them as pure test fan-outs.
+[tasks."test:apple"]
+description = "Both Apple test targets (macOS arm64 + iOS simulator arm64), both modules."
+depends = ["test:macos", "test:ios"]
+
+[tasks."test:all"]
+description = "Every unit-test target across every platform (macOS, iOS sim, Android host, JVM), both modules."
+depends = ["test:macos", "test:ios", "test:android", "test:jvm"]
+
 [tasks.lint]
 description = "ktlint + detekt only (no tests), both published modules."
 run = "./gradlew :ssdp:ktlintCheck :ssdp:detekt :ssdp-testing:ktlintCheck :ssdp-testing:detekt"
@@ -87,6 +110,25 @@ run = "./gradlew :ssdp:jvmJar"
 [tasks.xcframework]
 description = "Alias for `build` — produces the release Ssdp.xcframework."
 depends = ["build"]
+
+[tasks."build:xcframework"]
+description = "Build the release Ssdp.xcframework (all slices — iosArm64, iosSimulatorArm64, macosArm64). Alias used by CI."
+depends = ["build"]
+
+# --- public API / ABI ------------------------------------------------------
+# The committed dump under ssdp/api/ is the reference for the public surface.
+# `checkKotlinAbi` runs as part of `check` (and CI) — it fails if the public API
+# changed without a deliberate `api:dump`. Review the api/ diff like any other
+# change. Scoped to `:ssdp` only: `:ssdp-testing` is test infrastructure with
+# ABI validation deliberately disabled (see ssdp.kmp-library.gradle.kts).
+
+[tasks."api:check"]
+description = "Verify :ssdp's public API/ABI matches the committed dump (also runs inside `check`)."
+run = "./gradlew :ssdp:checkKotlinAbi"
+
+[tasks."api:dump"]
+description = "Regenerate :ssdp's committed public API/ABI dump after an INTENTIONAL public change. Review + commit the api/ diff."
+run = "./gradlew :ssdp:updateKotlinAbi"
 
 # --- apps ------------------------------------------------------------------
 
@@ -152,6 +194,48 @@ run = "open -a 'Android Studio' ."
 [tasks.docs]
 description = "Generate the Dokka API-reference HTML (output under build/dokka/html)."
 run = "./gradlew dokkaGenerate"
+
+# --- build health ----------------------------------------------------------
+
+[tasks."dependencies:analyze"]
+description = "Dependency hygiene: unused deps, api-vs-implementation misuse, undeclared transitives (dependency-analysis)."
+run = "./gradlew buildHealth"
+
+[tasks."build:doctor"]
+description = "Surface Gradle Doctor build-health diagnostics (slow config, cache misuse, JVM mismatches)."
+run = "./gradlew assemble --dry-run"
+
+# --- dependencies ----------------------------------------------------------
+# Renovate (renovate.json5) opens PRs in CI; these are the local equivalents.
+
+[tasks."dependencies:outdated"]
+description = "List dependencies with newer stable versions (ben-manes gradle-versions-plugin)."
+# --no-parallel is REQUIRED: this repo sets org.gradle.parallel=true, but
+# ben-manes' dependencyUpdates collects versions across projects single-threaded
+# and aborts under parallel project execution ("Parallel project execution is
+# not supported").
+run = "./gradlew dependencyUpdates -Drevision=release --no-parallel"
+
+[tasks."dependencies:update"]
+description = "Rewrite gradle/libs.versions.toml to the latest stable versions, then review the diff (version-catalog-update)."
+# Not truly interactive: it rewrites the catalog; review with `git diff
+# gradle/libs.versions.toml` and accept or revert. Web-search any bump that
+# crosses the Kotlin/SKIE pin before accepting (CLAUDE.md §3).
+# --no-parallel for the same reason as dependencies:outdated — versionCatalogUpdate
+# drives ben-manes' dependencyUpdates under the hood.
+run = "./gradlew versionCatalogUpdate --no-parallel"
+
+# --- publish ---------------------------------------------------------------
+
+[tasks."publish:local"]
+description = "Publish both modules to the local Maven repo (~/.m2)."
+run = "./gradlew publishToMavenLocal"
+
+# --- aggregates ------------------------------------------------------------
+
+[tasks.ci]
+description = "Run the exact CI sequence locally: check (ktlint + detekt + every test target + ABI) + release XCFramework."
+run = "./gradlew :ssdp:check :ssdp-testing:check :ssdp:assembleSsdpXCFramework"
 
 # --- housekeeping ----------------------------------------------------------
 
