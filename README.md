@@ -26,16 +26,16 @@ Published to Maven Central:
 
 | Module | Coordinate | Description |
 | ------ | ---------- | ---------- |
-| `:ssdp` | `com.happycodelucky.ssdp:ssdp` | Client library |
-| `:ssdp-testing` | `com.happycodelucky.ssdp:ssdp-testing` | `FakeSsdpClient` + `withFakeSsdpClient { }` for tests |
+| <code>:ssdp</code> | <code>com.happycodelucky.ssdp:ssdp</code> | Client library |
+| <code>:ssdp&#8209;testing</code> | <code>com.happycodelucky.ssdp:ssdp&#8209;testing</code> | `FakeSsdpClient` + `withFakeSsdpClient { }` for tests |
 
 Not published — repo tools and samples (excluded from the publish/check gate):
 
 | Module | What it is |
 |--------|------------|
-| `:ssdp-bridge` | Host-side daemon that relays SSDP to an Android emulator over TCP (see [Emulator bridge](#android-emulators)). Run with `mise run app:bridge`. |
-| `:jvm-cli` | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run cli` |
-| `:androidApp` | The Android Compose sample scanner (see [apps/](apps/)) |
+| <code>:ssdp&#8209;bridge</code> | Host-side daemon that relays SSDP to an Android emulator over TCP (see [Emulator bridge](#android-emulators)). Run with `mise run app:bridge`. |
+| <code>:jvm&#8209;cli</code> | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run cli` |
+| <code>:androidApp</code> | The Android Compose sample scanner (see [apps/](apps/)) |
 
 ## Quick examples
 
