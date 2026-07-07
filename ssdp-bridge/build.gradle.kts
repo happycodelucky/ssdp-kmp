@@ -22,6 +22,10 @@ plugins {
 dependencies {
     implementation(project(":ssdp"))
     implementation(libs.kotlinx.coroutines.core)
+    // SLF4J provider for Ktor's JVM client engine (transitively depends on
+    // slf4j-api but ships no binding). Without it a run prints "No SLF4J
+    // providers were found". runtimeOnly — nothing here compiles against it.
+    runtimeOnly(libs.slf4j.simple)
 }
 
 kotlin {

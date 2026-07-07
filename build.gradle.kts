@@ -13,6 +13,13 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.skie) apply false
     alias(libs.plugins.kmmbridge.github) apply false
+    // vanniktech Maven Central publish. Applied in :ssdp / :ssdp-testing via the
+    // `ssdp.publish` convention plugin; declared here `apply false` so its classes
+    // (notably the shared MavenCentralBuildService) load once into the root
+    // classloader scope. Without this, each sibling loads its own copy and the
+    // cross-project build-service reference fails to type-check under parallel +
+    // configuration-cache (`prepareMavenCentralPublishing` buildService conflict).
+    alias(libs.plugins.maven.publish) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.detekt) apply false
 

@@ -71,6 +71,15 @@ xmlutil = "1.0.0"
 # our native slices (iosArm64/iosSimulatorArm64/macosArm64/jvm). Verified on
 # Maven Central 2026-06-28.
 kermit = "2.1.0"
+# slf4j-simple — SLF4J *provider* for the JVM sample apps only (:jvm-cli,
+# :ssdp-bridge). Ktor's JVM client engine depends on slf4j-api:2.0.18 but ships
+# no provider, so a bare run prints "No SLF4J providers were found" and installs
+# a no-op logger. Adding this zero-config stderr provider silences that and
+# surfaces Ktor's HTTP diagnostics. Pinned to MATCH the slf4j-api version Ktor
+# pulls (2.0.18) — a provider/api version skew triggers SLF4J's own mismatch
+# warning. Runtime-only, in the samples; never in :ssdp (which stays headless
+# and uses Kermit). Verified on Maven Central 2026-07-01.
+slf4j = "2.0.18"
 
 # --- Android startup --------------------------------------------------------
 # androidx.startup — hosts the bundled `SsdpInitializer` that captures the
@@ -160,6 +169,9 @@ ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
 # bridge warning). `implementation` in :ssdp commonMain; no Kermit type crosses
 # the public API.
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+# slf4j-simple provider — runtimeOnly in the JVM sample apps to satisfy Ktor's
+# slf4j-api dependency (see the `slf4j` version note). NOT for :ssdp.
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 
 # --- Android startup --------------------------------------------------------
 # androidx.startup runtime — consumed in :ssdp's androidMain to host the bundled
