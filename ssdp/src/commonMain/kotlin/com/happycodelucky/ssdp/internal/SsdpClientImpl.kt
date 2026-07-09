@@ -17,8 +17,11 @@ import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
+import com.happycodelucky.ssdp.SsdpDeviceListener
 import io.ktor.client.HttpClient
 import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -99,6 +102,15 @@ internal class SsdpClientImpl(
     private val searchMutex = Mutex()
     private var retransmitJobs: List<Job> = emptyList()
 
+    // Registered callback listeners (SsdpClient.addListener). A thin fan-out over
+    // registry.changes — no separate emission path (CLAUDE.md §6/§12). Mutation
+    // and iteration are non-suspending critical sections, so they use the
+    // atomicfu synchronized tier (not searchMutex/registry's Mutex, which are for
+    // suspend boundaries — CLAUDE.md §6). Guarded by `listenerLock`; kept as a
+    // copy-on-read list so callbacks fire outside the lock.
+    private val listenerLock = SynchronizedObject()
+    private val listeners = mutableListOf<SsdpDeviceListener>()
+
     init {
         // Receive loop: parse every datagram and fold it into the registry.
         scope.launch {
@@ -109,6 +121,13 @@ internal class SsdpClientImpl(
                     SsdpMessage.SearchRequest, null -> Unit // ignore observed M-SEARCH and junk
                 }
             }
+        }
+
+        // Listener fan-out: mirror the change stream to registered callbacks.
+        // Same source as SsdpClient.changes (no duplicate emission); collected on
+        // the client's own scope so it's cancelled on close().
+        scope.launch {
+            registry.changes.collect { dispatchToListeners(it) }
         }
 
         // Network-change wiring (plan decision 4): reset the registry when the
@@ -172,6 +191,17 @@ internal class SsdpClientImpl(
         registry.reset(DeviceChange.Removed.Reason.Cleared)
     }
 
+    override fun addListener(listener: SsdpDeviceListener) {
+        if (closed.value) return
+        synchronized(listenerLock) {
+            if (listener !in listeners) listeners.add(listener)
+        }
+    }
+
+    override fun removeListener(listener: SsdpDeviceListener) {
+        synchronized(listenerLock) { listeners.remove(listener) }
+    }
+
     override suspend fun description(device: DiscoveredDevice): DescriptionResult =
         if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device)
 
@@ -191,6 +221,28 @@ internal class SsdpClientImpl(
         runCatching { socket.close() }
         runCatching { httpClient.close() }
         job.cancel()
+        synchronized(listenerLock) { listeners.clear() }
+    }
+
+    /**
+     * Fan a single [change] out to the registered listeners. Snapshots the set
+     * under [listenerLock], then invokes callbacks *outside* the lock so a
+     * listener that (re-)registers or does its own locking can't deadlock, and a
+     * throwing listener can't stall delivery to the others (or kill the
+     * collector) — each call is guarded and logged.
+     */
+    private fun dispatchToListeners(change: DeviceChange) {
+        val snapshot = synchronized(listenerLock) { listeners.toList() }
+        if (snapshot.isEmpty()) return
+        snapshot.forEach { listener ->
+            runCatching {
+                when (change) {
+                    is DeviceChange.Found -> listener.onFound(change.device)
+                    is DeviceChange.Updated -> listener.onUpdated(change.device)
+                    is DeviceChange.Removed -> listener.onRemoved(change.device, change.reason)
+                }
+            }.onFailure { ssdpLog.w(it) { "SsdpDeviceListener threw; ignoring" } }
+        }
     }
 
     /** Must hold [searchMutex]. */

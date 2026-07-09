@@ -3,8 +3,13 @@
  *
  * Designed for Swift consumers as much as Kotlin ones: StateFlow/SharedFlow
  * become AsyncSequences via SKIE, the sealed change/error types become
- * exhaustive Swift enums, and `close()` reads natively in both languages. No
- * callback-based surface (CLAUDE.md §7, §13).
+ * exhaustive Swift enums, and `close()` reads natively in both languages.
+ *
+ * The Flow API ([devices] / [changes]) is primary. [addListener] /
+ * [removeListener] add an additive callback surface for consumers that prefer a
+ * registered listener — a thin fan-out over [changes] with no separate emission
+ * path. This is a deliberate, additive exception to the "no callbacks" rule
+ * (CLAUDE.md §6/§12).
  */
 @file:OptIn(ExperimentalObjCName::class)
 
@@ -149,9 +154,29 @@ public interface SsdpClient : AutoCloseable {
     public suspend fun description(usn: String): DescriptionResult
 
     /**
+     * Register [listener] to receive registry changes as callbacks — the
+     * imperative counterpart to collecting [changes]. Fans out the same
+     * found / updated / removed events; the flow stays available and unchanged.
+     *
+     * Registration is idempotent per instance (a listener added twice still
+     * receives each event once) and may happen before or after [search], since
+     * passive listening is always live. A listener added after devices are
+     * already known does *not* replay them — read [devices] for current state,
+     * then let the listener deliver subsequent deltas. Listeners registered on a
+     * closed client are ignored. From Swift this is `client.addListener(l)`.
+     */
+    public fun addListener(listener: SsdpDeviceListener)
+
+    /**
+     * Remove a previously-registered [listener]. No-op if it was never added or
+     * the client is closed. From Swift this is `client.removeListener(l)`.
+     */
+    public fun removeListener(listener: SsdpDeviceListener)
+
+    /**
      * Stop all discovery, leave the multicast group, and cancel internal
      * coroutines. Idempotent; [devices] retains its last value but stops
-     * updating.
+     * updating. All registered listeners are dropped.
      */
     override fun close()
 

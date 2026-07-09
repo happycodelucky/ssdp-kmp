@@ -8,7 +8,9 @@ package com.happycodelucky.ssdp.internal
 import app.cash.turbine.test
 import com.happycodelucky.ssdp.DescriptionResult
 import com.happycodelucky.ssdp.DeviceChange
+import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
+import com.happycodelucky.ssdp.SsdpDeviceListener
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -281,5 +283,138 @@ class SsdpClientImplTest {
 
             client.close()
             assertEquals(DescriptionResult.NotFound, client.description(device))
+        }
+
+    // --- Listener fan-out (SsdpDeviceListener) -------------------------------
+
+    /** Records listener callbacks as tagged strings for order/content assertions. */
+    private class RecordingListener(
+        private val onEach: (() -> Unit)? = null,
+    ) : SsdpDeviceListener {
+        val events = mutableListOf<String>()
+
+        override fun onFound(device: DiscoveredDevice) {
+            events.add("found:${device.usn}")
+            onEach?.invoke()
+        }
+
+        override fun onUpdated(device: DiscoveredDevice) {
+            events.add("updated:${device.usn}")
+            onEach?.invoke()
+        }
+
+        override fun onRemoved(
+            device: DiscoveredDevice,
+            reason: DeviceChange.Removed.Reason,
+        ) {
+            events.add("removed:${device.usn}:$reason")
+            onEach?.invoke()
+        }
+    }
+
+    @Test
+    fun listenerReceivesFoundThenRemovedWithReason() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+
+            val listener = RecordingListener()
+            client.addListener(listener)
+
+            socket.deliver(Fixtures.NOTIFY_ALIVE_ROKU)
+            runCurrent()
+            client.clearDevices()
+            runCurrent()
+
+            val roku = "uuid:roku:ecp:YR0070123456::urn:dial-multiscreen-org:device:dial:1"
+            assertEquals(
+                listOf("found:$roku", "removed:$roku:Cleared"),
+                listener.events,
+            )
+            client.close()
+        }
+
+    @Test
+    fun listenerRegisteredAfterSearchStillReceivesChanges() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+
+            // Start a search, then register — a late listener still gets deltas.
+            client.search(setOf(SearchTarget.All))
+            runCurrent()
+            val listener = RecordingListener()
+            client.addListener(listener)
+
+            socket.deliver(Fixtures.NOTIFY_ALIVE_ROKU)
+            runCurrent()
+            assertEquals(1, listener.events.size)
+            assertTrue(listener.events.single().startsWith("found:"))
+            client.close()
+        }
+
+    @Test
+    fun removeListenerStopsDelivery() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+
+            val listener = RecordingListener()
+            client.addListener(listener)
+            client.removeListener(listener)
+
+            socket.deliver(Fixtures.NOTIFY_ALIVE_ROKU)
+            runCurrent()
+            assertTrue(listener.events.isEmpty())
+            client.close()
+        }
+
+    @Test
+    fun closeClearsListenersAndPostCloseAddIsNoOp() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+
+            val before = RecordingListener()
+            client.addListener(before)
+            client.close()
+
+            // Registering after close is ignored; no delivery occurs (the
+            // collector is cancelled anyway, but adding must also be a no-op).
+            val after = RecordingListener()
+            client.addListener(after)
+            socket.deliver(Fixtures.NOTIFY_ALIVE_ROKU)
+            runCurrent()
+            assertTrue(before.events.isEmpty())
+            assertTrue(after.events.isEmpty())
+        }
+
+    @Test
+    fun throwingListenerDoesNotStopOtherListeners() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+
+            val thrower = RecordingListener(onEach = { throw IllegalStateException("boom") })
+            val healthy = RecordingListener()
+            client.addListener(thrower)
+            client.addListener(healthy)
+
+            // First event: the thrower throws (caught + logged), the healthy one
+            // still receives it — and the collector survives for the next event.
+            socket.deliver(Fixtures.NOTIFY_ALIVE_ROKU)
+            runCurrent()
+            client.clearDevices()
+            runCurrent()
+
+            assertEquals(2, healthy.events.size)
+            assertTrue(healthy.events[0].startsWith("found:"))
+            assertTrue(healthy.events[1].startsWith("removed:"))
+            client.close()
         }
 }

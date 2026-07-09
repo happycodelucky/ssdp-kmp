@@ -12,7 +12,9 @@ abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { /
     abstract val devices // com.happycodelucky.ssdp/SsdpClient.devices|{}devices[0]
         abstract fun <get-devices>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, com.happycodelucky.ssdp/DiscoveredDevice>> // com.happycodelucky.ssdp/SsdpClient.devices.<get-devices>|<get-devices>(){}[0]
 
+    abstract fun addListener(com.happycodelucky.ssdp/SsdpDeviceListener) // com.happycodelucky.ssdp/SsdpClient.addListener|addListener(com.happycodelucky.ssdp.SsdpDeviceListener){}[0]
     abstract fun close() // com.happycodelucky.ssdp/SsdpClient.close|close(){}[0]
+    abstract fun removeListener(com.happycodelucky.ssdp/SsdpDeviceListener) // com.happycodelucky.ssdp/SsdpClient.removeListener|removeListener(com.happycodelucky.ssdp.SsdpDeviceListener){}[0]
     abstract suspend fun clearDevices() // com.happycodelucky.ssdp/SsdpClient.clearDevices|clearDevices(){}[0]
     abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
     abstract suspend fun description(kotlin/String): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String){}[0]
@@ -23,6 +25,12 @@ abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { /
         final const val DEFAULT_MAX_WAIT_SECONDS // com.happycodelucky.ssdp/SsdpClient.Companion.DEFAULT_MAX_WAIT_SECONDS|{}DEFAULT_MAX_WAIT_SECONDS[0]
             final fun <get-DEFAULT_MAX_WAIT_SECONDS>(): kotlin/Int // com.happycodelucky.ssdp/SsdpClient.Companion.DEFAULT_MAX_WAIT_SECONDS.<get-DEFAULT_MAX_WAIT_SECONDS>|<get-DEFAULT_MAX_WAIT_SECONDS>(){}[0]
     }
+}
+
+abstract interface com.happycodelucky.ssdp/SsdpDeviceListener { // com.happycodelucky.ssdp/SsdpDeviceListener|null[0]
+    abstract fun onFound(com.happycodelucky.ssdp/DiscoveredDevice) // com.happycodelucky.ssdp/SsdpDeviceListener.onFound|onFound(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+    abstract fun onRemoved(com.happycodelucky.ssdp/DiscoveredDevice, com.happycodelucky.ssdp/DeviceChange.Removed.Reason) // com.happycodelucky.ssdp/SsdpDeviceListener.onRemoved|onRemoved(com.happycodelucky.ssdp.DiscoveredDevice;com.happycodelucky.ssdp.DeviceChange.Removed.Reason){}[0]
+    abstract fun onUpdated(com.happycodelucky.ssdp/DiscoveredDevice) // com.happycodelucky.ssdp/SsdpDeviceListener.onUpdated|onUpdated(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
 }
 
 sealed interface com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult|null[0]
