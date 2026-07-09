@@ -97,6 +97,15 @@ public class SpecVersion(
  * @property services `<serviceList>` entries; empty when none.
  * @property embeddedDevices `<deviceList>` sub-devices (recursive); empty when
  *   none.
+ * @property extraProperties Vendor/non-standard *leaf* elements that appear as
+ *   direct children of this `<device>` and aren't surfaced as typed properties
+ *   above — generic access without per-vendor specialization. Keyed by element
+ *   local name (any namespace prefix stripped, so `qq:X_QPlay_SoftwareCapability`
+ *   → `X_QPlay_SoftwareCapability`), value is the trimmed text content. Real
+ *   examples: Sonos `roomName`, `MACAddress`, `softwareVersion`, `feature1`;
+ *   Roku `X_...` extensions. Elements that themselves contain child elements
+ *   (e.g. Sonos `<versions>`) are not flattened here. Empty when the device
+ *   emits no such elements. When a device repeats a leaf name, the last one wins.
  */
 public class Device(
     public val deviceType: String,
@@ -114,6 +123,7 @@ public class Device(
     public val icons: List<Icon> = emptyList(),
     public val services: List<Service> = emptyList(),
     public val embeddedDevices: List<Device> = emptyList(),
+    public val extraProperties: Map<String, String> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean = other is Device && other.udn == udn && other.deviceType == deviceType
 

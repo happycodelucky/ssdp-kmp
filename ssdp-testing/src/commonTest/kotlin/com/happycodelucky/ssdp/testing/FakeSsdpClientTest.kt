@@ -4,9 +4,13 @@
 package com.happycodelucky.ssdp.testing
 
 import app.cash.turbine.test
+import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.ssdp.Device
 import com.happycodelucky.ssdp.DeviceChange
+import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
+import com.happycodelucky.ssdp.SpecVersion
 import com.happycodelucky.ssdp.SsdpDeviceListener
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -197,5 +201,78 @@ class FakeSsdpClientTest {
             fake.emitFound(device("usn-1"))
             assertTrue(listener.events.isEmpty())
             assertFalse(fake.devices.value.isEmpty()) // emit still mutates state
+        }
+
+    @Test
+    fun stubbedSuccessPopulatesSyncCacheAndRefreshIsRecorded() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val d = device("usn-desc")
+                val desc =
+                    DeviceDescription(
+                        specVersion = SpecVersion(1, 0),
+                        urlBase = null,
+                        device =
+                            Device(
+                                deviceType = "urn:schemas-upnp-org:device:ZonePlayer:1",
+                                friendlyName = "Fake",
+                                manufacturer = null,
+                                manufacturerUrl = null,
+                                modelName = null,
+                                modelNumber = null,
+                                modelDescription = null,
+                                modelUrl = null,
+                                serialNumber = null,
+                                udn = "uuid:usn-desc",
+                                upc = null,
+                                presentationUrl = null,
+                            ),
+                        sourceUrl = "http://192.168.1.5/desc.xml",
+                    )
+                fake.stubDescription("usn-desc", DescriptionResult.Success(desc))
+
+                // Nothing cached until the (scripted) fetch runs.
+                assertEquals(null, fake.cachedDescription(d))
+
+                val result = fake.description(d, refresh = true)
+                assertTrue(result is DescriptionResult.Success)
+                // Success populated the sync cache (mirrors the real client).
+                assertEquals(desc, fake.cachedDescription(d))
+                assertEquals(desc, fake.cachedDescription("usn-desc"))
+                // The refresh flag was recorded for assertion.
+                assertEquals(listOf("usn-desc"), fake.descriptionRefreshRequests)
+            }
+        }
+
+    @Test
+    fun stubCachedDescriptionSeedsPeekWithoutAFetch() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val desc =
+                    DeviceDescription(
+                        specVersion = SpecVersion(1, 1),
+                        urlBase = null,
+                        device =
+                            Device(
+                                deviceType = "urn:schemas-upnp-org:device:Basic:1",
+                                friendlyName = null,
+                                manufacturer = null,
+                                manufacturerUrl = null,
+                                modelName = null,
+                                modelNumber = null,
+                                modelDescription = null,
+                                modelUrl = null,
+                                serialNumber = null,
+                                udn = "uuid:seeded",
+                                upc = null,
+                                presentationUrl = null,
+                            ),
+                        sourceUrl = "http://host/desc.xml",
+                    )
+                fake.stubCachedDescription("seeded", desc)
+                assertEquals(desc, fake.cachedDescription("seeded"))
+                // No description() call was made.
+                assertTrue(fake.descriptionRequests.isEmpty())
+            }
         }
 }

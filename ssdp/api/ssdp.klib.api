@@ -13,11 +13,13 @@ abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { /
         abstract fun <get-devices>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, com.happycodelucky.ssdp/DiscoveredDevice>> // com.happycodelucky.ssdp/SsdpClient.devices.<get-devices>|<get-devices>(){}[0]
 
     abstract fun addListener(com.happycodelucky.ssdp/SsdpDeviceListener) // com.happycodelucky.ssdp/SsdpClient.addListener|addListener(com.happycodelucky.ssdp.SsdpDeviceListener){}[0]
+    abstract fun cachedDescription(com.happycodelucky.ssdp/DiscoveredDevice): com.happycodelucky.ssdp/DeviceDescription? // com.happycodelucky.ssdp/SsdpClient.cachedDescription|cachedDescription(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
+    abstract fun cachedDescription(kotlin/String): com.happycodelucky.ssdp/DeviceDescription? // com.happycodelucky.ssdp/SsdpClient.cachedDescription|cachedDescription(kotlin.String){}[0]
     abstract fun close() // com.happycodelucky.ssdp/SsdpClient.close|close(){}[0]
     abstract fun removeListener(com.happycodelucky.ssdp/SsdpDeviceListener) // com.happycodelucky.ssdp/SsdpClient.removeListener|removeListener(com.happycodelucky.ssdp.SsdpDeviceListener){}[0]
     abstract suspend fun clearDevices() // com.happycodelucky.ssdp/SsdpClient.clearDevices|clearDevices(){}[0]
-    abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
-    abstract suspend fun description(kotlin/String): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String){}[0]
+    abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice, kotlin/Boolean = ...): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice;kotlin.Boolean){}[0]
+    abstract suspend fun description(kotlin/String, kotlin/Boolean = ...): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String;kotlin.Boolean){}[0]
     abstract suspend fun search(kotlin.collections/Set<com.happycodelucky.ssdp/SearchTarget>, kotlin/Int = ..., kotlin.time/Duration? = ...) // com.happycodelucky.ssdp/SsdpClient.search|search(kotlin.collections.Set<com.happycodelucky.ssdp.SearchTarget>;kotlin.Int;kotlin.time.Duration?){}[0]
     abstract suspend fun stopSearch() // com.happycodelucky.ssdp/SsdpClient.stopSearch|stopSearch(){}[0]
 
@@ -304,12 +306,14 @@ final class com.happycodelucky.ssdp/Advertisement { // com.happycodelucky.ssdp/A
 }
 
 final class com.happycodelucky.ssdp/Device { // com.happycodelucky.ssdp/Device|null[0]
-    constructor <init>(kotlin/String, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String, kotlin/String?, kotlin/String?, kotlin.collections/List<com.happycodelucky.ssdp/Icon> = ..., kotlin.collections/List<com.happycodelucky.ssdp/Service> = ..., kotlin.collections/List<com.happycodelucky.ssdp/Device> = ...) // com.happycodelucky.ssdp/Device.<init>|<init>(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String;kotlin.String?;kotlin.String?;kotlin.collections.List<com.happycodelucky.ssdp.Icon>;kotlin.collections.List<com.happycodelucky.ssdp.Service>;kotlin.collections.List<com.happycodelucky.ssdp.Device>){}[0]
+    constructor <init>(kotlin/String, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String, kotlin/String?, kotlin/String?, kotlin.collections/List<com.happycodelucky.ssdp/Icon> = ..., kotlin.collections/List<com.happycodelucky.ssdp/Service> = ..., kotlin.collections/List<com.happycodelucky.ssdp/Device> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // com.happycodelucky.ssdp/Device.<init>|<init>(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String;kotlin.String?;kotlin.String?;kotlin.collections.List<com.happycodelucky.ssdp.Icon>;kotlin.collections.List<com.happycodelucky.ssdp.Service>;kotlin.collections.List<com.happycodelucky.ssdp.Device>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
     final val deviceType // com.happycodelucky.ssdp/Device.deviceType|{}deviceType[0]
         final fun <get-deviceType>(): kotlin/String // com.happycodelucky.ssdp/Device.deviceType.<get-deviceType>|<get-deviceType>(){}[0]
     final val embeddedDevices // com.happycodelucky.ssdp/Device.embeddedDevices|{}embeddedDevices[0]
         final fun <get-embeddedDevices>(): kotlin.collections/List<com.happycodelucky.ssdp/Device> // com.happycodelucky.ssdp/Device.embeddedDevices.<get-embeddedDevices>|<get-embeddedDevices>(){}[0]
+    final val extraProperties // com.happycodelucky.ssdp/Device.extraProperties|{}extraProperties[0]
+        final fun <get-extraProperties>(): kotlin.collections/Map<kotlin/String, kotlin/String> // com.happycodelucky.ssdp/Device.extraProperties.<get-extraProperties>|<get-extraProperties>(){}[0]
     final val friendlyName // com.happycodelucky.ssdp/Device.friendlyName|{}friendlyName[0]
         final fun <get-friendlyName>(): kotlin/String? // com.happycodelucky.ssdp/Device.friendlyName.<get-friendlyName>|<get-friendlyName>(){}[0]
     final val icons // com.happycodelucky.ssdp/Device.icons|{}icons[0]
@@ -472,12 +476,16 @@ final class com.happycodelucky.ssdp/SsdpHeaders { // com.happycodelucky.ssdp/Ssd
         final fun <get-asMap>(): kotlin.collections/Map<kotlin/String, kotlin/String> // com.happycodelucky.ssdp/SsdpHeaders.asMap.<get-asMap>|<get-asMap>(){}[0]
     final val isEmpty // com.happycodelucky.ssdp/SsdpHeaders.isEmpty|{}isEmpty[0]
         final fun <get-isEmpty>(): kotlin/Boolean // com.happycodelucky.ssdp/SsdpHeaders.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val keys // com.happycodelucky.ssdp/SsdpHeaders.keys|{}keys[0]
+        final fun <get-keys>(): kotlin.collections/Set<kotlin/String> // com.happycodelucky.ssdp/SsdpHeaders.keys.<get-keys>|<get-keys>(){}[0]
     final val size // com.happycodelucky.ssdp/SsdpHeaders.size|{}size[0]
         final fun <get-size>(): kotlin/Int // com.happycodelucky.ssdp/SsdpHeaders.size.<get-size>|<get-size>(){}[0]
 
+    final fun contains(kotlin/String): kotlin/Boolean // com.happycodelucky.ssdp/SsdpHeaders.contains|contains(kotlin.String){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SsdpHeaders.equals|equals(kotlin.Any?){}[0]
     final fun get(kotlin/String): kotlin/String? // com.happycodelucky.ssdp/SsdpHeaders.get|get(kotlin.String){}[0]
     final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SsdpHeaders.hashCode|hashCode(){}[0]
+    final fun iterator(): kotlin.collections/Iterator<kotlin.collections/Map.Entry<kotlin/String, kotlin/String>> // com.happycodelucky.ssdp/SsdpHeaders.iterator|iterator(){}[0]
     final fun toString(): kotlin/String // com.happycodelucky.ssdp/SsdpHeaders.toString|toString(){}[0]
 
     final object Companion { // com.happycodelucky.ssdp/SsdpHeaders.Companion|null[0]
@@ -519,4 +527,6 @@ final object com.happycodelucky.ssdp/Ssdp { // com.happycodelucky.ssdp/Ssdp|null
     final fun createClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/Ssdp.createClient|createClient(kotlin.String?){}[0]
 }
 
+final fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/cachedDescription(com.happycodelucky.ssdp/SsdpClient): com.happycodelucky.ssdp/DeviceDescription? // com.happycodelucky.ssdp/cachedDescription|cachedDescription@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient){}[0]
 final fun com.happycodelucky.ssdp/SsdpClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/SsdpClient|SsdpClient(kotlin.String?){}[0]
+final suspend fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/description(com.happycodelucky.ssdp/SsdpClient, kotlin/Boolean = ...): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/description|description@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient;kotlin.Boolean){}[0]

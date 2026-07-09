@@ -85,6 +85,79 @@ class XmlDescriptionParserTest {
     }
 
     @Test
+    fun sonosVendorLeafElementsSurfaceAsExtraProperties() {
+        // The same unknown/vendor elements the typed parse drops are recovered
+        // generically into Device.extraProperties, keyed by element local name.
+        val desc =
+            parser.parse(
+                DescriptionFixtures.SONOS_ZONEPLAYER,
+                sourceUrl = "http://192.168.4.20:1400/xml/device_description.xml",
+            )
+        val extras = desc.device.extraProperties
+
+        // Standard vendor leaf elements, verbatim trimmed text.
+        assertEquals("95.1-78010", extras["softwareVersion"])
+        assertEquals("2", extras["swGen"])
+        assertEquals("1.41.1.7-1.1", extras["hardwareVersion"])
+        assertEquals("C4-38-75-10-26-E5:9", extras["serialNum"])
+        assertEquals("C4:38:75:10:26:E5", extras["MACAddress"])
+        assertEquals("94.0-00000", extras["minCompatibleVersion"])
+        assertEquals("Living Room", extras["roomName"])
+        assertEquals("0x00006000", extras["feature1"])
+
+        // Foreign-namespace leaf: keyed by local name, prefix (`qq:`) stripped.
+        assertEquals("QPlay:2", extras["X_QPlay_SoftwareCapability"])
+
+        // An empty leaf (<extraVersion></extraVersion>) is captured as "".
+        assertEquals("", extras["extraVersion"])
+
+        // A NON-leaf vendor block (<versions> has child elements) is NOT flattened
+        // into a bogus concatenated value — it's omitted from the flat map.
+        assertNull(extras["versions"])
+
+        // Foreign-namespace element WITH a child element (<X_Rhapsody-Extension>
+        // wraps <deviceID>) is likewise not a leaf → omitted.
+        assertNull(extras["X_Rhapsody-Extension"])
+
+        // Typed fields are NOT duplicated into the bag.
+        assertNull(extras["deviceType"])
+        assertNull(extras["manufacturer"])
+        assertNull(extras["UDN"])
+        assertNull(extras["serviceList"])
+    }
+
+    @Test
+    fun eeroDevicesHaveEmptyExtraPropertiesAndRecurseIndependently() {
+        // eero's document has no vendor leaf elements on any device, so every
+        // device in the recursive tree gets an empty (but present) bag — the
+        // capture pass must not misattribute one device's children to another.
+        val desc = parser.parse(DescriptionFixtures.EERO_IGD, sourceUrl = "http://192.168.4.1:1900/igd.xml")
+        val root = desc.device
+        val wan = root.embeddedDevices.single()
+        val wanConn = wan.embeddedDevices.single()
+        assertTrue(root.extraProperties.isEmpty())
+        assertTrue(wan.extraProperties.isEmpty())
+        assertTrue(wanConn.extraProperties.isEmpty())
+    }
+
+    @Test
+    fun extraPropertiesAreAttributedToTheOwningDeviceNotMixed() {
+        val desc = parser.parse(DescriptionFixtures.NESTED_VENDOR, sourceUrl = "http://host/desc.xml")
+        val root = desc.device
+        val child = root.embeddedDevices.single()
+
+        // Root's vendor tag on the root bag; child's on the child bag — no bleed.
+        assertEquals("root-only", root.extraProperties["rootVendorTag"])
+        assertNull(root.extraProperties["childVendorTag"])
+        assertEquals("child-only", child.extraProperties["childVendorTag"])
+        assertNull(child.extraProperties["rootVendorTag"])
+
+        // The same local name on both devices resolves to each device's own value.
+        assertEquals("root-value", root.extraProperties["sharedTag"])
+        assertEquals("child-value", child.extraProperties["sharedTag"])
+    }
+
+    @Test
     fun sonosRelativeUrlResolvesAgainstSourceUrlWhenNoUrlBase() {
         val desc =
             parser.parse(

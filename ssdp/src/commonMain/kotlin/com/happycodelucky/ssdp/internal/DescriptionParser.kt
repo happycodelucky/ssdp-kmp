@@ -11,7 +11,10 @@
  *
  * Robustness: real devices (e.g. Sonos) interleave dozens of vendor-specific and
  * foreign-namespace elements with the standard ones. xmlutil is configured to
- * ignore unknown children so those don't fail the parse.
+ * ignore unknown children so those don't fail the typed parse. A second,
+ * additive pull-parser pass (captureExtras) then recovers those otherwise-dropped
+ * per-device leaf elements into [Device.extraProperties] for generic access
+ * without per-vendor specialization.
  */
 package com.happycodelucky.ssdp.internal
 
@@ -22,10 +25,13 @@ import com.happycodelucky.ssdp.Service
 import com.happycodelucky.ssdp.SpecVersion
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import nl.adaptivity.xmlutil.EventType
+import nl.adaptivity.xmlutil.XmlReader
 import nl.adaptivity.xmlutil.serialization.XML
 import nl.adaptivity.xmlutil.serialization.XmlChildrenName
 import nl.adaptivity.xmlutil.serialization.XmlElement
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
+import nl.adaptivity.xmlutil.xmlStreaming
 
 /** Parses a UPnP description document body into a [DeviceDescription]. */
 internal interface DescriptionParser {
@@ -69,13 +75,166 @@ internal object XmlDescriptionParser : DescriptionParser {
         sourceUrl: String,
     ): DeviceDescription {
         val root = xml.decodeFromString(WireRoot.serializer(), body)
+        // Second, additive pass: the xmlutil deserialization above intentionally
+        // drops unknown/vendor elements (ignoreUnknownChildren). Walk the same
+        // document with the pull-parser to recover those leaf elements per device
+        // as a generic bag, then graft them onto the typed tree. Kept separate so
+        // the proven typed extraction is untouched; a capture failure degrades to
+        // empty bags rather than failing the whole parse.
+        val extras = runCatching { captureExtras(body) }.getOrNull()
         return DeviceDescription(
             specVersion = root.specVersion?.toModel() ?: SpecVersion(1, 0),
             urlBase = root.urlBase?.trim()?.takeIf { it.isNotEmpty() },
-            device = root.device.toModel(),
+            device = root.device.toModel(extras),
             sourceUrl = sourceUrl,
         )
     }
+
+    // --- generic extra-property capture (pull-parser) -------------------------
+
+    /**
+     * A parallel tree of the vendor/unknown leaf elements found under each
+     * `<device>`, mirroring the `<deviceList>` nesting so it can be zipped onto
+     * the typed [Device] tree structurally (by position), independent of how
+     * xmlutil orders its own deserialization.
+     */
+    private class DeviceExtras(
+        val properties: Map<String, String>,
+        val children: List<DeviceExtras>,
+    )
+
+    /**
+     * Parse [body] with the multiplatform generic pull-reader and return the
+     * root device's [DeviceExtras], or `null` if no root `<device>` is found.
+     * Uses `newGenericReader` (not the platform reader) so traversal is
+     * byte-identical across JVM/Native/Apple.
+     */
+    private fun captureExtras(body: String): DeviceExtras? {
+        // xmlutil's XmlReader implements its own multiplatform Closeable (not
+        // kotlin.AutoCloseable), which has no exported `use` extension — close it
+        // explicitly.
+        val reader = xmlStreaming.newGenericReader(body)
+        try {
+            while (reader.hasNext()) {
+                if (reader.next() == EventType.START_ELEMENT && reader.localName == "device") {
+                    return readDeviceExtras(reader)
+                }
+            }
+            return null
+        } finally {
+            reader.close()
+        }
+    }
+
+    /**
+     * Called positioned on a `<device>` START_ELEMENT; consumes through its
+     * matching END_ELEMENT. Records direct-child *leaf* elements not surfaced as
+     * typed properties into [DeviceExtras.properties], and recurses into the
+     * `<deviceList>`/`<device>` children to build the nested structure.
+     */
+    private fun readDeviceExtras(reader: XmlReader): DeviceExtras {
+        val properties = LinkedHashMap<String, String>()
+        val children = ArrayList<DeviceExtras>()
+        // Depth relative to this <device>: its direct children sit at depth 1.
+        var depth = 1
+        while (reader.hasNext() && depth > 0) {
+            val event = reader.next()
+            if (event == EventType.START_ELEMENT) {
+                // Either descends a level or is consumed whole by a handler;
+                // onStartElement returns the new depth so the loop stays flat.
+                depth = onStartElement(reader, depth, properties, children)
+            } else if (event == EventType.END_ELEMENT) {
+                depth--
+            }
+            // TEXT/CDATA/comments/whitespace between elements: ignored.
+        }
+        return DeviceExtras(properties, children)
+    }
+
+    /**
+     * Dispatch a START_ELEMENT encountered inside a `<device>` at [depth]. Returns
+     * the depth the caller's loop should continue at:
+     * - a nested `<device>` (inside `<deviceList>`, depth 2) is read as a child via
+     *   [readDeviceExtras] and consumed whole → depth unchanged;
+     * - an unknown direct-child leaf (depth 1) is captured into [properties] and
+     *   consumed whole → depth unchanged;
+     * - anything else (a `<deviceList>` we step into, a typed container, or a
+     *   deeper element) → depth + 1, letting the matching END_ELEMENT pop it.
+     */
+    private fun onStartElement(
+        reader: XmlReader,
+        depth: Int,
+        properties: MutableMap<String, String>,
+        children: MutableList<DeviceExtras>,
+    ): Int {
+        val name = reader.localName
+        return when {
+            depth == 2 && name == "device" -> {
+                children.add(readDeviceExtras(reader))
+                depth
+            }
+
+            depth == 1 && name !in TYPED_DEVICE_CHILDREN -> {
+                captureLeaf(reader)?.let { properties[name] = it }
+                depth
+            }
+
+            else -> {
+                depth + 1
+            }
+        }
+    }
+
+    /**
+     * Called positioned on a candidate leaf START_ELEMENT. Consumes through its
+     * matching END_ELEMENT and returns the concatenated, trimmed text if the
+     * element is a true leaf (no child elements); returns `null` if it contains
+     * child elements (e.g. Sonos `<versions>`), so nested vendor blocks aren't
+     * flattened into a misleading string.
+     */
+    private fun captureLeaf(reader: XmlReader): String? {
+        val text = StringBuilder()
+        var hasChildElement = false
+        var depth = 1
+        while (reader.hasNext() && depth > 0) {
+            val event = reader.next()
+            if (event == EventType.START_ELEMENT) {
+                hasChildElement = true
+                depth++
+            } else if (event == EventType.END_ELEMENT) {
+                depth--
+            } else if ((event == EventType.TEXT || event == EventType.CDSECT) && !hasChildElement) {
+                // Concatenate this leaf's direct text; once a child element is
+                // seen, further text belongs to that child and is ignored.
+                text.append(reader.text)
+            }
+        }
+        if (hasChildElement) return null
+        return text.toString().trim().takeIf { it.isNotEmpty() } ?: ""
+    }
+
+    // Direct children of <device> that the typed model already surfaces, so the
+    // generic bag doesn't duplicate them. Matched by local name (namespace-
+    // agnostic), consistent with how xmlutil binds them. iconList/serviceList/
+    // deviceList are structural containers; deviceList is handled explicitly above.
+    private val TYPED_DEVICE_CHILDREN =
+        setOf(
+            "deviceType",
+            "friendlyName",
+            "manufacturer",
+            "manufacturerURL",
+            "modelName",
+            "modelNumber",
+            "modelDescription",
+            "modelURL",
+            "serialNumber",
+            "UDN",
+            "UPC",
+            "presentationURL",
+            "iconList",
+            "serviceList",
+            "deviceList",
+        )
 
     // --- wire types (xmlutil @Serializable) — never cross SKIE ----------------
 
@@ -127,7 +286,11 @@ internal object XmlDescriptionParser : DescriptionParser {
         @XmlSerialName("deviceList", UPNP_NS, "")
         val deviceList: List<WireDevice> = emptyList(),
     ) {
-        fun toModel(): Device =
+        // [extras] is this device's captured leaf bag + child bags from the
+        // parallel pull-parser walk (null if capture was skipped/failed). It and
+        // [deviceList] mirror the same <deviceList> nesting in document order, so
+        // embedded devices zip by position.
+        fun toModel(extras: DeviceExtras? = null): Device =
             Device(
                 deviceType = deviceType,
                 friendlyName = friendlyName?.trim(),
@@ -143,7 +306,8 @@ internal object XmlDescriptionParser : DescriptionParser {
                 presentationUrl = presentationUrl?.trim(),
                 icons = iconList.map { it.toModel() },
                 services = serviceList.map { it.toModel() },
-                embeddedDevices = deviceList.map { it.toModel() },
+                embeddedDevices = deviceList.mapIndexed { i, child -> child.toModel(extras?.children?.getOrNull(i)) },
+                extraProperties = extras?.properties ?: emptyMap(),
             )
     }
 

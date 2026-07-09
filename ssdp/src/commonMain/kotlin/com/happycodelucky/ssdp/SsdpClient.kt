@@ -138,20 +138,57 @@ public interface SsdpClient : AutoCloseable {
      *     is DescriptionResult.ParseFailed -> logBadDevice(r.message)
      * }
      * ```
+     *
+     * @param refresh when `true`, ignore any cached result and force a fresh
+     *   fetch — for a manual "reload" of a device whose description may have
+     *   changed. Concurrent refreshes for the same device still share one HTTP
+     *   fetch. A failed refresh does not discard a previously-cached success (a
+     *   transient network blip leaves the good data in place). The default
+     *   `false` serves the cached result when one is present.
      */
     @Throws(kotlin.coroutines.cancellation.CancellationException::class)
     @ObjCName("description")
-    public suspend fun description(device: DiscoveredDevice): DescriptionResult
+    public suspend fun description(
+        device: DiscoveredDevice,
+        refresh: Boolean = false,
+    ): DescriptionResult
 
     /**
      * Like [description], but looks the device up by [usn] in the current
      * registry first. Returns [DescriptionResult.NotFound] if no device with that
      * USN is currently tracked. From Swift this is
      * `try await client.description(forUsn: usn)`.
+     *
+     * @param refresh see [description]; forces a fresh fetch past the cache.
      */
     @Throws(kotlin.coroutines.cancellation.CancellationException::class)
     @ObjCName("descriptionForUsn")
-    public suspend fun description(usn: String): DescriptionResult
+    public suspend fun description(
+        usn: String,
+        refresh: Boolean = false,
+    ): DescriptionResult
+
+    /**
+     * The already-fetched device description for [device], or `null` if none is
+     * cached — i.e. [description] has not yet been called for it (or its cache
+     * entry was evicted when the device left / the network changed, or the fetch
+     * failed).
+     *
+     * Synchronous and side-effect-free: this **never** triggers a fetch, so it is
+     * safe to call from a UI render path to decide whether to show details now or
+     * kick off a [description] load. To *fetch*, call [description]. From Swift
+     * this is `client.cachedDescription(of: device)`.
+     */
+    @ObjCName("cachedDescription")
+    public fun cachedDescription(device: DiscoveredDevice): DeviceDescription?
+
+    /**
+     * Like [cachedDescription], but keyed by [usn]. Returns `null` if nothing is
+     * cached for that USN. Does not consult the registry and never fetches. From
+     * Swift this is `client.cachedDescription(forUsn: usn)`.
+     */
+    @ObjCName("cachedDescriptionForUsn")
+    public fun cachedDescription(usn: String): DeviceDescription?
 
     /**
      * Register [listener] to receive registry changes as callbacks — the

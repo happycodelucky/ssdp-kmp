@@ -10,6 +10,7 @@ package com.happycodelucky.ssdp.testing
 
 import com.happycodelucky.ssdp.DescriptionResult
 import com.happycodelucky.ssdp.DeviceChange
+import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
@@ -59,6 +60,10 @@ import kotlin.native.ObjCName
  */
 @OptIn(ExperimentalObjCName::class)
 @ObjCName(name = "SsdpTestingFakeSsdpClient", swiftName = "FakeSsdpClient")
+// This test double necessarily mirrors the full SsdpClient surface (every
+// interface method) plus its scripting/assertion helpers, so its function count
+// tracks the interface and only grows. TooManyFunctions doesn't apply to a fake.
+@Suppress("TooManyFunctions")
 public class FakeSsdpClient : SsdpClient {
     private val _devices = MutableStateFlow<Map<String, DiscoveredDevice>>(emptyMap())
     override val devices: StateFlow<Map<String, DiscoveredDevice>> = _devices.asStateFlow()
@@ -110,12 +115,34 @@ public class FakeSsdpClient : SsdpClient {
     /** USNs passed to [description], in call order — asserts lazy-fetch timing. */
     public val descriptionRequests: MutableList<String> = mutableListOf()
 
+    /**
+     * USNs passed to [description] with `refresh = true`, in call order — lets a
+     * test assert a manual reload actually requested a refresh.
+     */
+    public val descriptionRefreshRequests: MutableList<String> = mutableListOf()
+
+    // Fake cache backing [cachedDescription]: populated when a [description] call
+    // resolves to Success (mirroring the real client's cache-on-success), and
+    // directly settable via [stubCachedDescription].
+    private val cachedDescriptions = mutableMapOf<String, DeviceDescription>()
+
     /** Script the [description] result for a specific USN. */
     public fun stubDescription(
         usn: String,
         result: DescriptionResult,
     ) {
         scriptedDescriptions[usn] = result
+    }
+
+    /**
+     * Seed the synchronous [cachedDescription] cache for [usn] directly, without a
+     * [description] call — for testing a consumer's render-time cache peek.
+     */
+    public fun stubCachedDescription(
+        usn: String,
+        description: DeviceDescription,
+    ) {
+        cachedDescriptions[usn] = description
     }
 
     // --- Scripting the registry ---------------------------------------------
@@ -205,14 +232,31 @@ public class FakeSsdpClient : SsdpClient {
         }
     }
 
-    override suspend fun description(device: DiscoveredDevice): DescriptionResult = recordAndResolve(device.usn)
+    override suspend fun description(
+        device: DiscoveredDevice,
+        refresh: Boolean,
+    ): DescriptionResult = recordAndResolve(device.usn, refresh)
 
-    override suspend fun description(usn: String): DescriptionResult = recordAndResolve(usn)
+    override suspend fun description(
+        usn: String,
+        refresh: Boolean,
+    ): DescriptionResult = recordAndResolve(usn, refresh)
 
-    private fun recordAndResolve(usn: String): DescriptionResult {
+    private fun recordAndResolve(
+        usn: String,
+        refresh: Boolean,
+    ): DescriptionResult {
         descriptionRequests.add(usn)
-        return scriptedDescriptions[usn] ?: defaultDescriptionResult
+        if (refresh) descriptionRefreshRequests.add(usn)
+        val result = scriptedDescriptions[usn] ?: defaultDescriptionResult
+        // Mirror the real client: a successful fetch populates the sync cache.
+        if (result is DescriptionResult.Success) cachedDescriptions[usn] = result.description
+        return result
     }
+
+    override fun cachedDescription(device: DiscoveredDevice): DeviceDescription? = cachedDescriptions[device.usn]
+
+    override fun cachedDescription(usn: String): DeviceDescription? = cachedDescriptions[usn]
 
     override fun close() {
         _closeCallCount.incrementAndGet()
