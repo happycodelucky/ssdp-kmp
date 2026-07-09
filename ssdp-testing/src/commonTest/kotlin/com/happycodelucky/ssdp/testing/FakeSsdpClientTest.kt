@@ -7,9 +7,11 @@ import app.cash.turbine.test
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
+import com.happycodelucky.ssdp.SsdpDeviceListener
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 
@@ -112,5 +114,88 @@ class FakeSsdpClientTest {
                 fake.setDevices(listOf(device("a"), device("b")))
                 assertEquals(setOf("a", "b"), fake.devices.value.keys)
             }
+        }
+
+    // --- Listener fan-out ----------------------------------------------------
+
+    private class RecordingListener : SsdpDeviceListener {
+        val events = mutableListOf<String>()
+
+        override fun onFound(device: DiscoveredDevice) {
+            events.add("found:${device.usn}")
+        }
+
+        override fun onUpdated(device: DiscoveredDevice) {
+            events.add("updated:${device.usn}")
+        }
+
+        override fun onRemoved(
+            device: DiscoveredDevice,
+            reason: DeviceChange.Removed.Reason,
+        ) {
+            events.add("removed:${device.usn}:$reason")
+        }
+    }
+
+    @Test
+    fun listenerReceivesFoundUpdatedRemovedInLockstepWithEmits() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val listener = RecordingListener()
+                fake.addListener(listener)
+
+                val d = device("usn-1")
+                fake.emitFound(d)
+                fake.emitUpdated(d)
+                fake.emitRemoved(d, DeviceChange.Removed.Reason.Byebye)
+
+                assertEquals(
+                    listOf("found:usn-1", "updated:usn-1", "removed:usn-1:Byebye"),
+                    listener.events,
+                )
+            }
+        }
+
+    @Test
+    fun clearDevicesNotifiesListenersWithCleared() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val listener = RecordingListener()
+                fake.emitFound(device("a"))
+                fake.emitFound(device("b"))
+                fake.addListener(listener)
+                fake.clearDevices()
+
+                assertEquals(
+                    listOf("removed:a:Cleared", "removed:b:Cleared"),
+                    listener.events,
+                )
+            }
+        }
+
+    @Test
+    fun removeListenerStopsDelivery() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val listener = RecordingListener()
+                fake.addListener(listener)
+                fake.removeListener(listener)
+                fake.emitFound(device("usn-1"))
+                assertTrue(listener.events.isEmpty())
+            }
+        }
+
+    @Test
+    fun closeClearsListeners() =
+        runTest {
+            val listener = RecordingListener()
+            val fake = FakeSsdpClient()
+            fake.addListener(listener)
+            fake.close()
+            // Post-close registration is ignored; no delivery after close.
+            fake.addListener(listener)
+            fake.emitFound(device("usn-1"))
+            assertTrue(listener.events.isEmpty())
+            assertFalse(fake.devices.value.isEmpty()) // emit still mutates state
         }
 }

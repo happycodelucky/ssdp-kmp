@@ -71,7 +71,10 @@ Koin/service locator inside `:ssdp`.
 ## 6. Concurrency
 
 - `kotlinx.coroutines` only. No `GlobalScope`.
-- `Flow`/`StateFlow`/`SharedFlow` over callbacks. No callback APIs in common.
+- `Flow`/`StateFlow`/`SharedFlow` over callbacks. The one callback surface is
+  `SsdpDeviceListener` (`addListener`/`removeListener`) — a deliberate additive
+  exception (see §12); it's a thin fan-out over `changes`, not a new emission
+  path, and the Flow API stays primary. Don't add other callback APIs.
 - Shared mutable state across suspend boundaries → `kotlinx.coroutines.sync.Mutex`
   (the registry's map). Non-suspending critical sections →
   `kotlinx.atomicfu.locks.synchronized`. Never `kotlin.synchronized`,
@@ -157,5 +160,7 @@ done gate; a JVM-only run hides native-test-compile and detekt failures
 No Compose Multiplatform. No CocoaPods. No Network.framework on Apple (POSIX
 only). No x86/Intel Macs/watchOS/tvOS. No `GlobalScope`, no `!!` in production,
 no `java.time` in common, no `kotlin.synchronized`/`@Synchronized`/`volatile`.
-No callback-based public APIs. No `kotlin.Result<T>` at the Swift boundary. No
+No callback-based public APIs — **except** the one sanctioned `SsdpDeviceListener`
+(additive fan-out over `changes`; the Flow API stays primary — see §6 and LESSONS
+D-008); don't add others. No `kotlin.Result<T>` at the Swift boundary. No
 SSDP server. No EAP/RC/Beta on `main`. `reachable` ≥ 0.14.0.

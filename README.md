@@ -109,6 +109,40 @@ case .parseFailed(let p): log(p.message)
 }
 ```
 
+> `onEnum(of:)` is how you switch a Kotlin sealed type in Swift — it's SKIE's
+> intended API, not a workaround. SKIE already generates an exhaustive Swift enum
+> for every sealed type (`DeviceChange`, `SearchTarget`, `Notification`,
+> `DescriptionResult`); a Kotlin sealed value arrives as a class instance, and
+> `onEnum(of:)` maps it to that enum so the `switch` is exhaustive with no
+> `default`. There's no SKIE setting that removes the call.
+
+### Listener callback (alternative to observing `changes`)
+
+Prefer a registered callback over a `for await` loop? Implement `SsdpDeviceListener`
+and register it — a thin fan-out over the same `changes` stream (the flows stay
+available and unchanged):
+
+```swift
+final class Listener: SsdpDeviceListener {
+    func onFound(device: DiscoveredDevice) { add(device) }
+    func onUpdated(device: DiscoveredDevice) { update(device) }
+    func onRemoved(device: DiscoveredDevice, reason: DeviceChangeRemovedReason) { remove(device) }
+}
+let listener = Listener()
+client.addListener(listener)
+// … later
+client.removeListener(listener)   // all listeners are also dropped on close()
+```
+
+```kotlin
+val listener = object : SsdpDeviceListener {
+    override fun onFound(device: DiscoveredDevice) { add(device) }
+    override fun onUpdated(device: DiscoveredDevice) { update(device) }
+    override fun onRemoved(device: DiscoveredDevice, reason: DeviceChange.Removed.Reason) { remove(device) }
+}
+client.addListener(listener)
+```
+
 ## Platforms & permissions
 
 ### iOS

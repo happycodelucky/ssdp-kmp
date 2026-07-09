@@ -13,6 +13,7 @@ import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
+import com.happycodelucky.ssdp.SsdpDeviceListener
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,11 @@ import kotlin.native.ObjCName
  * keep [devices] and [changes] consistent) or replace the whole set with
  * [setDevices]. Records every [search] / [stopSearch] / [close] call so a test can
  * assert the unit under test drove discovery as expected.
+ *
+ * Registered [SsdpDeviceListener]s are driven in lockstep with the emit helpers —
+ * each `emit*` (and [clearDevices]) synchronously invokes the matching listener
+ * callback right after emitting on [changes], so a test asserting on a listener
+ * sees callbacks without advancing the scheduler.
  *
  * ### Driving discovery
  *
@@ -59,6 +65,10 @@ public class FakeSsdpClient : SsdpClient {
 
     private val _changes = MutableSharedFlow<DeviceChange>(replay = 0, extraBufferCapacity = 64)
     override val changes: SharedFlow<DeviceChange> = _changes.asSharedFlow()
+
+    // Registered listeners, driven in lockstep with the emit* helpers below.
+    // Single-threaded test usage, so a plain list suffices (no lock).
+    private val listeners = mutableListOf<SsdpDeviceListener>()
 
     private val _searchCallCount = atomic(0)
     private val _stopSearchCallCount = atomic(0)
@@ -115,7 +125,9 @@ public class FakeSsdpClient : SsdpClient {
     @ObjCName("emitFound")
     public suspend fun emitFound(device: DiscoveredDevice) {
         _devices.value = _devices.value + (device.usn to device)
-        _changes.emit(DeviceChange.Found(device))
+        val change = DeviceChange.Found(device)
+        _changes.emit(change)
+        notifyListeners(change)
     }
 
     /** Replace [device] in [devices] and emit a [DeviceChange.Updated]. */
@@ -123,7 +135,9 @@ public class FakeSsdpClient : SsdpClient {
     @ObjCName("emitUpdated")
     public suspend fun emitUpdated(device: DiscoveredDevice) {
         _devices.value = _devices.value + (device.usn to device)
-        _changes.emit(DeviceChange.Updated(device))
+        val change = DeviceChange.Updated(device)
+        _changes.emit(change)
+        notifyListeners(change)
     }
 
     /** Remove [device] from [devices] and emit a [DeviceChange.Removed] with [reason]. */
@@ -134,7 +148,9 @@ public class FakeSsdpClient : SsdpClient {
         reason: DeviceChange.Removed.Reason,
     ) {
         _devices.value = _devices.value - device.usn
-        _changes.emit(DeviceChange.Removed(device, reason))
+        val change = DeviceChange.Removed(device, reason)
+        _changes.emit(change)
+        notifyListeners(change)
     }
 
     /** Replace the entire device set without emitting change events. */
@@ -163,7 +179,29 @@ public class FakeSsdpClient : SsdpClient {
         val evicted = _devices.value.values.toList()
         _devices.value = emptyMap()
         evicted.forEach { device ->
-            _changes.emit(DeviceChange.Removed(device, DeviceChange.Removed.Reason.Cleared))
+            val change = DeviceChange.Removed(device, DeviceChange.Removed.Reason.Cleared)
+            _changes.emit(change)
+            notifyListeners(change)
+        }
+    }
+
+    override fun addListener(listener: SsdpDeviceListener) {
+        if (wasClosed) return
+        if (listener !in listeners) listeners.add(listener)
+    }
+
+    override fun removeListener(listener: SsdpDeviceListener) {
+        listeners.remove(listener)
+    }
+
+    /** Mirror [change] to registered listeners, matching the real client's fan-out. */
+    private fun notifyListeners(change: DeviceChange) {
+        listeners.toList().forEach { listener ->
+            when (change) {
+                is DeviceChange.Found -> listener.onFound(change.device)
+                is DeviceChange.Updated -> listener.onUpdated(change.device)
+                is DeviceChange.Removed -> listener.onRemoved(change.device, change.reason)
+            }
         }
     }
 
@@ -178,5 +216,6 @@ public class FakeSsdpClient : SsdpClient {
 
     override fun close() {
         _closeCallCount.incrementAndGet()
+        listeners.clear()
     }
 }

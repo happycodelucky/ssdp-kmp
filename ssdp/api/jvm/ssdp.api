@@ -334,12 +334,14 @@ public final class com/happycodelucky/ssdp/Ssdp {
 public abstract interface class com/happycodelucky/ssdp/SsdpClient : java/lang/AutoCloseable {
 	public static final field Companion Lcom/happycodelucky/ssdp/SsdpClient$Companion;
 	public static final field DEFAULT_MAX_WAIT_SECONDS I
+	public abstract fun addListener (Lcom/happycodelucky/ssdp/SsdpDeviceListener;)V
 	public abstract fun clearDevices (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun close ()V
 	public abstract fun description (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun description (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getChanges ()Lkotlinx/coroutines/flow/SharedFlow;
 	public abstract fun getDevices ()Lkotlinx/coroutines/flow/StateFlow;
+	public abstract fun removeListener (Lcom/happycodelucky/ssdp/SsdpDeviceListener;)V
 	public abstract fun search-5_5nbZA (Ljava/util/Set;ILkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun search-5_5nbZA$default (Lcom/happycodelucky/ssdp/SsdpClient;Ljava/util/Set;ILkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun stopSearch (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -356,6 +358,12 @@ public final class com/happycodelucky/ssdp/SsdpClient$DefaultImpls {
 public final class com/happycodelucky/ssdp/SsdpClient_jvmKt {
 	public static final fun SsdpClient (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SsdpClient;
 	public static synthetic fun SsdpClient$default (Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SsdpClient;
+}
+
+public abstract interface class com/happycodelucky/ssdp/SsdpDeviceListener {
+	public abstract fun onFound (Lcom/happycodelucky/ssdp/DiscoveredDevice;)V
+	public abstract fun onRemoved (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/DeviceChange$Removed$Reason;)V
+	public abstract fun onUpdated (Lcom/happycodelucky/ssdp/DiscoveredDevice;)V
 }
 
 public abstract class com/happycodelucky/ssdp/SsdpError : java/lang/Exception {
