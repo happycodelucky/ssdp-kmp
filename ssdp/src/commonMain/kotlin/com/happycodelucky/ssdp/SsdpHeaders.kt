@@ -24,6 +24,17 @@ public class SsdpHeaders private constructor(
     /** Case-insensitive lookup by header name. */
     public operator fun get(key: String): String? = storage[key.uppercase()]
 
+    /** Case-insensitive membership test — `"x-rincon-bootseq" in headers`. */
+    public operator fun contains(key: String): Boolean = storage.containsKey(key.uppercase())
+
+    /**
+     * The header names present, in canonical uppercase form. Lets consumers
+     * *discover* which custom/vendor headers a device sent (e.g. to enumerate
+     * `X-…` extensions) rather than only look them up by a name they already
+     * know.
+     */
+    public val keys: Set<String> get() = storage.keys
+
     /** True if no headers are set. */
     public val isEmpty: Boolean get() = storage.isEmpty()
 
@@ -32,6 +43,12 @@ public class SsdpHeaders private constructor(
 
     /** The underlying map (uppercase-keyed) for advanced use. */
     public val asMap: Map<String, String> get() = storage
+
+    /**
+     * Iterate name/value pairs (names in canonical uppercase form) — enables
+     * `for ((name, value) in headers)` and other stdlib iterable use.
+     */
+    public operator fun iterator(): Iterator<Map.Entry<String, String>> = storage.entries.iterator()
 
     /**
      * Returns a copy of the header set with the given keys removed

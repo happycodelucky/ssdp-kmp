@@ -141,6 +141,38 @@ internal object DescriptionFixtures {
         </root>
         """.trimIndent()
 
+    /**
+     * A synthetic nested document where BOTH the root and the embedded device
+     * carry distinct vendor leaf elements. Exercises per-device attribution of
+     * the generic extra-property capture: the root's `<rootVendorTag>` must land
+     * on the root bag and the child's `<childVendorTag>` on the child bag — never
+     * mixed. The repeated local name `<sharedTag>` (different value per device)
+     * proves each device gets its own bag, not a shared/merged one.
+     */
+    val NESTED_VENDOR =
+        """
+        <?xml version="1.0"?>
+        <root xmlns="urn:schemas-upnp-org:device-1-0">
+          <specVersion><major>1</major><minor>0</minor></specVersion>
+          <device>
+            <deviceType>urn:schemas-upnp-org:device:Root:1</deviceType>
+            <friendlyName>Root</friendlyName>
+            <UDN>uuid:root</UDN>
+            <rootVendorTag>root-only</rootVendorTag>
+            <sharedTag>root-value</sharedTag>
+            <deviceList>
+              <device>
+                <deviceType>urn:schemas-upnp-org:device:Child:1</deviceType>
+                <friendlyName>Child</friendlyName>
+                <UDN>uuid:child</UDN>
+                <childVendorTag>child-only</childVendorTag>
+                <sharedTag>child-value</sharedTag>
+              </device>
+            </deviceList>
+          </device>
+        </root>
+        """.trimIndent()
+
     /** A truncated document — closing tags missing — to exercise ParseFailed. */
     val MALFORMED =
         """

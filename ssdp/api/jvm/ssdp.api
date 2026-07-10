@@ -60,11 +60,12 @@ public final class com/happycodelucky/ssdp/DescriptionResult$Success : com/happy
 }
 
 public final class com/happycodelucky/ssdp/Device {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDeviceType ()Ljava/lang/String;
 	public final fun getEmbeddedDevices ()Ljava/util/List;
+	public final fun getExtraProperties ()Ljava/util/Map;
 	public final fun getFriendlyName ()Ljava/lang/String;
 	public final fun getIcons ()Ljava/util/List;
 	public final fun getManufacturer ()Ljava/lang/String;
@@ -159,6 +160,12 @@ public final class com/happycodelucky/ssdp/DiscoveredDevice {
 	public final fun getUsn ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/happycodelucky/ssdp/DiscoveredDeviceDescriptionKt {
+	public static final fun cachedDescription (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/SsdpClient;)Lcom/happycodelucky/ssdp/DeviceDescription;
+	public static final fun description (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/SsdpClient;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun description$default (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lcom/happycodelucky/ssdp/SsdpClient;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class com/happycodelucky/ssdp/Icon {
@@ -335,10 +342,14 @@ public abstract interface class com/happycodelucky/ssdp/SsdpClient : java/lang/A
 	public static final field Companion Lcom/happycodelucky/ssdp/SsdpClient$Companion;
 	public static final field DEFAULT_MAX_WAIT_SECONDS I
 	public abstract fun addListener (Lcom/happycodelucky/ssdp/SsdpDeviceListener;)V
+	public abstract fun cachedDescription (Lcom/happycodelucky/ssdp/DiscoveredDevice;)Lcom/happycodelucky/ssdp/DeviceDescription;
+	public abstract fun cachedDescription (Ljava/lang/String;)Lcom/happycodelucky/ssdp/DeviceDescription;
 	public abstract fun clearDevices (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun close ()V
-	public abstract fun description (Lcom/happycodelucky/ssdp/DiscoveredDevice;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun description (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun description (Lcom/happycodelucky/ssdp/DiscoveredDevice;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun description (Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun description$default (Lcom/happycodelucky/ssdp/SsdpClient;Lcom/happycodelucky/ssdp/DiscoveredDevice;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun description$default (Lcom/happycodelucky/ssdp/SsdpClient;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getChanges ()Lkotlinx/coroutines/flow/SharedFlow;
 	public abstract fun getDevices ()Lkotlinx/coroutines/flow/StateFlow;
 	public abstract fun removeListener (Lcom/happycodelucky/ssdp/SsdpDeviceListener;)V
@@ -352,6 +363,8 @@ public final class com/happycodelucky/ssdp/SsdpClient$Companion {
 }
 
 public final class com/happycodelucky/ssdp/SsdpClient$DefaultImpls {
+	public static synthetic fun description$default (Lcom/happycodelucky/ssdp/SsdpClient;Lcom/happycodelucky/ssdp/DiscoveredDevice;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun description$default (Lcom/happycodelucky/ssdp/SsdpClient;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun search-5_5nbZA$default (Lcom/happycodelucky/ssdp/SsdpClient;Ljava/util/Set;ILkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
@@ -393,12 +406,15 @@ public final class com/happycodelucky/ssdp/SsdpError$TransportFailed : com/happy
 
 public final class com/happycodelucky/ssdp/SsdpHeaders {
 	public static final field Companion Lcom/happycodelucky/ssdp/SsdpHeaders$Companion;
+	public final fun contains (Ljava/lang/String;)Z
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun get (Ljava/lang/String;)Ljava/lang/String;
 	public final fun getAsMap ()Ljava/util/Map;
+	public final fun getKeys ()Ljava/util/Set;
 	public final fun getSize ()I
 	public fun hashCode ()I
 	public final fun isEmpty ()Z
+	public final fun iterator ()Ljava/util/Iterator;
 	public fun toString ()Ljava/lang/String;
 }
 

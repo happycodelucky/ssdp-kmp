@@ -11,12 +11,15 @@ import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpDeviceListener
+import com.happycodelucky.ssdp.cachedDescription
+import com.happycodelucky.ssdp.description
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -283,6 +286,82 @@ class SsdpClientImplTest {
 
             client.close()
             assertEquals(DescriptionResult.NotFound, client.description(device))
+        }
+
+    // A device built directly (not via the registry) with NO cache-control, so no
+    // expiry timer exists to fire under runTest's virtual-time auto-advance and
+    // evict the description cache between two description() calls. description() /
+    // cachedDescription() read only device.location/usn, so registry membership is
+    // irrelevant for these — the point is the client → service → cache wiring.
+    private fun sonosDevice(): DiscoveredDevice =
+        DiscoveredDevice(
+            usn = "uuid:RINCON_000E58A1B2C300400::urn:schemas-upnp-org:device:ZonePlayer:1",
+            target = SearchTarget.RootDevice,
+            location = "http://192.168.1.42:1400/xml/device_description.xml",
+            server = null,
+            cacheControl = null, // <-- no expiry timer
+            bootId = null,
+            configId = null,
+            firstSeen = kotlin.time.Instant.fromEpochMilliseconds(0),
+            lastSeen = kotlin.time.Instant.fromEpochMilliseconds(0),
+            expiresAt = null,
+            otherHeaders = com.happycodelucky.ssdp.SsdpHeaders.EMPTY,
+        )
+
+    @Test
+    fun cachedDescriptionIsNullUntilFetchedThenReadableSynchronously() =
+        runTest {
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket)
+            runCurrent()
+            val device = sonosDevice()
+
+            // Discovery never auto-fetches → nothing cached yet.
+            assertEquals(null, client.cachedDescription(device))
+            assertEquals(null, client.cachedDescription(device.usn))
+
+            // After an explicit fetch, the synchronous peek returns the parsed doc.
+            val fetched = client.description(device)
+            assertTrue(fetched is DescriptionResult.Success)
+            val cached = client.cachedDescription(device)
+            assertEquals(fetched.description, cached)
+            assertEquals(fetched.description, client.cachedDescription(device.usn))
+            // The device-centric Kotlin extension reads the same cached value.
+            assertEquals(fetched.description, device.cachedDescription(client))
+
+            client.close()
+        }
+
+    @Test
+    fun refreshThreadsThroughClientAndRefetches() =
+        runTest {
+            // A counting mock so we can prove refresh causes a second HTTP hit.
+            val hits = atomic(0)
+            val engine =
+                MockEngine {
+                    hits.incrementAndGet()
+                    respond(
+                        content = ByteReadChannel(DescriptionFixtures.SONOS_ZONEPLAYER),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf("Content-Type", "text/xml"),
+                    )
+                }
+            val socket = FakeMulticastSocket()
+            val client = newClient(socket, httpClient = HttpClient(engine))
+            runCurrent()
+            val device = sonosDevice()
+
+            client.description(device) // first fetch
+            client.description(device) // cached — no new hit
+            assertEquals(1, hits.value)
+
+            client.description(device, refresh = true) // forced refetch
+            assertEquals(2, hits.value)
+            // The Kotlin extension's refresh path reaches the same code.
+            device.description(client, refresh = true)
+            assertEquals(3, hits.value)
+
+            client.close()
         }
 
     // --- Listener fan-out (SsdpDeviceListener) -------------------------------

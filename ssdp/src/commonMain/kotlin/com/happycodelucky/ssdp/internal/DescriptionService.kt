@@ -16,11 +16,13 @@ package com.happycodelucky.ssdp.internal
 
 import com.happycodelucky.ssdp.DescriptionResult
 import com.happycodelucky.ssdp.DeviceChange
+import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -58,6 +60,13 @@ internal class DescriptionService(
     private val entries = mutableMapOf<String, Entry>() // key = usn
     private val inFlight = mutableMapOf<String, Deferred<DescriptionResult>>() // key = usn
 
+    // Lock-free snapshot of successfully-parsed descriptions (usn -> DeviceDescription),
+    // mirrored from [entries] on every mutation while the [mutex] is held. Enables a
+    // synchronous, non-suspending cache peek ([cachedDescription]) without locking —
+    // the same immutable-snapshot-swapped-atomically pattern the registry uses. Only
+    // Success descriptions are mirrored; failures and negative-cache entries are not.
+    private val successSnapshot = atomic<Map<String, DeviceDescription>>(emptyMap())
+
     init {
         // One collector handles ALL eviction: byebye, max-age expiry, and
         // network reset (reset() emits Removed(_, NetworkChanged) per device).
@@ -72,40 +81,56 @@ internal class DescriptionService(
      * Get (or fetch+parse+cache) the description for [device]. Concurrent calls
      * for the same USN share one fetch. Returns [DescriptionResult.NotFound] when
      * the device has no LOCATION.
+     *
+     * @param refresh when true, bypass a valid cached result and force a fresh
+     *   fetch. The refetch still coalesces with any in-flight fetch for this USN
+     *   (a concurrent refresh won't cause two HTTP GETs). On success the cache is
+     *   replaced; on failure the previous cached [DescriptionResult.Success] (if
+     *   any) is left intact rather than clobbered by a transient error — see
+     *   [fetchParseAndStore].
      */
-    suspend fun describe(device: DiscoveredDevice): DescriptionResult {
+    suspend fun describe(
+        device: DiscoveredDevice,
+        refresh: Boolean = false,
+    ): DescriptionResult {
         val location = device.location ?: return DescriptionResult.NotFound
         val usn = device.usn
 
         val deferred =
             mutex.withLock {
-                // Fresh cache hit?
-                when (val cached = entries[usn]) {
-                    is Entry.Success -> {
-                        if (cached.sourceUrl == location) {
-                            return cached.result // still the same URL → serve cached success.
-                        } else {
-                            entries.remove(usn) // device moved (new LOCATION) → stale, drop.
+                // A valid cache entry short-circuits the fetch — UNLESS refresh is
+                // requested, in which case we fall straight through to (join or
+                // start) a fetch, leaving the stale entry in place for now so a
+                // failed refresh can preserve it.
+                if (!refresh) {
+                    when (val cached = entries[usn]) {
+                        is Entry.Success -> {
+                            if (cached.sourceUrl == location) {
+                                return cached.result // still the same URL → serve cached success.
+                            } else {
+                                entries.remove(usn) // device moved (new LOCATION) → stale, drop.
+                                successSnapshot.value = successSnapshot.value - usn
+                            }
                         }
-                    }
 
-                    is Entry.Failure -> {
-                        if (cached.sourceUrl == location && clock.now() < cached.expiresAt) {
-                            return cached.result // negative cache still valid → don't re-hit.
-                        } else {
-                            entries.remove(usn)
+                        is Entry.Failure -> {
+                            if (cached.sourceUrl == location && clock.now() < cached.expiresAt) {
+                                return cached.result // negative cache still valid → don't re-hit.
+                            } else {
+                                entries.remove(usn)
+                            }
                         }
-                    }
 
-                    null -> {
-                        // No cache entry — fall through to start a fetch below.
+                        null -> {
+                            // No cache entry — fall through to start a fetch below.
+                        }
                     }
                 }
 
                 // Join an in-flight fetch, or start one. `async` is non-suspending
                 // so starting it under the lock is safe.
                 inFlight.getOrPut(usn) {
-                    scope.async { fetchParseAndStore(usn, location) }
+                    scope.async { fetchParseAndStore(usn, location, refresh) }
                 }
             }
 
@@ -113,20 +138,41 @@ internal class DescriptionService(
         return deferred.await()
     }
 
+    /**
+     * The already-fetched, successfully-parsed description for [usn], or `null`
+     * if none is cached (never fetched, fetch failed, or evicted). Synchronous
+     * and non-suspending — reads the lock-free [successSnapshot]; never triggers
+     * a fetch.
+     */
+    fun cachedDescription(usn: String): DeviceDescription? = successSnapshot.value[usn]
+
     private suspend fun fetchParseAndStore(
         usn: String,
         location: String,
+        refresh: Boolean,
     ): DescriptionResult {
         val result = fetchAndParse(location)
         mutex.withLock {
             // Only publish if this fetch is still the one of record (a concurrent
             // evict()/reset may have cancelled+removed our slot).
             if (inFlight.remove(usn) != null) {
-                entries[usn] =
-                    when (result) {
-                        is DescriptionResult.Success -> Entry.Success(location, result)
-                        else -> Entry.Failure(location, result, clock.now() + negativeTtl)
+                when (result) {
+                    is DescriptionResult.Success -> {
+                        entries[usn] = Entry.Success(location, result)
+                        successSnapshot.value = successSnapshot.value + (usn to result.description)
                     }
+
+                    else -> {
+                        // A failed *refresh* must not clobber a still-valid cached
+                        // Success (a transient blip shouldn't evict good data); leave
+                        // the existing entry untouched. A failed *initial* fetch (no
+                        // prior Success) records a negative-cache entry as before.
+                        val keepPriorSuccess = refresh && entries[usn] is Entry.Success
+                        if (!keepPriorSuccess) {
+                            entries[usn] = Entry.Failure(location, result, clock.now() + negativeTtl)
+                        }
+                    }
+                }
             }
         }
         return result
@@ -214,6 +260,7 @@ internal class DescriptionService(
         mutex.withLock {
             inFlight.remove(usn)
             entries.remove(usn)
+            successSnapshot.value = successSnapshot.value - usn
         }
     }
 

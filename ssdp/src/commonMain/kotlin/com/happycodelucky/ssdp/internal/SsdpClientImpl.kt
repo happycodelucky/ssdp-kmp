@@ -14,6 +14,7 @@ package com.happycodelucky.ssdp.internal
 
 import com.happycodelucky.ssdp.DescriptionResult
 import com.happycodelucky.ssdp.DeviceChange
+import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
@@ -202,14 +203,26 @@ internal class SsdpClientImpl(
         synchronized(listenerLock) { listeners.remove(listener) }
     }
 
-    override suspend fun description(device: DiscoveredDevice): DescriptionResult =
-        if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device)
+    override suspend fun description(
+        device: DiscoveredDevice,
+        refresh: Boolean,
+    ): DescriptionResult = if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device, refresh)
 
-    override suspend fun description(usn: String): DescriptionResult {
+    override suspend fun description(
+        usn: String,
+        refresh: Boolean,
+    ): DescriptionResult {
         if (closed.value) return DescriptionResult.NotFound
         val device = registry.deviceSet.value[usn] ?: return DescriptionResult.NotFound
-        return descriptionService.describe(device)
+        return descriptionService.describe(device, refresh)
     }
+
+    // Synchronous cache peeks — no fetch, no registry lookup for the usn form
+    // (the cache is keyed by usn directly). Safe after close(): the snapshot just
+    // stops changing. The device form ignores everything but the device's usn.
+    override fun cachedDescription(device: DiscoveredDevice): DeviceDescription? = descriptionService.cachedDescription(device.usn)
+
+    override fun cachedDescription(usn: String): DeviceDescription? = descriptionService.cachedDescription(usn)
 
     override fun close() {
         if (!closed.compareAndSet(expect = false, update = true)) return

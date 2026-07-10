@@ -265,4 +265,118 @@ class DescriptionServiceTest {
             assertTrue(result is DescriptionResult.Success)
             assertEquals("Sonos Arc Ultra", result.description.device.modelName)
         }
+
+    // --- refresh -------------------------------------------------------------
+
+    @Test
+    fun refreshBypassesCacheAndRefetches() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client)
+            service.describe(device())
+            assertEquals(1, hits())
+            // A non-refresh call would serve the cache; refresh forces a new hit.
+            val result = service.describe(device(), refresh = true)
+            assertTrue(result is DescriptionResult.Success)
+            assertEquals(2, hits())
+        }
+
+    @Test
+    fun concurrentRefreshesForSameUsnStillCauseOneFetch() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val count = atomic(0)
+            val engine =
+                MockEngine {
+                    count.incrementAndGet()
+                    gate.await()
+                    respond(
+                        content = ByteReadChannel(DescriptionFixtures.SONOS_ZONEPLAYER),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf("Content-Type", "text/xml"),
+                    )
+                }
+            val service = newService(HttpClient(engine))
+
+            val a = async { service.describe(device(), refresh = true) }
+            val b = async { service.describe(device(), refresh = true) }
+            runCurrent()
+            gate.complete(Unit)
+            a.await()
+            b.await()
+            assertEquals(1, count.value) // two concurrent refreshes coalesce.
+        }
+
+    @Test
+    fun failedRefreshKeepsPreviousCachedSuccess() =
+        runTest {
+            // First fetch succeeds and caches. Then the device starts failing and a
+            // refresh is issued: the caller sees the failure, but the prior Success
+            // must survive (a transient blip shouldn't evict good data).
+            var fail = false
+            val engine =
+                MockEngine {
+                    if (fail) {
+                        respondError(HttpStatusCode.InternalServerError)
+                    } else {
+                        respond(
+                            content = ByteReadChannel(DescriptionFixtures.SONOS_ZONEPLAYER),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf("Content-Type", "text/xml"),
+                        )
+                    }
+                }
+            val service = newService(HttpClient(engine))
+
+            val first = service.describe(device())
+            assertTrue(first is DescriptionResult.Success)
+            assertEquals(first.description, service.cachedDescription(device().usn))
+
+            fail = true
+            val refreshed = service.describe(device(), refresh = true)
+            assertTrue(refreshed is DescriptionResult.FetchFailed)
+            // The cached Success is intact despite the failed refresh.
+            assertEquals(first.description, service.cachedDescription(device().usn))
+        }
+
+    // --- synchronous cache peek ----------------------------------------------
+
+    @Test
+    fun cachedDescriptionIsNullBeforeFetchAndPopulatedAfterSuccess() =
+        runTest {
+            val (client, _) = countingClient()
+            val service = newService(client)
+            assertEquals(null, service.cachedDescription(device().usn)) // never fetched.
+
+            val result = service.describe(device())
+            assertTrue(result is DescriptionResult.Success)
+            assertEquals(result.description, service.cachedDescription(device().usn))
+        }
+
+    @Test
+    fun cachedDescriptionStaysNullAfterAFailedFetch() =
+        runTest {
+            val (client, _) = countingClient(status = HttpStatusCode.NotFound)
+            val service = newService(client)
+            service.describe(device())
+            // A failure is negative-cached but is NOT a DeviceDescription — the sync
+            // peek only ever exposes successes.
+            assertEquals(null, service.cachedDescription(device().usn))
+        }
+
+    @Test
+    fun cachedDescriptionClearedWhenDeviceEvicted() =
+        runTest {
+            val (client, _) = countingClient()
+            val changes = MutableSharedFlow<DeviceChange>(extraBufferCapacity = 16)
+            val service = newService(client, changes = changes)
+            runCurrent()
+
+            service.describe(device())
+            assertTrue(service.cachedDescription(device().usn) != null)
+
+            changes.emit(DeviceChange.Removed(device(), DeviceChange.Removed.Reason.Byebye))
+            runCurrent()
+            assertEquals(null, service.cachedDescription(device().usn)) // evicted from snapshot too.
+        }
 }
