@@ -6,7 +6,7 @@ a device to fetch and view its UPnP description document.
 
 | App | Path | How to run |
 |-----|------|-----------|
-| **JVM CLI** | `apps/jvm-cli` | `mise run cli` (optional duration: `mise run cli -- 20`) |
+| **JVM CLI** | `apps/cli` | `mise run cli` (optional duration: `mise run cli -- 20`) |
 | **SSDP bridge daemon** | `ssdp-bridge` (repo root) | `mise run app:bridge` (optional port: `mise run app:bridge -- 1901`) |
 | **Android** | `apps/android` | `mise run open:android`, or `./gradlew :androidApp:installDebug` |
 | **iOS** | `apps/ios` | `mise run open:ios` |

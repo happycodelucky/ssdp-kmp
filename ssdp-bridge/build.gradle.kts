@@ -9,7 +9,7 @@
  * A thin shell over `runSsdpBridgeDaemon` in :ssdp's jvmMain (where the pipe
  * logic is unit-tested). Lives at the repo root (not under apps/) since it's a
  * distributable host tool rather than a UI sample. Not a published artifact —
- * excluded from the library lint/check gate, like :jvm-cli.
+ * excluded from the library lint/check gate, like :cli.
  */
 plugins {
     // Version omitted: the Kotlin plugin is already on the build classpath from
