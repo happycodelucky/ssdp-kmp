@@ -136,4 +136,36 @@ class SsdpMessageParserTest {
     fun unknownLeadingTokenReturnsNull() {
         assertNull(SsdpMessageParser.parse("GARBAGE not-a-real line\r\nfoo: bar\r\n\r\n"))
     }
+
+    @Test
+    fun responseWithNonUpnpStSurfacesAsCustomTarget() {
+        // A device answering with a vendor ST (roku:ecp) must be surfaced, not
+        // dropped — the parser uses parseOrCustom, so searchTarget is Custom.
+        val raw =
+            "HTTP/1.1 200 OK\r\nLOCATION: http://192.168.4.50:8060/\r\n" +
+                "ST: roku:ecp\r\nUSN: uuid:roku:ecp:X00500ABCDEF\r\n\r\n"
+        val r = parseResponse(raw)
+        assertEquals(SearchTarget.Custom("roku:ecp"), r.searchTarget)
+        assertEquals("http://192.168.4.50:8060/", r.location)
+    }
+
+    @Test
+    fun aliveWithNonUpnpNtSurfacesAsCustomTarget() {
+        val raw =
+            "NOTIFY * HTTP/1.1\r\nNT: roku:ecp\r\nNTS: ssdp:alive\r\n" +
+                "LOCATION: http://192.168.4.50:8060/\r\nUSN: uuid:roku:ecp:X00500ABCDEF\r\n\r\n"
+        val n = parseNotification(raw)
+        assertTrue(n is Notification.Alive)
+        assertEquals(SearchTarget.Custom("roku:ecp"), n.advertisement.notificationTarget)
+    }
+
+    @Test
+    fun responseWithBlankStReturnsNull() {
+        // A present-but-empty ST is junk — parseOrCustom returns null, so the
+        // datagram is still dropped (blank is not a custom target).
+        val raw =
+            "HTTP/1.1 200 OK\r\nLOCATION: http://192.168.4.50:8060/\r\n" +
+                "ST: \r\nUSN: uuid:x\r\n\r\n"
+        assertNull(SsdpMessageParser.parse(raw))
+    }
 }

@@ -258,6 +258,18 @@ public final class com/happycodelucky/ssdp/SearchTarget$All : com/happycodelucky
 public final class com/happycodelucky/ssdp/SearchTarget$Companion {
 	public static final field UPNP_ORG_SCHEMA Ljava/lang/String;
 	public final fun parse (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SearchTarget;
+	public final fun parseOrCustom (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SearchTarget;
+}
+
+public final class com/happycodelucky/ssdp/SearchTarget$Custom : com/happycodelucky/ssdp/SearchTarget {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SearchTarget$Custom;
+	public static synthetic fun copy$default (Lcom/happycodelucky/ssdp/SearchTarget$Custom;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SearchTarget$Custom;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getRawValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/happycodelucky/ssdp/SearchTarget$DeviceType : com/happycodelucky/ssdp/SearchTarget {
