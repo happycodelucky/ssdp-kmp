@@ -40,6 +40,37 @@ internal object UpnpUrl {
         }
     }
 
+    /**
+     * Extract just the host (IP literal or hostname) from an absolute [url],
+     * discarding scheme, any `userinfo@`, the port, path, query and fragment.
+     *
+     * - `http://192.168.4.20:1400/xml/desc.xml` → `192.168.4.20`
+     * - `https://device.local/desc.xml` → `device.local`
+     * - `http://[fe80::1%25en0]:1900/igd.xml` → `fe80::1%25en0` (IPv6 literal,
+     *   brackets stripped; the port colon after `]` is not mistaken for part of
+     *   the address).
+     *
+     * Returns `null` when [url] can't be parsed as `scheme://authority/…` or the
+     * authority carries no host.
+     */
+    fun host(url: String): String? {
+        val authority = parse(url.trim())?.authority ?: return null
+        // Drop any userinfo (everything up to and including the last '@').
+        val hostPort = authority.substringAfterLast('@')
+        if (hostPort.isEmpty()) return null
+        val host =
+            if (hostPort.startsWith("[")) {
+                // IPv6 literal: host is inside the brackets; ignore any `:port` after ']'.
+                val close = hostPort.indexOf(']')
+                if (close <= 0) return null
+                hostPort.substring(1, close)
+            } else {
+                // host[:port] — the port is after the last ':' (IPv4/hostnames have none inside the host).
+                hostPort.substringBefore(':')
+            }
+        return host.ifEmpty { null }
+    }
+
     /** True if [s] begins with a URI scheme (`scheme:`), e.g. `http:`, `https:`. */
     private fun hasScheme(s: String): Boolean {
         val colon = s.indexOf(':')

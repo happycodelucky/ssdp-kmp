@@ -367,6 +367,8 @@ final class com.happycodelucky.ssdp/DeviceDescription { // com.happycodelucky.ss
 final class com.happycodelucky.ssdp/DiscoveredDevice { // com.happycodelucky.ssdp/DiscoveredDevice|null[0]
     constructor <init>(kotlin/String, com.happycodelucky.ssdp/SearchTarget, kotlin/String?, kotlin/String?, kotlin.time/Duration?, kotlin/Int?, kotlin/Int?, kotlin.time/Instant, kotlin.time/Instant, kotlin.time/Instant?, com.happycodelucky.ssdp/SsdpHeaders) // com.happycodelucky.ssdp/DiscoveredDevice.<init>|<init>(kotlin.String;com.happycodelucky.ssdp.SearchTarget;kotlin.String?;kotlin.String?;kotlin.time.Duration?;kotlin.Int?;kotlin.Int?;kotlin.time.Instant;kotlin.time.Instant;kotlin.time.Instant?;com.happycodelucky.ssdp.SsdpHeaders){}[0]
 
+    final val address // com.happycodelucky.ssdp/DiscoveredDevice.address|{}address[0]
+        final fun <get-address>(): kotlin/String? // com.happycodelucky.ssdp/DiscoveredDevice.address.<get-address>|<get-address>(){}[0]
     final val bootId // com.happycodelucky.ssdp/DiscoveredDevice.bootId|{}bootId[0]
         final fun <get-bootId>(): kotlin/Int? // com.happycodelucky.ssdp/DiscoveredDevice.bootId.<get-bootId>|<get-bootId>(){}[0]
     final val cacheControl // com.happycodelucky.ssdp/DiscoveredDevice.cacheControl|{}cacheControl[0]
