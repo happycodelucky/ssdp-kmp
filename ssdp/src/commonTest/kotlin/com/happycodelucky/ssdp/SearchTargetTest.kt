@@ -51,6 +51,46 @@ class SearchTargetTest {
     }
 
     @Test
+    fun parseOrCustomPrefersCanonicalFormsOverCustom() {
+        // Every canonical form parseOrCustom sees must resolve to its specific
+        // case, never Custom — parse is tried first.
+        assertEquals(SearchTarget.All, SearchTarget.parseOrCustom("ssdp:all"))
+        assertEquals(SearchTarget.RootDevice, SearchTarget.parseOrCustom("upnp:rootdevice"))
+        assertEquals(SearchTarget.Uuid("abc-123"), SearchTarget.parseOrCustom("uuid:abc-123"))
+        assertEquals(
+            SearchTarget.DeviceType("schemas-upnp-org", "MediaServer", 1),
+            SearchTarget.parseOrCustom("urn:schemas-upnp-org:device:MediaServer:1"),
+        )
+    }
+
+    @Test
+    fun parseOrCustomFallsBackToCustomForNonUpnpForms() {
+        // The strings the strict parse rejects (except blank) become Custom,
+        // carried verbatim — including a vendor target like roku:ecp.
+        listOf(
+            "roku:ecp",
+            "ssdp:something",
+            "upnp:notroot",
+            "urn:schemas-upnp-org:widget:Foo:1",
+            "urn:schemas-upnp-org:device:Foo:notanumber",
+            "urn:too:few",
+            "garbage",
+        ).forEach { wire ->
+            assertEquals(SearchTarget.Custom(wire), SearchTarget.parseOrCustom(wire), "expected Custom for '$wire'")
+            // Custom round-trips: its rawValue is the wire string verbatim.
+            assertEquals(wire, SearchTarget.parseOrCustom(wire)?.rawValue)
+        }
+    }
+
+    @Test
+    fun parseOrCustomReturnsNullForBlank() {
+        // A blank ST/NT is junk, not a custom target — parseOrCustom drops it.
+        listOf("", " ", "   ", "\t").forEach {
+            assertNull(SearchTarget.parseOrCustom(it), "expected null for blank '$it'")
+        }
+    }
+
+    @Test
     fun deviceAndServiceTypesRoundTripForArbitrarySchemaTypeVersion() =
         runTest {
             // Tokens are colon-free, whitespace-free, non-empty alphanumeric

@@ -195,6 +195,19 @@ sealed interface com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ss
     abstract val rawValue // com.happycodelucky.ssdp/SearchTarget.rawValue|{}rawValue[0]
         abstract fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
 
+    final class Custom : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.Custom|null[0]
+        constructor <init>(kotlin/String) // com.happycodelucky.ssdp/SearchTarget.Custom.<init>|<init>(kotlin.String){}[0]
+
+        final val rawValue // com.happycodelucky.ssdp/SearchTarget.Custom.rawValue|{}rawValue[0]
+            final fun <get-rawValue>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Custom.rawValue.<get-rawValue>|<get-rawValue>(){}[0]
+
+        final fun component1(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Custom.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): com.happycodelucky.ssdp/SearchTarget.Custom // com.happycodelucky.ssdp/SearchTarget.Custom.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/SearchTarget.Custom.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/SearchTarget.Custom.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Custom.toString|toString(){}[0]
+    }
+
     final class DeviceType : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.DeviceType|null[0]
         constructor <init>(kotlin/String, kotlin/String, kotlin/Int) // com.happycodelucky.ssdp/SearchTarget.DeviceType.<init>|<init>(kotlin.String;kotlin.String;kotlin.Int){}[0]
 
@@ -266,6 +279,7 @@ sealed interface com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ss
             final fun <get-UPNP_ORG_SCHEMA>(): kotlin/String // com.happycodelucky.ssdp/SearchTarget.Companion.UPNP_ORG_SCHEMA.<get-UPNP_ORG_SCHEMA>|<get-UPNP_ORG_SCHEMA>(){}[0]
 
         final fun parse(kotlin/String): com.happycodelucky.ssdp/SearchTarget? // com.happycodelucky.ssdp/SearchTarget.Companion.parse|parse(kotlin.String){}[0]
+        final fun parseOrCustom(kotlin/String): com.happycodelucky.ssdp/SearchTarget? // com.happycodelucky.ssdp/SearchTarget.Companion.parseOrCustom|parseOrCustom(kotlin.String){}[0]
     }
 
     final object RootDevice : com.happycodelucky.ssdp/SearchTarget { // com.happycodelucky.ssdp/SearchTarget.RootDevice|null[0]

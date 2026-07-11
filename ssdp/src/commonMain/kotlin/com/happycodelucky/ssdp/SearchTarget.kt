@@ -14,16 +14,21 @@ package com.happycodelucky.ssdp
  * requests and search responses, and as `NT` in NOTIFY broadcasts. The wire
  * format is identical in both roles, so a single type covers both.
  *
- * All cases follow the canonical UPnP forms:
+ * The canonical UPnP forms plus a [Custom] escape hatch for vendor targets:
  *
  * - [All] → `ssdp:all`
  * - [RootDevice] → `upnp:rootdevice`
  * - [Uuid] → `uuid:<UUID>`
  * - [DeviceType] → `urn:<schema>:device:<type>:<version>`
  * - [ServiceType] → `urn:<schema>:service:<type>:<version>`
+ * - [Custom] → any non-UPnP wire string (e.g. `roku:ecp`)
  *
- * Use [rawValue] to serialize to the wire string, and [SearchTarget.parse] to
- * read one back (returns `null` for unrecognized forms — lenient by design).
+ * Use [rawValue] to serialize to the wire string. Two read-back helpers:
+ * [SearchTarget.parse] is strict (returns `null` for anything not one of the
+ * canonical forms above), while [SearchTarget.parseOrCustom] falls back to
+ * [Custom] for any non-blank unrecognized string. Use `parse` when you only
+ * accept UPnP forms; use `parseOrCustom` to preserve whatever a device
+ * announced (including vendor targets).
  */
 public sealed interface SearchTarget {
     /** The wire-string form, suitable for use as an `ST` or `NT` header value. */
@@ -71,6 +76,19 @@ public sealed interface SearchTarget {
     ) : SearchTarget {
         override val rawValue: String get() = "urn:$schema:service:$serviceType:$version"
     }
+
+    /**
+     * An arbitrary, non-UPnP search target carried verbatim on the wire — e.g.
+     * Roku's `roku:ecp`, which is not one of the canonical forms.
+     *
+     * Unlike the other leaves (which compute [rawValue] from their parts), the
+     * wire string *is* the value here, so [rawValue] is the stored property.
+     * Prefer the canonical cases where one applies; [SearchTarget.parseOrCustom]
+     * only produces a [Custom] when no canonical form matches.
+     */
+    public data class Custom(
+        override val rawValue: String,
+    ) : SearchTarget
 
     public companion object {
         /** Schema string for UPnP-forum working-committee devices and services. */
@@ -128,6 +146,24 @@ public sealed interface SearchTarget {
                     null
                 }
             }
+        }
+
+        /**
+         * Parse a search target, falling back to [Custom] for a non-UPnP form.
+         *
+         * Tries the canonical forms first (via [parse]), so `ssdp:all` still
+         * yields [All], never `Custom("ssdp:all")`. Any other **non-blank**
+         * string becomes [Custom] verbatim — e.g. `parseOrCustom("roku:ecp")`
+         * is `Custom("roku:ecp")`. A blank string returns `null` (a blank
+         * `ST`/`NT` is junk, not a target).
+         *
+         * This is what the wire parser uses so a device announcing a vendor
+         * target is surfaced rather than dropped; use the strict [parse] when
+         * only canonical UPnP forms are acceptable.
+         */
+        public fun parseOrCustom(rawValue: String): SearchTarget? {
+            if (rawValue.isBlank()) return null
+            return parse(rawValue) ?: Custom(rawValue)
         }
     }
 }

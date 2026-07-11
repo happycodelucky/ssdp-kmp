@@ -88,7 +88,10 @@ internal object SsdpMessageParser {
         // Required: LOCATION, ST, USN.
         val location = headers[SsdpHeaderKeys.LOCATION]?.takeIf { it.isNotBlank() } ?: return null
         val stString = headers[SsdpHeaderKeys.SEARCH_TARGET] ?: return null
-        val st = SearchTarget.parse(stString) ?: return null
+        // parseOrCustom (not parse): a device answering with a non-UPnP ST
+        // (e.g. Roku's `roku:ecp`) is surfaced as SearchTarget.Custom rather
+        // than dropped. A blank ST still yields null and drops the datagram.
+        val st = SearchTarget.parseOrCustom(stString) ?: return null
         val usn = headers[SsdpHeaderKeys.USN] ?: return null
 
         // EXT is required by spec but omitted by Hue bridges and some Roku
@@ -123,7 +126,9 @@ internal object SsdpMessageParser {
     private fun makeNotification(headers: SsdpHeaders): Notification? {
         // Required for all NOTIFYs: NT, NTS, USN.
         val ntString = headers[SsdpHeaderKeys.NOTIFY_TYPE] ?: return null
-        val nt = SearchTarget.parse(ntString) ?: return null
+        // parseOrCustom (not parse): a NOTIFY advertising a non-UPnP NT is
+        // surfaced as SearchTarget.Custom rather than dropped. Blank NT → null.
+        val nt = SearchTarget.parseOrCustom(ntString) ?: return null
         val ntsString = headers[SsdpHeaderKeys.NOTIFY_SUB_TYPE] ?: return null
         val nts = MessageAnnouncement.parse(ntsString.lowercase()) ?: return null
         val usn = headers[SsdpHeaderKeys.USN] ?: return null
