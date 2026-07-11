@@ -9,8 +9,43 @@ package com.happycodelucky.ssdp.internal
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class UpnpUrlTest {
+    @Test
+    fun hostExtractsIpv4DiscardingSchemePortAndPath() {
+        assertEquals("192.168.4.20", UpnpUrl.host("http://192.168.4.20:1400/xml/device_description.xml"))
+        assertEquals("192.168.4.1", UpnpUrl.host("http://192.168.4.1:1900/igd.xml"))
+        // https scheme, no port, query present.
+        assertEquals("10.0.0.5", UpnpUrl.host("https://10.0.0.5/desc.xml?v=2"))
+    }
+
+    @Test
+    fun hostExtractsHostname() {
+        assertEquals("device.local", UpnpUrl.host("https://device.local/desc.xml"))
+        // No port, no path.
+        assertEquals("example.com", UpnpUrl.host("http://example.com"))
+    }
+
+    @Test
+    fun hostStripsUserinfo() {
+        assertEquals("192.168.1.1", UpnpUrl.host("http://user:pass@192.168.1.1:1900/desc.xml"))
+    }
+
+    @Test
+    fun hostExtractsBracketedIpv6Literal() {
+        assertEquals("fe80::1", UpnpUrl.host("http://[fe80::1]:1900/igd.xml"))
+        // Zone ID (%25 == percent-encoded '%'), no port.
+        assertEquals("fe80::1%25en0", UpnpUrl.host("http://[fe80::1%25en0]/desc.xml"))
+    }
+
+    @Test
+    fun hostReturnsNullForUnparseableUrl() {
+        assertNull(UpnpUrl.host("not-a-url"))
+        assertNull(UpnpUrl.host(""))
+        assertNull(UpnpUrl.host("http:///desc.xml")) // empty authority
+    }
+
     @Test
     fun absoluteRefReturnedUnchanged() {
         assertEquals(

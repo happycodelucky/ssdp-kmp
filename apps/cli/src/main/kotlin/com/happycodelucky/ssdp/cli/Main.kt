@@ -6,7 +6,7 @@
  * actual multicast send/receive + retransmit + registry path against whatever
  * UPnP devices are on the local network.
  *
- * Run: ./gradlew :jvm-cli:run   (optionally -PdurationSeconds=20)
+ * Run: ./gradlew :cli:run   (optionally -PdurationSeconds=20)
  */
 package com.happycodelucky.ssdp.cli
 

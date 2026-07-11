@@ -126,7 +126,7 @@ run = "./gradlew :ssdp:updateKotlinAbi"
 
 [tasks.cli]
 description = "Run the JVM CLI discovery harness: search ssdp:all on the local network, print devices + fetched descriptions. Pass a duration like `mise run cli -- 20`."
-run = "./gradlew :jvm-cli:run --args=\"{{arg(name='seconds', default='15')}}\""
+run = "./gradlew :cli:run --args=\"{{arg(name='seconds', default='15')}}\""
 
 [tasks."app:bridge"]
 description = "Run the host SSDP bridge daemon so an Android emulator can discover real LAN devices. Listens on TCP; the emulator app connects via SsdpClient.bridged(). Pass a port like `mise run app:bridge -- 1901`."

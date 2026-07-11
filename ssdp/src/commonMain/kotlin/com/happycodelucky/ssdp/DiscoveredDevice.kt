@@ -8,6 +8,7 @@
  */
 package com.happycodelucky.ssdp
 
+import com.happycodelucky.ssdp.internal.UpnpUrl
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -39,6 +40,11 @@ import kotlin.time.Instant
  *   `lastSeen + cacheControl`. `null` when the device advertised no `max-age`
  *   (such devices are evicted only by an explicit `byebye` or a network reset).
  * @property otherHeaders Remaining headers from the most recent announcement.
+ * @property address The device's network address — the host portion of
+ *   [location] (an IPv4/IPv6 literal or hostname), with the `http://`/`https://`
+ *   scheme, any port, and the path/query stripped. E.g. a `location` of
+ *   `http://192.168.4.20:1400/xml/device_description.xml` yields `192.168.4.20`.
+ *   `null` when [location] is `null` or can't be parsed as a URL.
  */
 public class DiscoveredDevice(
     public val usn: String,
@@ -53,6 +59,14 @@ public class DiscoveredDevice(
     public val expiresAt: Instant?,
     public val otherHeaders: SsdpHeaders,
 ) {
+    /**
+     * The device's host address derived from [location] — the IP literal or
+     * hostname, with scheme, port, and path discarded. `null` when there is no
+     * parseable [location]. See the class-level `address` doc for examples.
+     */
+    public val address: String?
+        get() = location?.let { UpnpUrl.host(it) }
+
     override fun equals(other: Any?): Boolean = other is DiscoveredDevice && other.usn == usn
 
     override fun hashCode(): Int = usn.hashCode()

@@ -71,7 +71,7 @@ xmlutil = "1.0.0"
 # our native slices (iosArm64/iosSimulatorArm64/macosArm64/jvm). Verified on
 # Maven Central 2026-06-28.
 kermit = "2.1.0"
-# slf4j-simple — SLF4J *provider* for the JVM sample apps only (:jvm-cli,
+# slf4j-simple — SLF4J *provider* for the JVM sample apps only (:cli,
 # :ssdp-bridge). Ktor's JVM client engine depends on slf4j-api:2.0.18 but ships
 # no provider, so a bare run prints "No SLF4J providers were found" and installs
 # a no-op logger. Adding this zero-config stderr provider silences that and

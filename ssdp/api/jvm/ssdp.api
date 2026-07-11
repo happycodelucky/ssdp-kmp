@@ -147,6 +147,7 @@ public final class com/happycodelucky/ssdp/DeviceDescription {
 public final class com/happycodelucky/ssdp/DiscoveredDevice {
 	public synthetic fun <init> (Ljava/lang/String;Lcom/happycodelucky/ssdp/SearchTarget;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/Integer;Ljava/lang/Integer;Lkotlin/time/Instant;Lkotlin/time/Instant;Lkotlin/time/Instant;Lcom/happycodelucky/ssdp/SsdpHeaders;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAddress ()Ljava/lang/String;
 	public final fun getBootId ()Ljava/lang/Integer;
 	public final fun getCacheControl-FghU774 ()Lkotlin/time/Duration;
 	public final fun getConfigId ()Ljava/lang/Integer;

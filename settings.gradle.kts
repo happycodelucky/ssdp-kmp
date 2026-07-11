@@ -68,7 +68,7 @@ include(":ssdp-testing")
 // best inside the same Gradle build that produces the AAR. The iOS and macOS
 // samples are standalone Xcode projects under /apps/ios and /apps/macos; they
 // consume the shared module via SPM, NOT Gradle, and so are deliberately not
-// included here. A JVM CLI sample lives under /apps/jvm-cli for on-LAN testing.
+// included here. A JVM CLI sample lives under /apps/cli for on-LAN testing.
 //
 // The Android SSDP scanner sample: Compose UI listing discovered devices
 // (grouped by UDN) with a description-detail screen. Consumes :ssdp as a
@@ -79,8 +79,8 @@ project(":androidApp").projectDir = file("apps/android")
 // JVM CLI live-discovery harness / sample. Plain kotlin("jvm") app (its own
 // repositories block), depends on :ssdp via the JVM slice. Not published, not
 // in the library check gate.
-include(":jvm-cli")
-project(":jvm-cli").projectDir = file("apps/jvm-cli")
+include(":cli")
+project(":cli").projectDir = file("apps/cli")
 
 // SSDP bridge daemon — runs on the host so an Android emulator (which can't
 // receive inbound UDP multicast) can discover real LAN devices over TCP. Plain
