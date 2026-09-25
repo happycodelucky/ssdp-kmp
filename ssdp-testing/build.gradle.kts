@@ -28,9 +28,9 @@ kotlin {
             // against those types.
             api(project(":ssdp"))
 
-            // StateFlow / SharedFlow plumbing and the atomic state inside
-            // FakeSsdpClient.
-            implementation(libs.kotlinx.coroutines.core)
+            // StateFlow / SharedFlow plumbing inside FakeSsdpClient. `api`:
+            // its public surface exposes those flow types.
+            api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.atomicfu)
         }
 

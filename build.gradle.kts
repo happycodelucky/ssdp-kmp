@@ -63,10 +63,9 @@ allprojects {
 //     KMP: it wants curated single deps (ktor-client-core's internals, kermit's
 //     kermit-core, the :ssdp project dep) re-declared in every leaf set.
 //     Splitting them into transitive internals would churn the catalog.
-//   * incorrectConfiguration → warn. The api-vs-implementation advice is NOT a
-//     false positive here: SsdpClient.devices/changes expose StateFlow/SharedFlow,
-//     so kotlinx-coroutines-core is part of the public API (and androidx.startup
-//     is the supertype of the public SsdpInitializer). Left visible on purpose.
+//   * incorrectConfiguration → warn. Its api-vs-implementation advice was real
+//     here (SsdpClient exposes StateFlow/SharedFlow; SsdpInitializer implements
+//     androidx.startup's Initializer) and is fixed — those are now `api`.
 //   * runtimeOnly → warn, with ONE exclusion: coroutines-android is
 //     compile-invisible because its MainDispatcherFactory loads via
 //     ServiceLoader — kept as the conventional `implementation`.
