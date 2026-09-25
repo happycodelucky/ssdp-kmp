@@ -136,3 +136,6 @@ Want a nicer Kotlin call site (`device.description(client)` subject-verb) withou
 
 ### N-008 — A custom `group("apple")` hierarchy has no iosMain/macosMain — 2026-09-24
 `applyDefaultHierarchyTemplate { common { group("apple") { withIos(); withMacos() } } }` hangs the targets DIRECTLY under appleMain — no iosMain/macosMain for platform-only code. The implicit default template already builds native → apple → ios/macos. Its lambda form is still `@ExperimentalKotlinGradlePluginApi` in 2.4.x; `compilerOptions {}` and AGP's `android {}` need no opt-in. (kmp-template N-008.)
+
+### N-009 — AndroidX `minCompileSdk` only bites the app build — 2026-09-24
+AndroidX AARs carry `minCompileSdk` in `META-INF/com/android/build/gradle/aar-metadata.properties`; AGP's `checkAarMetadata` enforces it on the consuming *app*. lifecycle 2.11.0 needs 37, and `:androidApp` sat broken on main at compileSdk 36 because `check` never builds it. `mise run build:samples` does, on CI's fast leg. (kmp-template N-006.)

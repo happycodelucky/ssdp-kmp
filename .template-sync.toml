@@ -1,0 +1,146 @@
+# Template sync state — maintained with the paul-template-sync skill.
+#
+# last_synced is the template commit this repo has been reconciled against: every template
+# change up to it was adopted, adapted, or deliberately skipped (see [[decision]] / [[ignore]]).
+# Advance it only with `template_sync.py record`, in the same PR that lands the sync.
+
+[template]
+repo = "https://github.com/happycodelucky/kmp-template"
+branch = "main"
+last_synced = "8592621e8be427153e15b1a05177ccba168f729b"
+last_synced_date = "2026-09-24"
+
+# Render map: how template paths and text read in this repo. Generated from the template's
+# scripts/init.sh rules; edit it where this repo deliberately differs. Replacements are
+# literal and applied in order; path rules are regexes applied in order.
+[render]
+name = "ssdp"
+display_name = "Ssdp"
+framework = "SsdpKit"
+group = "com.happycodelucky"
+org = "happycodelucky"
+repo_name = "ssdp-kmp"
+
+[[render.replace]]
+from = "github.com/happycodelucky/__PROJECT_NAME__"
+to = "github.com/happycodelucky/ssdp-kmp"
+
+[[render.replace]]
+from = "__PROJECT_NAME__"
+to = "ssdp"
+
+[[render.replace]]
+from = "__DISPLAY_NAME__"
+to = "Ssdp"
+
+[[render.replace]]
+from = "__FRAMEWORK__"
+to = "SsdpKit"
+
+[[render.replace]]
+from = "template.kmp-library"
+to = "ssdp.kmp-library"
+
+[[render.replace]]
+from = "template.publish"
+to = "ssdp.publish"
+
+[[render.replace]]
+from = "LIBRARY_VERSION"
+to = "SSDP_VERSION"
+
+[[render.replace]]
+from = "com.happycodelucky.src.testing"
+to = "com.happycodelucky.ssdp.testing"
+
+[[render.replace]]
+from = "com.happycodelucky.src.example"
+to = "com.happycodelucky.ssdp.example"
+
+[[render.replace]]
+from = "com.happycodelucky.src.cli"
+to = "com.happycodelucky.ssdp.cli"
+
+[[render.replace]]
+from = "com.happycodelucky.src"
+to = "com.happycodelucky.ssdp"
+
+[[render.replace]]
+from = "build:src"
+to = "build@@SRCTASK@@"
+
+[[render.replace]]
+from = ":src-testing"
+to = ":ssdp-testing"
+
+[[render.replace]]
+from = ":src"
+to = ":ssdp"
+
+[[render.replace]]
+from = "build@@SRCTASK@@"
+to = "build:src"
+
+[[render.replace]]
+from = "assembleSrcKitXCFramework"
+to = "assembleSsdpKitXCFramework"
+
+[[render.replace]]
+from = "assembleSrcXCFramework"
+to = "assembleSsdpXCFramework"
+
+[[render.replace]]
+from = "src-testing/build"
+to = "ssdp-testing/build"
+
+[[render.replace]]
+from = "src-testing/api"
+to = "ssdp-testing/api"
+
+[[render.replace]]
+from = "src/build"
+to = "ssdp/build"
+
+[[render.replace]]
+from = "src/api"
+to = "ssdp/api"
+
+[[render.replace]]
+from = "if-no-files-found: warn"
+to = "if-no-files-found: error"
+
+[[render.path]]
+from = "^src-testing/"
+to = "ssdp-testing/"
+
+[[render.path]]
+from = "^src/"
+to = "ssdp/"
+
+[[render.path]]
+from = "/com/happycodelucky/src(/|$)"
+to = "/com/happycodelucky/ssdp\\1"
+
+[[render.path]]
+from = "^gradle/plugins/src/main/kotlin/template\\."
+to = "gradle/plugins/src/main/kotlin/ssdp."
+
+# Standing decisions: template paths this repo deliberately does not carry.
+[[ignore]]
+path = "TEMPLATE.md"
+reason = "Template scaffolding, removed at render."
+
+[[ignore]]
+path = "scripts/init.sh"
+reason = "Template scaffolding, removed at render."
+
+[[ignore]]
+path = "scripts/template-manifest.txt"
+reason = "Template scaffolding, removed at render."
+
+# Per-change decisions (append one per template change triaged; `deferred` resurfaces in
+# `status`). status: adopted | adapted | skipped | deferred.
+# [[decision]]
+# change = "e2737c2 Drive releases from changesets and a rolling release PR"
+# status = "adopted"
+# reason = "…"

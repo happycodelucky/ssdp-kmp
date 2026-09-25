@@ -84,6 +84,14 @@ run = "./gradlew :ssdp:ktlintFormat :ssdp-testing:ktlintFormat"
 
 # --- build -----------------------------------------------------------------
 
+[tasks."build:samples"]
+description = "Build the Gradle sample apps (Android debug APK, JVM CLI, emulator bridge) — `check` never builds them."
+# The samples are excluded from lint/check (demo scaffolding, not shipped code),
+# but they must still COMPILE: AndroidX AARs impose compileSdk floors
+# (aar-metadata minCompileSdk) that only an app build enforces. CI's fast leg
+# runs this. See .claude/lessons/LESSONS.md N-009.
+run = "./gradlew :androidApp:assembleDebug :cli:build :ssdp-bridge:build"
+
 [tasks."build:xcframework"]
 description = "Assemble the release Ssdp.xcframework (all slices — iosArm64, iosSimulatorArm64, macosArm64; sample-app local SPM + CI)."
 run = "./gradlew :ssdp:assembleSsdpXCFramework"

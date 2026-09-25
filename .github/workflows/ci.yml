@@ -46,6 +46,10 @@ jobs:
       # Lint + detekt + JVM/Android tests. No Apple targets here — those need a
       # Mac and run in the `apple` job.
       #
+      # `build:samples` compiles the Android + JVM sample apps. They're outside
+      # `check`, but an AndroidX bump can raise the compileSdk floor they need
+      # (aar-metadata minCompileSdk) — only an app build notices.
+      #
       # `mise run dependencies:analyze` (buildHealth) is intentionally OMITTED:
       # dependency-analysis 3.16.0 can't read Kotlin 2.4.0's bytecode metadata, so
       # analysis is gated off in build.gradle.kts (see the `enableDependencyAnalysis`
@@ -57,6 +61,7 @@ jobs:
           mise run lint
           mise run test:jvm
           mise run test:android
+          mise run build:samples
           # mise run dependencies:analyze   # re-enable with the DAGP gate (issue #1724)
 
       - name: Upload reports on failure

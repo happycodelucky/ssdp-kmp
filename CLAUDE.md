@@ -163,6 +163,8 @@ done gate; a JVM-only run hides native-test-compile and detekt failures
    `:ssdp:compileKotlinMacosArm64` / `compileKotlinIosArm64` /
    `compileAndroidMain` build clean (common-code bugs often only surface on
    Native — the JVM compile is not a sufficient gate, LESSONS B-004).
+   `check` never builds the sample apps — `mise run build:samples` does (CI's
+   fast leg runs it); it's what catches AndroidX compileSdk floors (LESSONS N-009).
 6. Learned something non-obvious? Add it to `.claude/lessons/LESSONS.md` (terse).
 
 ## 12. Hard rules
