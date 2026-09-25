@@ -1,22 +1,17 @@
 // swift-tools-version:6.0
 import PackageDescription
 
-// SsdpKit is the XCFramework's Swift module name (derived from the :ssdp module
-// + "Kit" — CLAUDE.md §8). This committed form points at the debug XCFramework
-// Gradle builds, and stays that way on main. Each release tags a commit whose
-// Package.swift is the remote `.binaryTarget(url:checksum:)` for that version's
-// GitHub Release asset — SPM consumers pin a tag and get that form
-// (.github/PUBLISHING.md).
-//
-//   mise run spm:dev      — rebuild the debug XCFramework + point this file at it
-//   mise run spm:restore  — restore the committed form
+// BEGIN KMMBRIDGE VARIABLES BLOCK (do not edit)
+let remoteKotlinUrl = "https://github.com/happycodelucky/ssdp-kmp/releases/download/v0.7.0/SsdpKit.xcframework.zip"
+let remoteKotlinChecksum = "f67102ff424639fb826e5085c7a25432c4a19856a82bc7d46fc1fea28aabd886"
 let packageName = "SsdpKit"
+// END KMMBRIDGE BLOCK
 
 let package = Package(
     name: packageName,
     platforms: [
         .iOS(.v18),
-        .macOS(.v15),
+.macOS(.v15)
     ],
     products: [
         .library(
@@ -27,7 +22,9 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: packageName,
-            path: "./ssdp/build/XCFrameworks/debug/SsdpKit.xcframework"
-        ),
+            url: remoteKotlinUrl,
+            checksum: remoteKotlinChecksum
+        )
+        ,
     ]
 )
