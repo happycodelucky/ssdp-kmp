@@ -130,3 +130,9 @@ Want a nicer Kotlin call site (`device.description(client)` subject-verb) withou
 
 ### N-002 — Inject Clock + scope into the registry; never read wall-clock in timer logic — 2026-06-25
 `DeviceRegistry` takes `Clock` and a `CoroutineScope`; expiry uses `delay`. A `TestClock` reading `TestCoroutineScheduler.currentTime` keeps "now" and `delay` in lockstep under `runTest`. (Carries backgrounder's N-011 forward.) `TestCoroutineScheduler.currentTime` needs `@OptIn(ExperimentalCoroutinesApi::class)`.
+
+### N-007 — AGP's KMP Android target isn't a `KotlinJvmTarget`; set `jvmTarget` explicitly — 2026-09-24
+`KotlinMultiplatformAndroidLibraryTargetImpl` is a `DecoratedExternalKotlinTarget`, so `targets.withType<KotlinJvmTarget>()` never reaches it, and an unset `jvmTarget` follows the JDK running the build (building on JDK 25 would ship Java 25 bytecode in the AAR). The convention plugin sets `jvmTarget` on `android { compilerOptions {} }` AND `jvm { compilerOptions {} }` from the catalog's `jvm-target`. (Ported from kmp-template N-005.)
+
+### N-008 — A custom `group("apple")` hierarchy has no iosMain/macosMain — 2026-09-24
+`applyDefaultHierarchyTemplate { common { group("apple") { withIos(); withMacos() } } }` hangs the targets DIRECTLY under appleMain — no iosMain/macosMain for platform-only code. The implicit default template already builds native → apple → ios/macos. Its lambda form is still `@ExperimentalKotlinGradlePluginApi` in 2.4.x; `compilerOptions {}` and AGP's `android {}` need no opt-in. (kmp-template N-008.)

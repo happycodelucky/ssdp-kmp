@@ -39,8 +39,14 @@ contract a contributor (human or agent) reads first. Start here, then
 
 Latest stable only — no EAP/RC/Beta on `main`. K2 only. Single source of truth:
 `gradle/libs.versions.toml`. **Before bumping anything, web-search the latest
-stable** (training data goes stale). The Kotlin pin (`2.3.21`) is bounded above
-by SKIE (`0.10.12`). Gradle 9.5.x, AGP 9.2.x, JVM target 21, JDK 21.
+stable** (training data goes stale). The Kotlin pin is bounded above by SKIE —
+do not bump Kotlin past SKIE's supported range; bump SKIE first. JVM bytecode
+target 21 (the catalog's `jvm-target`, set explicitly on the android + jvm
+targets — never inherited from the build JDK, LESSONS N-007); build JDK 21.
+Every other version — Kotlin, AGP, SKIE, Gradle — is whatever the catalog says,
+so read it there rather than trusting a number quoted in prose. mise pins the
+non-Gradle tools and `gradle/wrapper/gradle-wrapper.properties` pins the Gradle
+distribution; all three must agree.
 **`reachable = "0.14.0"` is a hard floor** — first release with a `jvm` slice,
 which our `jvm()` target needs (D-003).
 
@@ -49,8 +55,12 @@ which our `jvm()` target needs (D-003).
 - Targets: `iosArm64`, `iosSimulatorArm64`, `macosArm64`, Android (arm64-v8a),
   and **`jvm()`** (the one target the ARM-only rule doesn't touch — serves
   desktop/server/Linux/Windows). No x86, no Intel Macs, no watchOS/tvOS.
-- `applyDefaultHierarchyTemplate { common { group("apple") { withIos(); withMacos() } } }` —
-  iOS+macOS coalesce into `appleMain` (shared POSIX socket). Don't hand-roll.
+- Source sets come from Kotlin's **default hierarchy template**, applied
+  implicitly (no `applyDefaultHierarchyTemplate { }` block): commonMain →
+  nativeMain → `appleMain` → `iosMain` / `macosMain`, plus `androidMain` and
+  `jvmMain`. The shared POSIX socket lives in `appleMain` (must compile on both
+  iOS and macOS); iOS-only code goes in `iosMain`. Don't hand-roll source-set
+  wiring — any manual `dependsOn()` edge disables the template (LESSONS N-008).
 - Module shape lives in the `ssdp.kmp-library` convention plugin
   (`gradle/plugins/`). The only delta from reachable's plugin is the `jvm()`
   block. Adding a module = apply `ssdp.kmp-library` + `ssdp.publish`.
@@ -63,8 +73,8 @@ which our `jvm()` target needs (D-003).
 
 Ktor/Ktorfit for HTTP (v1.1 XML fetch), kotlinx.* family (coroutines, atomicfu,
 io), Kermit for logging, `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
-`java.time` in common — and `kotlin.time.Instant`/`Clock` are stable in 2.3.21,
-no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
+`java.time` in common — and `kotlin.time.Instant`/`Clock` are stable since
+2.3.x, no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
 Kotest (property tests). Library code uses **constructor injection only** — no
 Koin/service locator inside `:ssdp`.
 
