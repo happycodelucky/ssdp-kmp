@@ -15,16 +15,21 @@ concurrency:
 
 jobs:
   # --- Fast leg: everything that doesn't need a Mac ---------------------------
-  # commonTest runs on the JVM without a simulator/Xcode, so the bulk of the
-  # suite — lint, detekt, JVM + Android tests, and dependency hygiene — runs
-  # here on cheap Ubuntu in ~2–3 min and fails fast.
+  # commonTest runs on the JVM without a simulator/Xcode, so the cheap half of
+  # the suite — ktlint, detekt, the JVM + Android test targets, the sample-app
+  # builds and dependency hygiene — runs here on Ubuntu and fails fast.
+  #
+  # NOT run here (both need a Mac and live in the `apple` job): the Apple test
+  # targets, and the public-API/ABI check. `checkKotlinAbi` validates every
+  # target from one dump — including the JVM surface — so running it on the
+  # macOS leg covers the JVM API too; there's no gap, just no duplication.
   fast:
     name: Lint + JVM/Android tests
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # mise pins the JDK, Gradle bootstrap binary, gh, and python (see
       # /mise.toml). One install gives CI and local dev the same toolchain.
@@ -34,30 +39,39 @@ jobs:
           install: true
           cache: true
 
-      # Pinned at v5: v6 moved caching to a commercially-licensed component. v5
-      # keeps the freely-licensed caching and runs on Node 24. cache-read-only on
-      # fork PRs (which run without secrets and can't safely populate the shared
-      # cache) prevents cache poisoning.
+      # v6 defaults to "Enhanced Caching", a proprietary component under the
+      # Gradle Technologies Terms of Use. `cache-provider: basic` opts out: the
+      # MIT-licensed provider (plain actions/cache of ~/.gradle/caches +
+      # wrapper) — the proprietary library is then never loaded. (This replaces
+      # the old v5 pin, which kept free caching but stopped receiving patches in
+      # Feb 2026.) Tradeoff: basic has no restore keys, so a build-file or
+      # catalog change starts from a cold cache. See the gradle/actions
+      # DISTRIBUTION.md. cache-read-only on fork PRs (which run without secrets
+      # and can't safely populate the shared cache) prevents cache poisoning.
       - name: Set up Gradle cache
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
+          cache-provider: basic
           cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
 
       # Lint + detekt + JVM/Android tests. No Apple targets here — those need a
       # Mac and run in the `apple` job.
       #
-      # `mise run dependencies:analyze` (buildHealth) is intentionally OMITTED:
-      # dependency-analysis 3.16.0 can't read Kotlin 2.4.0's bytecode metadata, so
-      # analysis is gated off in build.gradle.kts (see the `enableDependencyAnalysis`
-      # gate + DAGP issue #1724). With the gate off it's a no-op; running it here
-      # would only imply a hygiene check that isn't happening. Re-add the line
-      # below (and flip the build.gradle.kts gate on) once DAGP supports 2.4.0.
+      # `build:samples` compiles the Android + JVM sample apps. They're outside
+      # `check`, but an AndroidX bump can raise the compileSdk floor they need
+      # (aar-metadata minCompileSdk) — only an app build notices.
+      #
+      # `dependencies:analyze` (buildHealth) reports dependency-hygiene advice as
+      # WARNINGS and exits 0 — it surfaces the report in the log without gating
+      # the merge. Every category that misfires on hierarchical KMP source sets is
+      # tuned in the root build.gradle.kts; read the advice, don't apply it blindly.
       - name: Lint, JVM + Android tests
         run: |
           mise run lint
           mise run test:jvm
           mise run test:android
-          # mise run dependencies:analyze   # re-enable with the DAGP gate (issue #1724)
+          mise run build:samples
+          mise run dependencies:analyze
 
       - name: Upload reports on failure
         if: failure()
@@ -79,7 +93,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up mise toolchain
         uses: jdx/mise-action@v4
@@ -88,23 +102,19 @@ jobs:
           cache: true
 
       - name: Set up Gradle cache
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
+          cache-provider: basic
           cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
 
-      # Read major.minor from the in-tree fallback literal in build.gradle.kts
-      # (the `getOrElse("X.Y.0-SNAPSHOT")` argument) and stamp the patch with the
-      # CI run number. Humans bump major/minor in build.gradle.kts; CI never
-      # writes back.
+      # Stamp CI builds `<gradle.properties version>-ci.<run>` — the last
+      # release on main (the next one, on a release PR) plus the run number.
+      # Only ever an artifact name; CI never writes the version back.
       - name: Compute version
         id: version
         run: |
-          MAJOR_MINOR=$(grep -oE 'getOrElse\("[0-9]+\.[0-9]+' build.gradle.kts | head -1 | cut -d'"' -f2)
-          if [[ -z "$MAJOR_MINOR" ]]; then
-            echo "Could not parse major.minor from build.gradle.kts" >&2
-            exit 1
-          fi
-          VERSION="${MAJOR_MINOR}.0-ci.${GITHUB_RUN_NUMBER}"
+          set -euo pipefail
+          VERSION="$(python3 scripts/changeset.py current)-ci.${GITHUB_RUN_NUMBER}"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Computed CI version: $VERSION"
 
@@ -124,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ssdp-kmp-${{ steps.version.outputs.VERSION }}.xcframework
-          path: ssdp/build/XCFrameworks/release/Ssdp.xcframework
+          path: ssdp/build/XCFrameworks/release/SsdpKit.xcframework
           if-no-files-found: error
 
       - name: Upload test reports on failure

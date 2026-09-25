@@ -35,7 +35,7 @@ entitlements are per-platform.
 **Iteration loop** (pick up local Kotlin edits):
 
 ```sh
-mise run spm:dev      # build debug Ssdp.xcframework + point Package.swift at it
+mise run spm:dev      # build debug SsdpKit.xcframework + point Package.swift at it
 mise run open:ios     # (or open:macos) — regenerates the .xcodeproj and opens Xcode
 # … edit Kotlin … re-run spm:dev … rebuild in Xcode …
 mise run spm:restore  # restore the committed Package.swift before committing

@@ -1,0 +1,19 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+# ktlint does not police line length; detekt's MaxLineLength (140, in
+# config/detekt/detekt.yml) is the single limit.
+max_line_length = off
+# ktlint_official forces a multiline class header at >= 1 constructor parameter
+# and a multiline function signature at >= 2 parameters, regardless of length.
+# Unset both so declarations stay on one line; detekt flags any past 140.
+ktlint_class_signature_rule_force_multiline_when_parameter_count_greater_or_equal_than = unset
+ktlint_function_signature_rule_force_multiline_when_parameter_count_greater_or_equal_than = unset

@@ -39,8 +39,14 @@ contract a contributor (human or agent) reads first. Start here, then
 
 Latest stable only — no EAP/RC/Beta on `main`. K2 only. Single source of truth:
 `gradle/libs.versions.toml`. **Before bumping anything, web-search the latest
-stable** (training data goes stale). The Kotlin pin (`2.3.21`) is bounded above
-by SKIE (`0.10.12`). Gradle 9.5.x, AGP 9.2.x, JVM target 21, JDK 21.
+stable** (training data goes stale). The Kotlin pin is bounded above by SKIE —
+do not bump Kotlin past SKIE's supported range; bump SKIE first. JVM bytecode
+target 21 (the catalog's `jvm-target`, set explicitly on the android + jvm
+targets — never inherited from the build JDK, LESSONS N-007); build JDK 21.
+Every other version — Kotlin, AGP, SKIE, Gradle — is whatever the catalog says,
+so read it there rather than trusting a number quoted in prose. mise pins the
+non-Gradle tools and `gradle/wrapper/gradle-wrapper.properties` pins the Gradle
+distribution; all three must agree.
 **`reachable = "0.14.0"` is a hard floor** — first release with a `jvm` slice,
 which our `jvm()` target needs (D-003).
 
@@ -49,8 +55,12 @@ which our `jvm()` target needs (D-003).
 - Targets: `iosArm64`, `iosSimulatorArm64`, `macosArm64`, Android (arm64-v8a),
   and **`jvm()`** (the one target the ARM-only rule doesn't touch — serves
   desktop/server/Linux/Windows). No x86, no Intel Macs, no watchOS/tvOS.
-- `applyDefaultHierarchyTemplate { common { group("apple") { withIos(); withMacos() } } }` —
-  iOS+macOS coalesce into `appleMain` (shared POSIX socket). Don't hand-roll.
+- Source sets come from Kotlin's **default hierarchy template**, applied
+  implicitly (no `applyDefaultHierarchyTemplate { }` block): commonMain →
+  nativeMain → `appleMain` → `iosMain` / `macosMain`, plus `androidMain` and
+  `jvmMain`. The shared POSIX socket lives in `appleMain` (must compile on both
+  iOS and macOS); iOS-only code goes in `iosMain`. Don't hand-roll source-set
+  wiring — any manual `dependsOn()` edge disables the template (LESSONS N-008).
 - Module shape lives in the `ssdp.kmp-library` convention plugin
   (`gradle/plugins/`). The only delta from reachable's plugin is the `jvm()`
   block. Adding a module = apply `ssdp.kmp-library` + `ssdp.publish`.
@@ -63,8 +73,8 @@ which our `jvm()` target needs (D-003).
 
 Ktor/Ktorfit for HTTP (v1.1 XML fetch), kotlinx.* family (coroutines, atomicfu,
 io), Kermit for logging, `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
-`java.time` in common — and `kotlin.time.Instant`/`Clock` are stable in 2.3.21,
-no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
+`java.time` in common — and `kotlin.time.Instant`/`Clock` are stable since
+2.3.x, no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
 Kotest (property tests). Library code uses **constructor injection only** — no
 Koin/service locator inside `:ssdp`.
 
@@ -99,8 +109,31 @@ everywhere (`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()
 
 Two channels, copied from reachable: Maven Central (Android AAR + jvm jar + KMP
 metadata + klibs) via `ssdp.publish`/vanniktech; GitHub Releases (SKIE-enhanced
-`Ssdp.xcframework` for SPM) via KMMBridge in `ssdp/build.gradle.kts`. Don't
-redeclare `XCFramework("Ssdp")` — KMMBridge auto-creates it. CI-only publishing.
+`SsdpKit.xcframework` for SPM) via KMMBridge in `ssdp/build.gradle.kts`. Don't
+redeclare `XCFramework("SsdpKit")` — KMMBridge auto-creates it. The framework /
+Swift module is always `<Name>Kit` (`import SsdpKit`), derived from the module
+name in the convention plugin and `ssdp/build.gradle.kts`, so it never shares a
+name with a public type — `object Ssdp` in module `Ssdp` made SKIE rename it
+`Ssdp_` (LESSONS D-010). `mise run publish:local` installs the next
+`X.Y.Z-SNAPSHOT` to `~/.m2` (never the released version, which would shadow
+Central's). The released `Package.swift` lives only on each `vX.Y.Z` tag; `main`
+keeps the local-dev form.
+
+**Releases are changeset-driven** (`.changeset/README.md`,
+`.github/PUBLISHING.md`; LESSONS D-011, N-012, N-013). Every PR that reaches
+consumers adds a changeset (`mise run changeset`: `title`, `change:
+major|minor|patch`, `description`, then the full note in place of its Unfilled
+callout); the Changeset PR check enforces it (label `no-changeset` to opt out).
+A changeset's `change` is the source of truth for the version — the author's
+call, which neither the PR nor tooling overrides. Merges to `main` keep one
+rolling **Release vX.Y.Z** PR up to date — it bumps `version=` in
+`gradle.properties` (the single source of the version), rewrites every
+`x-release-version`-marked copy, and writes `CHANGELOG.md`. Merging it runs
+`.github/workflows/release.yml`, which publishes exactly that version. While 0.x
+a `major` change bumps the minor; `version: X.Y.Z` in a changeset pins the
+version (the way to 1.0.0). Never edit `version=` by hand. Pre-releases and
+retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
+`mise run publish:maven` by hand.
 
 ## 9. Platform notes
 
@@ -149,11 +182,34 @@ done gate; a JVM-only run hides native-test-compile and detekt failures
 2. Adding a dependency? Web-search the latest stable; add to the catalog only.
 3. Platform-specific? Keep the `expect`/`actual` seam tiny; push logic to common.
 4. Public API crossing to Swift? Apply §7 at design time.
-5. Done when `./gradlew :ssdp:check :ssdp-testing:check` passes AND
+5. Add a changeset (`mise run changeset`, §8) when the change reaches
+   consumers, and replace its Unfilled callout with the release note. Its
+   `change` level is the version decision. The usual reading — removed/renamed
+   public API is `major` (even while 0.x), new API `minor`, a fix `patch` — is a
+   default, not a rule: a different level is the author's call (say why in the
+   body). Docs/CI/test/sample-only PRs get the `no-changeset` label.
+6. Done when `./gradlew :ssdp:check :ssdp-testing:check` passes AND
    `:ssdp:compileKotlinMacosArm64` / `compileKotlinIosArm64` /
    `compileAndroidMain` build clean (common-code bugs often only surface on
    Native — the JVM compile is not a sufficient gate, LESSONS B-004).
-6. Learned something non-obvious? Add it to `.claude/lessons/LESSONS.md` (terse).
+   `check` never builds the sample apps — `mise run build:samples` does (CI's
+   fast leg runs it); it's what catches AndroidX compileSdk floors (LESSONS N-009).
+7. Learned something non-obvious? Add it to `.claude/lessons/LESSONS.md` (terse).
+8. Opening a PR or filing an issue? GitHub applies the templates only in its web
+   UI — `gh … create --body` skips them — so build the body from them yourself
+   and pass it with `--body-file` (LESSONS N-015):
+   - **PR:** start from `.github/PULL_REQUEST_TEMPLATE.md`. Follow each
+     `<!-- AI: … -->` comment, replace every `Unfilled` callout (none may
+     remain), prune each choice list to the lines that apply, and tick a
+     done-gate box only for what you actually ran or checked. Keep "AI-authored"
+     under AI assistance, name the tool + model, and open with `--draft` — a
+     human marking it ready is the review sign-off (LESSONS N-016).
+   - **Issue:** read the matching form in `.github/ISSUE_TEMPLATE/`. Write each
+     field's `label` as a `### ` heading in form order, with `_No response_`
+     under a skipped optional field — the exact shape the web form produces.
+     Use its `title:` prefix and `labels:` (drop any the repo lacks — `gh`
+     rejects them). Tick a required checkbox only if it's true (e.g. search
+     with `gh issue list --search` first).
 
 ## 12. Hard rules
 

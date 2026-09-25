@@ -6,7 +6,7 @@
 #
 # The app declares a local Swift Package dependency at `../../` (the repo root
 # Package.swift). `mise run spm:dev` rewrites that Package.swift to point at the
-# locally-built debug Ssdp.xcframework, so iOS engineers iterate by re-running
+# locally-built debug SsdpKit.xcframework, so iOS engineers iterate by re-running
 # spm:dev and rebuilding in Xcode — no Gradle inside Xcode.
 #
 # SSDP-specific setup (vs the reachable sample):
@@ -62,7 +62,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_PREVIEWS: "YES"
         CODE_SIGN_STYLE: Automatic
-        # The Ssdp.xcframework simulator slice is arm64-only (the library is
+        # The SsdpKit.xcframework simulator slice is arm64-only (the library is
         # ARM-only — CLAUDE.md §1 ships no x86_64 native slice). On an Apple
         # Silicon Mac the iOS Simulator runs arm64, so exclude the x86_64
         # simulator arch — otherwise a `generic/platform=iOS Simulator` build
@@ -70,4 +70,4 @@ targets:
         # fails with "no member 'search'"-style errors on that arch.
         EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
     dependencies:
-      - package: Ssdp
+      - package: SsdpKit

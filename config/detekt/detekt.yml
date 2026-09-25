@@ -43,8 +43,8 @@ style:
     # style with many returns is the readable shape for "tolerate and bail".
     max: 12
   MaxLineLength:
-    # Matches the project's 120-col ktlint setting; a handful of fully-qualified
-    # URN literals in test/data run slightly long and are clearer unwrapped.
+    # The project's only line-length limit — ktlint's is off in the root
+    # .editorconfig, so the two linters can't disagree (LESSONS D-009).
     maxLineLength: 140
   LoopWithTooManyJumpStatements:
     # The recvfrom / interface-enumeration loops legitimately break/continue on

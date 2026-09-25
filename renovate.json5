@@ -2,13 +2,27 @@
 //
 // Automates the "use the latest stable, web-search before bumping" policy
 // (see CLAUDE.md): Renovate opens a PR when a dependency in
-// gradle/libs.versions.toml (or a GitHub Action) has a newer stable
-// release, and CI's full check gates the merge.
+// gradle/libs.versions.toml, mise.toml, gradle/wrapper/gradle-wrapper.properties,
+// or a GitHub Action has a newer stable release, and CI's full check gates
+// the merge.
+//
+// NOTE on matchers: `matchPackagePrefixes` was REMOVED in Renovate v38. Use
+// `matchPackageNames` with a glob or a `/regex/`. Renovate auto-migrates the
+// old key, but don't rely on that here — these rules encode the repo's
+// SKIE-bound Kotlin policy, which is too load-bearing to leave to a silent
+// config migration.
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
     'config:recommended',
   ],
+  // Dependency bumps carry no changeset: the Changeset PR check
+  // (.github/workflows/changeset.yml) passes a PR labelled `no-changeset`.
+  // `addLabels` merges with a packageRule's own `labels` (the SKIE rule
+  // below) instead of being replaced by them. Worth a changeset anyway —
+  // e.g. a major coroutines bump consumers will feel — then remove the label
+  // and add one to the PR.
+  addLabels: ['no-changeset'],
   packageRules: [
     {
       // Never EAP / RC / beta / alpha on main. Renovate's default versioning
@@ -21,17 +35,34 @@
       // Kotlin is bounded above by SKIE's supported range ("if SKIE doesn't
       // yet support a Kotlin version, we wait"). A Kotlin bump must be a
       // deliberate, human-paired change with the SKIE pin — Renovate must
-      // not propose it on its own. The prefix also covers the
-      // kotlin-serialization plugin, which versions in lockstep with Kotlin.
-      matchPackagePrefixes: ['org.jetbrains.kotlin'],
+      // not propose it on its own. Covers both the `org.jetbrains.kotlin:*`
+      // Maven coordinates and the `org.jetbrains.kotlin.*` plugin ids (the
+      // multiplatform and compose-compiler plugins, which version in lockstep
+      // with Kotlin).
+      //
+      // A REGEX, not a prefix glob, and the `[.:]` boundary is load-bearing:
+      // a bare `org.jetbrains.kotlin` prefix also swallows
+      // `org.jetbrains.kotlinx` — which would silently disable
+      // kotlinx.coroutines and atomicfu updates too. Those are NOT SKIE-bound
+      // and should keep flowing.
+      matchPackageNames: ['/^org\\.jetbrains\\.kotlin([.:]|$)/'],
       enabled: false,
       description: 'Kotlin pin is SKIE-bound; bump manually together with the skie version.',
     },
     {
       // SKIE bumps are welcome — they're what eventually unlocks a Kotlin
       // bump. Label them so the paired manual Kotlin review is prompted.
-      matchPackagePrefixes: ['co.touchlab.skie'],
+      matchPackageNames: ['/^co\\.touchlab\\.skie([.:]|$)/'],
       labels: ['skie', 'check-kotlin-pin'],
+    },
+    {
+      // mise.toml pins the Gradle launcher; gradle/wrapper/gradle-wrapper.properties
+      // pins the distribution. Both file headers require the two to agree, so
+      // group them into a single PR — separate PRs would land one Gradle
+      // version apart and break that invariant until the second merged.
+      matchManagers: ['mise', 'gradle-wrapper'],
+      matchPackageNames: ['gradle'],
+      groupName: 'gradle',
     },
   ],
 }

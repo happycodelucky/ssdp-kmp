@@ -1,0 +1,116 @@
+# Agents filing through `gh issue create`: the web form is bypassed, so build
+# the body from this file — see CLAUDE.md §11.
+name: Bug report
+description: Report incorrect behavior in Ssdp.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. The fields below are structured so a maintainer
+        — or a coding agent — can reproduce and act on the report with no
+        back-and-forth. Fill in every required field; a minimal reproduction is
+        worth more than a long description.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences — what's wrong?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Affected platform(s)
+      description: Which target(s) does this reproduce on? (Bugs that only appear on Native often hide on the JVM.)
+      multiple: true
+      options:
+        - iOS
+        - macOS
+        - Android
+        - JVM
+        - All / platform-independent (commonMain)
+    validations:
+      required: true
+
+  - type: input
+    id: library-version
+    attributes:
+      label: Ssdp version
+      description: The release tag or commit SHA you're on.
+      placeholder: "e.g. 0.3.1 or a1b2c3d"
+    validations:
+      required: true
+
+  - type: input
+    id: toolchain
+    attributes:
+      label: Toolchain
+      description: Kotlin (Gradle plugin) / Gradle / Xcode / JDK versions, as relevant. Building this repo? The pins are in gradle/libs.versions.toml.
+      placeholder: "Kotlin … · Gradle … · Xcode … · JDK …"
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        The smallest steps or code that trigger the bug. A failing test against
+        `:ssdp` or `:ssdp-testing` is ideal — it's the contract a fix verifies
+        against. Link a branch/gist if it's more than a snippet.
+      render: kotlin
+      placeholder: |
+        // commonTest
+        @Test
+        fun reproduces() {
+            // ...
+        }
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the exact error, stack trace, or wrong output. Paste logs as text, not screenshots.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & pointers
+      description: |
+        Where a fix should start — for a maintainer or a coding agent. The
+        suspected module / source set (e.g. `:ssdp` `appleMain`), files or
+        symbols involved, when it started, a suspected cause, related issues
+        or PRs.
+      placeholder: |
+        - Suspected area: `:ssdp` appleMain, `SomeClient.connect()`
+        - Started after: 0.3.0
+        - Related: #12
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: I'm on a supported configuration (Apple Silicon / arm64; see README).
+          required: true
+        - label: I can reproduce this on the latest release or `main`.
+          required: false

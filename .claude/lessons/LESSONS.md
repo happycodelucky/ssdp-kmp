@@ -6,6 +6,15 @@ Terse, symptom-first notes on bugs hit and decisions made, so a future session
 
 ## Decisions (D)
 
+### D-011 — Releases are changeset-driven — 2026-09-24
+`.changeset/*.md` per PR + `scripts/changeset.py`. `version=` in gradle.properties is the single source of the version — the last release from main (seeded at 0.6.0), bumped only by the rolling release PR; release.yml publishes when a push to main CHANGES it. While 0.x a `major` changeset bumps the minor; only an explicit `version:` pin leaves 0.x. A changeset's `change` is the author's call; bodies start as the PR template's Unfilled callout, which `check`/`version` refuse. Stable versions never come from a manual dispatch (only pre-releases / retries). Replaced the old dispatch-with-`bumpType` release.yml, whose push of Package.swift to main left main's Package.swift at v0.1.0 through v0.6.0. Changelog is the root `CHANGELOG.md` (no mkdocs site here). (kmp-template D-001.)
+
+### D-010 — The Apple framework / Swift module is `SsdpKit`, not `Ssdp` — 2026-09-24
+A module named like one of its public types (`object Ssdp` in module `Ssdp`) makes SKIE rename the type in Swift (`Ssdp_`) and lets the bare type shadow the module qualifier in SKIE's generated Swift. The name is `<PascalName>Kit`, derived identically in the convention plugin (`frameworkBaseName`) and `ssdp/build.gradle.kts` (KMMBridge `frameworkName`); `Package.swift`'s product and the zip follow. Renaming a shipped framework changes every Swift consumer's `import` (`import SsdpKit`) — a breaking change, released as a minor while 0.x. (kmp-template D-002.)
+
+### D-009 — Line length: detekt's 140 is the only limit — 2026-09-24
+With no `.editorconfig`, ktlint 1.8 fell back to `ktlint_official`, which forces multiline class/function signatures by parameter count (≥ 1 constructor param, ≥ 2 function params) regardless of length. The root `.editorconfig` sets ktlint's `max_line_length = off` and unsets both thresholds, so detekt `MaxLineLength` (140) is the single rule. Gotcha: with `off`, ktlint's `function-signature` treats the width as infinite and demands expression bodies join the signature line — even past 140, which detekt then rejects. Shorten the line (e.g. import instead of an FQN) rather than fight either linter. Setting ktlint to 140 instead demanded ~230 signature joins. (kmp-template D-003.)
+
 ### D-008 — `SsdpDeviceListener` callback protocol is a deliberate additive exception; `onEnum` stays — 2026-07-07
 **Two Swift-ergonomics asks, resolved.** (1) "Sealed classes aren't converted to enums; ditch `onEnum`" — a **misunderstanding, not a bug.** SKIE's `SealedInterop` is on by default and DOES emit a Swift enum per sealed type (verified in `ssdp/build/skie/.../DeviceChange.swift`: `enum __Sealed { case found(...); … }` + free func `onEnum(of:)`). There is **NO SKIE flag** to `switch` a sealed value without `onEnum`, because a Kotlin sealed subtype crosses as a reference-typed *class instance* while a Swift enum case is a *value* — `onEnum(of:)` IS that mapping (runtime-type inspection that boxes into the generated enum). The only alternative is a hand-maintained Swift shim doing the identical inspection under a nicer name (must track SKIE's generated leaf names) — **considered and rejected.** Keep `onEnum`; the codebase was already correct. Do not "fix" this again.
 **(2) Callback protocol.** Added `public interface SsdpDeviceListener { onFound / onUpdated / onRemoved(device, reason) }` + `SsdpClient.addListener/removeListener` (non-suspending). A **deliberate, user-requested additive exception** to the §12 "no callback-based public APIs" hard rule (§6/§12 now note it): the Flow API (`devices`/`changes`) stays primary and unchanged; the listener is a **thin fan-out** — one `scope.launch { registry.changes.collect { dispatchToListeners(it) } }` in `SsdpClientImpl.init`, NO separate emission path in `DeviceRegistry`. Listener set uses the §6 **non-suspending** tier (`kotlinx.atomicfu.locks.synchronized` over a `SynchronizedObject`, NOT the registry/search `Mutex`); callbacks fire **outside** the lock (snapshot then invoke), each `runCatching` + `ssdpLog.w` so a throwing listener can't stall the others or kill the collector. `close()` cancels the job (stops the collector) AND clears the set. `FakeSsdpClient` mirrors it: each `emit*`/`clearDevices` calls `notifyListeners` synchronously (deterministic, no scheduler advance) and `close()` clears.
@@ -130,3 +139,33 @@ Want a nicer Kotlin call site (`device.description(client)` subject-verb) withou
 
 ### N-002 — Inject Clock + scope into the registry; never read wall-clock in timer logic — 2026-06-25
 `DeviceRegistry` takes `Clock` and a `CoroutineScope`; expiry uses `delay`. A `TestClock` reading `TestCoroutineScheduler.currentTime` keeps "now" and `delay` in lockstep under `runTest`. (Carries backgrounder's N-011 forward.) `TestCoroutineScheduler.currentTime` needs `@OptIn(ExperimentalCoroutinesApi::class)`.
+
+### N-007 — AGP's KMP Android target isn't a `KotlinJvmTarget`; set `jvmTarget` explicitly — 2026-09-24
+`KotlinMultiplatformAndroidLibraryTargetImpl` is a `DecoratedExternalKotlinTarget`, so `targets.withType<KotlinJvmTarget>()` never reaches it, and an unset `jvmTarget` follows the JDK running the build (building on JDK 25 would ship Java 25 bytecode in the AAR). The convention plugin sets `jvmTarget` on `android { compilerOptions {} }` AND `jvm { compilerOptions {} }` from the catalog's `jvm-target`. (Ported from kmp-template N-005.)
+
+### N-008 — A custom `group("apple")` hierarchy has no iosMain/macosMain — 2026-09-24
+`applyDefaultHierarchyTemplate { common { group("apple") { withIos(); withMacos() } } }` hangs the targets DIRECTLY under appleMain — no iosMain/macosMain for platform-only code. The implicit default template already builds native → apple → ios/macos. Its lambda form is still `@ExperimentalKotlinGradlePluginApi` in 2.4.x; `compilerOptions {}` and AGP's `android {}` need no opt-in. (kmp-template N-008.)
+
+### N-009 — AndroidX `minCompileSdk` only bites the app build — 2026-09-24
+AndroidX AARs carry `minCompileSdk` in `META-INF/com/android/build/gradle/aar-metadata.properties`; AGP's `checkAarMetadata` enforces it on the consuming *app*. lifecycle 2.11.0 needs 37, and `:androidApp` sat broken on main at compileSdk 36 because `check` never builds it. `mise run build:samples` does, on CI's fast leg. (kmp-template N-006.)
+
+### N-010 — version-catalog-update ≥ 1.0 doesn't read the ben-manes report — 2026-09-24
+VCU resolves versions itself with its own (different) stability rule, so `dependencies:update` ignored the stable-only filter and could write a Kotlin past SKIE's cap. The root build passes it the shared `stableVersion` predicate (`versionSelector`), `pin`s `kotlin`, `keep`s findVersion-only keys, and disables `sortByKey`. It still strips blank lines and end-of-line comments. Gradle Doctor was removed (its JDK checks were already disabled; it caused Gradle 10 deprecations) — `mise run build:profile` replaces `build:doctor`. (kmp-template N-001, N-009.)
+
+### N-011 — Catalog keys are kebab-case; a key must not be a segment-prefix of another — 2026-09-24
+Dashes become nested accessors, so `ktlint` beside `ktlint-gradle` turns `libs.versions.ktlint` into a group and `.get()` stops compiling. Name siblings by artifact: `ktlint-cli` / `ktlint-gradle` (accessor `libs.versions.ktlint.cli`). (kmp-template N-010.)
+
+### N-012 — `GITHUB_TOKEN` pushes/PRs trigger no workflows — 2026-09-24
+A push or PR made with `GITHUB_TOKEN` triggers no workflows (workflow_dispatch excepted), and opening a PR with it needs Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests". release-pr.yml therefore dispatches ci.yml + changeset.yml on `release/next` itself — their check runs attach to the head SHA, so they show on the PR — unless a GitHub App (`RELEASE_APP_CLIENT_ID` var + `RELEASE_APP_PRIVATE_KEY` secret) is configured. (kmp-template N-013.)
+
+### N-013 — The released Package.swift lives only on the tag — 2026-09-24
+main is branch-protected, so no workflow can push to it. The release commit carrying the remote-binary Package.swift is a detached commit the `vX.Y.Z` tag is force-moved onto (Touchlab's flow); main keeps the local-dev `.binaryTarget(path:)` form. SPM resolves the manifest from the tag. (kmp-template N-014.)
+
+### N-014 — actionlint rejects `client-id` on create-github-app-token@v3 — 2026-09-24
+actionlint's bundled metadata for `actions/create-github-app-token@v3` is stale: it demands `app-id` and rejects `client-id`. v3's action.yml has `client-id` (and deprecates `app-id`) — the workflow is right, the lint is wrong. Expect exactly these two errors on release-pr.yml. (kmp-template N-015.)
+
+### N-015 — `gh pr/issue create --body` bypasses the templates — 2026-09-24
+PR templates and YAML issue forms apply only in GitHub's web UI, so agents follow them only because CLAUDE.md §11 says to. A submitted form renders as `### <label>` + answer per field (`_No response_` when skipped) — mirroring that shape is indistinguishable from a web submission. Nested HTML comments don't exist: the PR template's header can't quote `<!-- AI: … -->` (the inner `-->` closes it). (kmp-template N-011.)
+
+### N-016 — Checkboxes in a PR body only for the done-gate — 2026-09-24
+Every `- [ ]` in a PR body is live (one click toggles it) and feeds the PR list's "N of M tasks" counter; a pick-one group can never be fully ticked. So choices are plain bullet lists you prune, and human review is signalled by the PR leaving draft, not by a tick. (kmp-template N-012.)

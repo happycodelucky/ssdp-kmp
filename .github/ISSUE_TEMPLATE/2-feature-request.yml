@@ -1,0 +1,112 @@
+# Agents filing through `gh issue create`: the web form is bypassed, so build
+# the body from this file — see CLAUDE.md §11.
+name: Feature request
+description: Propose new functionality or an API change for Ssdp.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the proposal. The **Acceptance criteria** field below is the
+        most important one: write it as a checklist of observable, testable
+        outcomes. A well-formed proposal can be picked up and implemented
+        directly — by a contributor or a coding agent — against that checklist.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What can't you do today, or what's awkward? Describe the use case, not just the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should Ssdp do? If it's an API change, sketch the public surface — remember it crosses to Swift via SKIE (sealed types, suspend/Flow), so design with that in mind (CLAUDE.md §7).
+      render: kotlin
+      placeholder: |
+        // Sketch the public API you'd want in commonMain.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Target platform(s)
+      description: Which targets does this need to work on? Prefer commonMain — keep the expect/actual seam tiny (CLAUDE.md §4).
+      multiple: true
+      options:
+        - iOS
+        - macOS
+        - Android
+        - JVM
+        - All (commonMain)
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: |
+        A checklist of observable, testable outcomes that define "done". This is
+        the contract an implementation (human or agent) builds and verifies
+        against. Be specific.
+      value: |
+        - [ ] <Public API X exists in commonMain and behaves as Y>
+        - [ ] <Covered by commonTest with runTest virtual time>
+        - [ ] <Bridges cleanly to Swift (exhaustive enum / async / AsyncSequence)>
+        - [ ] <`mise run check` passes on every target>
+        - [ ] <Docs updated (README + KDoc) if public API changed>
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: |
+        What this should explicitly NOT do. The counterpart to the acceptance
+        criteria: it keeps an implementation, especially an agent's, from
+        over-building. The library is headless, so UI and app-level concerns
+        are out of scope by default (CLAUDE.md §1).
+      placeholder: |
+        - No change to existing public signatures
+        - No platform-specific convenience API (commonMain only)
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & pointers
+      description: |
+        Where an implementer (human or agent) should start: modules / source
+        sets (`commonMain`, `appleMain`, …), existing types or files to extend,
+        related issues or PRs, prior art in other libraries.
+      placeholder: |
+        - Extends: `SomeClient` in `:ssdp` commonMain
+        - Related: #12
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, existing libraries (see CLAUDE.md §5 — Kotlin-first), or why a workaround isn't enough.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and this isn't already proposed.
+          required: true
+        - label: This fits the library's scope (headless, no UI; see CLAUDE.md §1).
+          required: true

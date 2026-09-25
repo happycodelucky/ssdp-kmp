@@ -17,12 +17,12 @@ plugins {
     // codegen for the UPnP description wire types in internal/DescriptionParser.kt.
     alias(libs.plugins.kotlin.serialization)
     // KMMBridge (CLAUDE.md §9): aggregates the per-target Apple frameworks the
-    // convention plugin declared into `Ssdp.xcframework`, publishes the release
+    // convention plugin declared into `SsdpKit.xcframework`, publishes the release
     // zip as a GitHub Release asset, and regenerates the root /Package.swift.
     // The `.github` plugin variant is a superset of the core plugin in 1.2.x —
     // applying both produces a duplicate-extension error, so only this one.
     //
-    // Do NOT redeclare `XCFramework("Ssdp")` in the kotlin { } block: KMMBridge
+    // Do NOT redeclare `XCFramework("SsdpKit")` in the kotlin { } block: KMMBridge
     // auto-creates the aggregator from the framework binaries at config time.
     alias(libs.plugins.kmmbridge.github)
 }
@@ -30,7 +30,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.coroutines.core)
+            // `api`: the public surface exposes coroutines types —
+            // SsdpClient.devices is a StateFlow, changes a SharedFlow — so
+            // consumers need coroutines on their compile classpath.
+            api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.atomicfu)
             implementation(libs.kotlinx.io.core)
             // reachable supplies the network-change signal (Reachability.status)
@@ -62,25 +65,25 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
-            implementation(libs.kotest.assertions.core)
+            // Property-based parser tests (Arb generators); assertions are
+            // kotlin.test's.
             implementation(libs.kotest.property)
             // Ktor MockEngine drives the description fetch under runTest with no
             // real HTTP.
             implementation(libs.ktor.client.mock)
-            // `:ssdp-testing` provides the public `FakeSsdpClient` used in
-            // registry / client tests. The testing module `api`s `:ssdp`'s
-            // `main` configuration; the back-edge here is on `commonTest`, not
-            // `main`, so Gradle resolves both without a circular `main`
-            // dependency.
-            implementation(project(":ssdp-testing"))
+            // No `:ssdp-testing` here: :ssdp's own tests drive the internals
+            // through test doubles in commonTest (e.g. FakeMulticastSocket), not
+            // the public FakeSsdpClient.
         }
 
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             // androidx.startup hosts the bundled SsdpInitializer, which captures
             // the application Context at process startup so the Android
-            // Ssdp.createClient() factory needs no Context argument.
-            implementation(libs.androidx.startup.runtime)
+            // Ssdp.createClient() factory needs no Context argument. `api`:
+            // the public SsdpInitializer implements androidx.startup's
+            // Initializer, so that supertype is part of the Android API.
+            api(libs.androidx.startup.runtime)
         }
 
         // androidHostTest source set is created by the convention plugin's
@@ -91,7 +94,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
             implementation(libs.ktor.client.mock)
-            implementation(project(":ssdp-testing"))
         }
 
         jvmTest.dependencies {
@@ -99,7 +101,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
             implementation(libs.ktor.client.mock)
-            implementation(project(":ssdp-testing"))
         }
     }
 }
@@ -122,7 +123,7 @@ skie {
 //   1. Maven Central (`ssdp.publish` convention plugin) — Android AAR, the jvm
 //      jar, `kotlinMultiplatform` metadata, and per-target klibs. KMP consumers
 //      resolve these from `commonMain`; no XCFramework involved.
-//   2. GitHub Releases (this block) — the SKIE-enhanced `Ssdp.xcframework` zip
+//   2. GitHub Releases (this block) — the SKIE-enhanced `SsdpKit.xcframework` zip
 //      for pure-Swift consumers, referenced from the root /Package.swift by URL
 //      + checksum so `swift package resolve` needs no local Gradle build and no
 //      authentication.
@@ -135,11 +136,14 @@ skie {
 // entry point — see mise task `spm:dev`.
 gitHubReleaseArtifacts(releasString = "v${project.version}")
 
+// The XCFramework's Swift module name. DERIVED from the module name the same way
+// the convention plugin derives each framework binary's baseName (ssdp →
+// "SsdpKit"), so the two can never drift. If they disagreed, the generated
+// Package.swift would reference a binary that doesn't exist.
+val xcframeworkBaseName = project.name.split("-").joinToString("") { it.replaceFirstChar(Char::uppercase) } + "Kit"
+
 kmmbridge {
-    // The XCFramework's Swift module name. Must match the `baseName` the
-    // convention plugin sets on each framework binary, or the generated
-    // Package.swift references a binary that doesn't exist.
-    frameworkName.set("Ssdp")
+    frameworkName.set(xcframeworkBaseName)
 
     // `swiftToolVersion = "6.0"` because the platform constants `.iOS(.v18)`
     // and `.macOS(.v15)` need PackageDescription 6.0; KMMBridge defaults to

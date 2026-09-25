@@ -1,0 +1,272 @@
+# Template sync state — maintained with the paul-template-sync skill.
+#
+# last_synced is the template commit this repo has been reconciled against: every template
+# change up to it was adopted, adapted, or deliberately skipped (see [[decision]] / [[ignore]]).
+# Advance it only with `template_sync.py record`, in the same PR that lands the sync.
+
+[template]
+repo = "https://github.com/happycodelucky/kmp-template"
+branch = "main"
+last_synced = "bc4b2035300a05b505590cf181144e73e3271122"
+last_synced_date = "2026-09-24"
+
+# Render map: how template paths and text read in this repo. Generated from the template's
+# scripts/init.sh rules; edit it where this repo deliberately differs. Replacements are
+# literal and applied in order; path rules are regexes applied in order.
+[render]
+name = "ssdp"
+display_name = "Ssdp"
+framework = "SsdpKit"
+group = "com.happycodelucky"
+org = "happycodelucky"
+repo_name = "ssdp-kmp"
+
+[[render.replace]]
+from = "github.com/happycodelucky/__PROJECT_NAME__"
+to = "github.com/happycodelucky/ssdp-kmp"
+
+[[render.replace]]
+from = "__PROJECT_NAME__"
+to = "ssdp"
+
+[[render.replace]]
+from = "__DISPLAY_NAME__"
+to = "Ssdp"
+
+[[render.replace]]
+from = "__FRAMEWORK__"
+to = "SsdpKit"
+
+[[render.replace]]
+from = "template.kmp-library"
+to = "ssdp.kmp-library"
+
+[[render.replace]]
+from = "template.publish"
+to = "ssdp.publish"
+
+[[render.replace]]
+from = "LIBRARY_VERSION"
+to = "SSDP_VERSION"
+
+[[render.replace]]
+from = "com.happycodelucky.src.testing"
+to = "com.happycodelucky.ssdp.testing"
+
+[[render.replace]]
+from = "com.happycodelucky.src.example"
+to = "com.happycodelucky.ssdp.example"
+
+[[render.replace]]
+from = "com.happycodelucky.src.cli"
+to = "com.happycodelucky.ssdp.cli"
+
+[[render.replace]]
+from = "com.happycodelucky.src"
+to = "com.happycodelucky.ssdp"
+
+[[render.replace]]
+from = "build:src"
+to = "build@@SRCTASK@@"
+
+[[render.replace]]
+from = ":src-testing"
+to = ":ssdp-testing"
+
+[[render.replace]]
+from = ":src"
+to = ":ssdp"
+
+[[render.replace]]
+from = "build@@SRCTASK@@"
+to = "build:src"
+
+[[render.replace]]
+from = "assembleSrcKitXCFramework"
+to = "assembleSsdpKitXCFramework"
+
+[[render.replace]]
+from = "src-testing/build"
+to = "ssdp-testing/build"
+
+[[render.replace]]
+from = "src-testing/api"
+to = "ssdp-testing/api"
+
+[[render.replace]]
+from = "src/build"
+to = "ssdp/build"
+
+[[render.replace]]
+from = "src/api"
+to = "ssdp/api"
+
+[[render.replace]]
+from = "if-no-files-found: warn"
+to = "if-no-files-found: error"
+
+[[render.path]]
+from = "^docs/changelog\\.md$"
+to = "CHANGELOG.md"
+
+[[render.path]]
+from = "^src-testing/"
+to = "ssdp-testing/"
+
+[[render.path]]
+from = "^src/"
+to = "ssdp/"
+
+[[render.path]]
+from = "/com/happycodelucky/src(/|$)"
+to = "/com/happycodelucky/ssdp\\1"
+
+[[render.path]]
+from = "^gradle/plugins/src/main/kotlin/template\\."
+to = "gradle/plugins/src/main/kotlin/ssdp."
+
+# Standing decisions: template paths this repo deliberately does not carry.
+[[ignore]]
+path = "TEMPLATE.md"
+reason = "Template scaffolding, removed at render."
+
+[[ignore]]
+path = "scripts/init.sh"
+reason = "Template scaffolding, removed at render."
+
+[[ignore]]
+path = "scripts/template-manifest.txt"
+reason = "Template scaffolding, removed at render."
+
+[[ignore]]
+path = "mkdocs.yml"
+reason = "No mkdocs site: Dokka + README only (the earlier merge deferred docs.yml)."
+
+[[ignore]]
+path = "main.py"
+reason = "mkdocs-macros hook; no mkdocs site here."
+
+[[ignore]]
+path = ".github/workflows/docs.yml"
+reason = "No mkdocs site; release.yml's docs-deploy job is dropped too."
+
+[[ignore]]
+path = "docs/[!c]*"
+reason = "mkdocs site pages; no docs site here (docs/changelog.md maps to CHANGELOG.md and is still tracked)."
+
+[[ignore]]
+path = "src/src/*"
+reason = "Template placeholder library code (Greeter / Platform)."
+
+[[ignore]]
+path = "src-testing/src/*"
+reason = "Template placeholder fakes (FakeGreeter)."
+
+[[ignore]]
+path = "src/api/*"
+reason = "Placeholder API dump; ssdp commits its own ssdp/api/."
+
+[[ignore]]
+path = "src-testing/api/*"
+reason = "Placeholder API dump; ABI validation is deliberately off for :ssdp-testing here."
+
+[[ignore]]
+path = "apps/*"
+reason = "ssdp's sample apps (SSDP scanner, :cli, :ssdp-bridge) are its own; port sample-build infra (mise/CI) by hand."
+
+# Per-change decisions (append one per template change triaged; `deferred` resurfaces in
+# `status`). status: adopted | adapted | skipped | deferred.
+# [[decision]]
+# change = "e2737c2 Drive releases from changesets and a rolling release PR"
+# status = "adopted"
+# reason = "…"
+
+[[decision]]
+change = "90261ed, d07dbff — template-repo CI guards (token XCFramework path, Pages deploy skip)"
+status = "skipped"
+reason = "Template-only; the render map already flips if-no-files-found back to error, and there's no Pages site here."
+synced = "2026-09-24"
+
+[[decision]]
+change = "0a671fc — Renovate Kotlin guard, provenance headers, stale doc claims"
+status = "adapted"
+reason = "Renovate rules adopted as-is; CLAUDE.md §3 stops quoting versions (it said Kotlin 2.3.21 vs the catalog's 2.4.0); ci.yml comment fixed."
+synced = "2026-09-24"
+
+[[decision]]
+change = "5e548ec — un-gate dependency-analysis"
+status = "adapted"
+reason = "DAGP 3.16.0 -> 3.19.2, gate removed, CI step back. Tuning re-derived here: coroutines-core `api` advice is real for ssdp (StateFlow in the public API); follow-up chip filed."
+synced = "2026-09-24"
+
+[[decision]]
+change = "a09b8a2, 5abb508, 98a2a83, 7d3ed37 (bumps) — toolchain + library bumps (Gradle 9.7.1, AGP 9.4.1, Kotlin 2.4.10/SKIE 0.10.14, kotest, kermit, …)"
+status = "deferred"
+reason = "Owner chose a separate paul-update-repo pass. Only forced pieces taken: DAGP 3.19.2, VCU 1.1.1, compileSdk 37. Carry N-002/N-003 (JDK 21 hold, KGP support gap) with it."
+synced = "2026-09-24"
+
+[[decision]]
+change = "44181b9, 4b89ef9 — build:doctor -> remove Gradle Doctor, add build:profile"
+status = "adopted"
+reason = "Doctor removed; build:profile replaces build:doctor. LESSONS N-010."
+synced = "2026-09-24"
+
+[[decision]]
+change = "7d3ed37 (VCU config) + cbc424b (pre-baseline stable filter) — stable-only dependency tooling"
+status = "adopted"
+reason = "ssdp never took cbc424b; stableVersion now feeds ben-manes rejectVersionIf and VCU versionSelector; VCU pins kotlin, keeps findVersion keys. LESSONS N-010."
+synced = "2026-09-24"
+
+[[decision]]
+change = "d44e6e1 — explicit jvmTarget on android + jvm"
+status = "adopted"
+reason = "Verified class-file major 65 on both outputs. LESSONS N-007."
+synced = "2026-09-24"
+
+[[decision]]
+change = "e3f0625 (+ compileSdk from 98a2a83) — build the sample apps in CI"
+status = "adapted"
+reason = "build:samples = :androidApp :cli :ssdp-bridge. :androidApp was broken on main (lifecycle 2.11 needs compileSdk 37); 37 builds on AGP 9.2.1. LESSONS N-009."
+synced = "2026-09-24"
+
+[[decision]]
+change = "4c79e9d — checkout v7, setup-gradle v6 basic caching"
+status = "adopted"
+reason = "ci.yml and release.yml. First exercised by the sync PR's CI."
+synced = "2026-09-24"
+
+[[decision]]
+change = "f04fb40 — Kotlin 2.4 idioms: default hierarchy template, explicit backing fields, Uuid"
+status = "adapted"
+reason = "Build-logic half adopted (implicit default template, opt-ins dropped; LESSONS N-008). Contract idioms deferred: languageVersion/apiVersion are still KOTLIN_2_3 here, so explicit backing fields / kotlin.uuid aren't available — decide with the toolchain pass."
+synced = "2026-09-24"
+
+[[decision]]
+change = "3ca7c4b — kebab-case catalog keys"
+status = "adopted"
+reason = "House standard. ktlint-cli / ktlint-gradle split. LESSONS N-011."
+synced = "2026-09-24"
+
+[[decision]]
+change = "0d9958f — detekt 140 as the only line-length rule (.editorconfig)"
+status = "adapted"
+reason = "Adopted `max_line_length = off`; one test line shortened because ktlint then wanted a 145-col join (140 in ktlint instead forced ~230 joins). LESSONS D-009."
+synced = "2026-09-24"
+
+[[decision]]
+change = "e2737c2, f78c8cc, 59dbeb7, 0d80b6a — changeset-driven releases + rolling release PR"
+status = "adapted"
+reason = "Owner approved. Changelog is root CHANGELOG.md (no docs site), docs-deploy job + template guards dropped, version seeded 0.6.0, README install snippets marked. LESSONS D-011, N-012..N-014."
+synced = "2026-09-24"
+
+[[decision]]
+change = "abafd65, a458044 — agent-fillable PR + issue templates"
+status = "adapted"
+reason = "Owner approved. Done-gate mapped to ssdp's contract (iosArm64 compile, §12 extras); question contact link dropped (Discussions off). LESSONS N-015, N-016."
+synced = "2026-09-24"
+
+[[decision]]
+change = "0d90e73 — Apple framework named <Name>Kit"
+status = "adopted"
+reason = "Owner approved: Ssdp -> SsdpKit (object Ssdp was exported as Ssdp_). Breaking for Swift; changeset ssdpkit-framework (-> 0.7.0). LESSONS D-010."
+synced = "2026-09-24"

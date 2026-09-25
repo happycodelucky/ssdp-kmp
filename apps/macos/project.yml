@@ -47,4 +47,4 @@ targets:
         CODE_SIGN_ENTITLEMENTS: macOSApp/macOSApp.entitlements
         CODE_SIGN_STYLE: Automatic
     dependencies:
-      - package: Ssdp
+      - package: SsdpKit

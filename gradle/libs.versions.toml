@@ -10,6 +10,20 @@
 # template) and adds the two things SSDP needs that reachable lacks: a `jvm`
 # target (so the catalog carries no jvm-only knobs, but the convention plugin
 # declares jvm()), and a dependency on the published `reachable` artifact.
+#
+# NOTE: `mise run dependencies:update` (version-catalog-update) rewrites this
+# file. The root build script configures it to keep entry order, keep
+# findVersion("…")-only keys (android-compile-sdk, jvm-target, …), and never
+# touch the SKIE-bound `kotlin` ref. It still strips BLANK LINES and END-OF-LINE
+# comments — so new comments go on their own line above the entry, where they
+# survive. After running it, restore the blank lines and review the bumps.
+#
+# NAMING: every key, in every section, is lowercase kebab-case. Dashes become
+# nested accessors (`android-compile-sdk` → libs.versions.android.compile.sdk),
+# so a key must never be a whole-segment prefix of another: adding
+# `ktlint-gradle` beside `ktlint` turns libs.versions.ktlint into a group and
+# breaks `.get()`. Name siblings by artifact instead (ktlint-cli, ktlint-gradle).
+# LESSONS N-011.
 # =============================================================================
 
 [versions]
@@ -18,9 +32,7 @@
 # Kotlin 2.4.0 is the highest version SKIE 0.10.13 supports. CLAUDE.md §8:
 # "If SKIE doesn't yet support a Kotlin version, we wait. Don't bump Kotlin
 # past SKIE's supported range." SKIE 0.10.13 added 2.4.0 (changelog 2026-06-24);
-# these two move in lockstep. NOTE: dependency-analysis 3.16.0 can't read Kotlin
-# 2.4.0 bytecode metadata, so `buildHealth` is gated off until DAGP catches up
-# (see build.gradle.kts `enableDependencyAnalysis` + upstream issue #1724).
+# these two move in lockstep.
 kotlin = "2.4.0"
 agp = "9.2.1"                  # com.android.kotlin.multiplatform.library variant (CLAUDE.md §2).
 skie = "0.10.13"               # Supports Kotlin 2.4.0 (changelog 2026-06-24).
@@ -31,10 +43,13 @@ dokka = "2.2.0"                # Kotlin API doc generator; Dokka v2 task layout.
 # Gradle 9 / AGP 9 floor and supports com.android.kotlin.multiplatform.library
 # publications. Coexists with KMMBridge — each plugin owns its own repository
 # and publish-umbrella task, so there's no cross-contamination.
-mavenPublish = "0.36.0"
+maven-publish = "0.36.0"
 
 # --- Android SDK ------------------------------------------------------------
-android-compile-sdk = "36"
+# 37 is forced: lifecycle 2.11.0 (and Compose 1.12) declare minCompileSdk=37 in
+# their aar-metadata, which AGP's checkAarMetadata enforces on :androidApp
+# (LESSONS N-009). Builds clean on AGP 9.2.1.
+android-compile-sdk = "37"
 android-min-sdk = "30"         # arm64-v8a only (CLAUDE.md §1).
 jvm-target = "21"              # CLAUDE.md §2.
 
@@ -115,8 +130,10 @@ turbine = "1.2.1"
 kotest = "6.2.1"
 
 # --- Lint ------------------------------------------------------------------
-ktlint = "1.8.0"               # The ktlint tool itself.
-ktlintGradle = "14.2.0"        # The org.jlleitschuh.gradle.ktlint Gradle plugin.
+# The ktlint tool itself (com.pinterest.ktlint:ktlint-cli).
+ktlint-cli = "1.8.0"
+# The org.jlleitschuh.gradle.ktlint Gradle plugin.
+ktlint-gradle = "14.2.0"
 # detekt 1.23.8 is the latest stable; the 2.x line is alpha-only and CLAUDE.md
 # §2 bans pre-stable on main.
 detekt = "1.23.8"
@@ -125,12 +142,16 @@ detekt = "1.23.8"
 # Applied at the root build (not via the convention plugin) — they register
 # root tasks: `buildHealth` (dependency-analysis), `dependencyUpdates`
 # (ben-manes), `versionCatalogUpdate` (littlerobots). Drive the mise
-# dependencies:* / build:doctor tasks. All four verified latest-stable on
-# plugins.gradle.org 2026-06-29.
-benManesVersions = "0.54.0"        # com.github.ben-manes.versions — reports newer stable deps.
-versionCatalogUpdate = "1.1.0"     # nl.littlerobots.version-catalog-update — rewrites this catalog.
-dependencyAnalysis = "3.16.0"      # com.autonomousapps.dependency-analysis — unused/misused/transitive advice.
-gradleDoctor = "0.12.0"            # com.osacky.doctor — slow-config / JVM-mismatch / cache-miss warnings.
+# dependencies:* tasks.
+# com.github.ben-manes.versions — reports newer stable deps.
+ben-manes-versions = "0.54.0"
+# nl.littlerobots.version-catalog-update — rewrites this catalog. 1.1.1
+# (plugins.gradle.org 2026-09-24).
+version-catalog-update = "1.1.1"
+# com.autonomousapps.dependency-analysis — unused/misused/transitive advice.
+# ≥ 3.18.0 is required: 3.16.x couldn't read Kotlin 2.4 bytecode metadata
+# (issue #1724). 3.19.2 (plugins.gradle.org 2026-09-24).
+dependency-analysis = "3.19.2"
 
 
 [libraries]
@@ -190,7 +211,7 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 skie-gradle-plugin = { module = "co.touchlab.skie:co.touchlab.skie.gradle.plugin", version.ref = "skie" }
 dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
-vanniktech-maven-publish-gradle-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+vanniktech-maven-publish-gradle-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "maven-publish" }
 
 # --- Sample-app deps (apps/android only) ------------------------------------
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
@@ -228,19 +249,18 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 skie = { id = "co.touchlab.skie", version.ref = "skie" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 # kmmbridge-github — applied in ssdp/build.gradle.kts. Publishes the
-# SKIE-enhanced Ssdp.xcframework zip as a GitHub *Release* asset (public,
+# SKIE-enhanced SsdpKit.xcframework zip as a GitHub *Release* asset (public,
 # unauthenticated download) and regenerates the root Package.swift to reference
 # it by URL + checksum. The .github variant is a superset of the core plugin in
 # 1.2.x — applying both produces a duplicate-extension error.
 kmmbridge-github = { id = "co.touchlab.kmmbridge.github", version.ref = "kmmbridge" }
 # Vanniktech Maven Publish — Maven Central Portal upload + GPG signing.
-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 # Dependency-update tooling (mise dependencies:outdated / dependencies:update).
-ben-manes-versions = { id = "com.github.ben-manes.versions", version.ref = "benManesVersions" }
-version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }
-# Build-health tooling (mise dependencies:analyze / build:doctor).
-dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysis" }
-gradle-doctor = { id = "com.osacky.doctor", version.ref = "gradleDoctor" }
+ben-manes-versions = { id = "com.github.ben-manes.versions", version.ref = "ben-manes-versions" }
+version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version.ref = "version-catalog-update" }
+# Build-health tooling (mise dependencies:analyze).
+dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }

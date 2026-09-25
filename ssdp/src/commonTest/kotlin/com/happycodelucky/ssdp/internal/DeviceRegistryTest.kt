@@ -10,6 +10,7 @@ package com.happycodelucky.ssdp.internal
 
 import app.cash.turbine.test
 import com.happycodelucky.ssdp.DeviceChange
+import com.happycodelucky.ssdp.Notification
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -202,8 +203,7 @@ class DeviceRegistryTest {
 
     private fun wire(vararg lines: String): String = lines.joinToString("\r\n") + "\r\n\r\n"
 
-    private fun parseNotify(raw: String): com.happycodelucky.ssdp.Notification =
-        (SsdpMessageParser.parse(raw) as SsdpMessage.Notify).notification
+    private fun parseNotify(raw: String): Notification = (SsdpMessageParser.parse(raw) as SsdpMessage.Notify).notification
 
     private companion object {
         const val ROKU_USN = "uuid:roku:ecp:YR0070123456::urn:dial-multiscreen-org:device:dial:1"

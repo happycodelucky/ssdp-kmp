@@ -1,0 +1,53 @@
+name: Changeset
+
+# Every PR that reaches consumers carries a changeset (.changeset/README.md).
+# This check validates every pending changeset and, on a PR, fails unless the
+# branch adds or edits one. Two ways past the requirement:
+#
+#   * the `no-changeset` label — docs, CI, tests, samples: nothing a consumer
+#     gets. Renovate adds it to dependency PRs (renovate.json5).
+#   * being the release PR itself (release/next), which consumes changesets.
+#
+# Its own workflow, not a ci.yml job: toggling the label re-runs this check
+# alone instead of the macOS leg. `workflow_dispatch` lets the Release PR
+# workflow run it on the release branch — a PR opened with GITHUB_TOKEN
+# triggers no workflows on its own (see release-pr.yml).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changeset-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changeset:
+    name: Changeset
+    runs-on: ubuntu-latest
+    steps:
+      # Full history: the requirement diffs the PR against its base branch.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Stdlib-only Python — the runner's python3 is enough; no mise needed.
+      - name: Validate changesets
+        env:
+          REQUIRE: >-
+            ${{ github.event_name == 'pull_request'
+                && !(github.head_ref == 'release/next'
+                     && github.event.pull_request.head.repo.full_name == github.repository)
+                && !contains(github.event.pull_request.labels.*.name, 'no-changeset') }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$REQUIRE" == "true" ]]; then
+            python3 scripts/changeset.py check --require-since "origin/$BASE_REF"
+          else
+            python3 scripts/changeset.py check
+          fi
