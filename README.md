@@ -45,8 +45,8 @@ Not published — repo tools and samples (excluded from the publish/check gate):
 ```toml
 # gradle/libs.versions.toml
 [libraries]
-ssdp = { module = "com.happycodelucky.ssdp:ssdp", version = "0.6.0" }
-ssdp-testing = { module = "com.happycodelucky.ssdp:ssdp-testing", version = "0.6.0" }
+ssdp = { module = "com.happycodelucky.ssdp:ssdp", version = "0.7.0" }
+ssdp-testing = { module = "com.happycodelucky.ssdp:ssdp-testing", version = "0.7.0" }
 ```
 <!-- x-release-version-end -->
 
@@ -64,7 +64,7 @@ a GitHub Release asset (see [`.github/PUBLISHING.md`](.github/PUBLISHING.md)).
 
 <!-- x-release-version-start -->
 ```swift
-.package(url: "https://github.com/happycodelucky/ssdp-kmp.git", from: "0.6.0")
+.package(url: "https://github.com/happycodelucky/ssdp-kmp.git", from: "0.7.0")
 ```
 <!-- x-release-version-end -->
 
