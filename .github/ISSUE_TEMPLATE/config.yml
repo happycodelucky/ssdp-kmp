@@ -1,0 +1,6 @@
+# Force contributors through a structured form — no blank issues. This keeps
+# every issue machine-readable (predictable fields for triage, automation, and
+# coding agents). GitHub Discussions is off on this repo, so there's no
+# question/discussion contact link; enable Discussions and add one under
+# `contact_links:` if that changes.
+blank_issues_enabled: false

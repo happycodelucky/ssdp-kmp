@@ -163,3 +163,9 @@ main is branch-protected, so no workflow can push to it. The release commit carr
 
 ### N-014 — actionlint rejects `client-id` on create-github-app-token@v3 — 2026-09-24
 actionlint's bundled metadata for `actions/create-github-app-token@v3` is stale: it demands `app-id` and rejects `client-id`. v3's action.yml has `client-id` (and deprecates `app-id`) — the workflow is right, the lint is wrong. Expect exactly these two errors on release-pr.yml. (kmp-template N-015.)
+
+### N-015 — `gh pr/issue create --body` bypasses the templates — 2026-09-24
+PR templates and YAML issue forms apply only in GitHub's web UI, so agents follow them only because CLAUDE.md §11 says to. A submitted form renders as `### <label>` + answer per field (`_No response_` when skipped) — mirroring that shape is indistinguishable from a web submission. Nested HTML comments don't exist: the PR template's header can't quote `<!-- AI: … -->` (the inner `-->` closes it). (kmp-template N-011.)
+
+### N-016 — Checkboxes in a PR body only for the done-gate — 2026-09-24
+Every `- [ ]` in a PR body is live (one click toggles it) and feeds the PR list's "N of M tasks" counter; a pick-one group can never be fully ticked. So choices are plain bullet lists you prune, and human review is signalled by the PR leaving draft, not by a tick. (kmp-template N-012.)
