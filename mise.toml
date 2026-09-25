@@ -201,15 +201,26 @@ run = "./gradlew dokkaGenerate"
 description = "Dependency hygiene: unused deps, api-vs-implementation misuse, undeclared transitives (dependency-analysis)."
 run = "./gradlew buildHealth"
 
-[tasks."build:doctor"]
-description = "Surface Gradle Doctor build-health diagnostics (slow config, cache misuse, JVM mismatches)."
-run = "./gradlew assemble --dry-run"
+[tasks."build:profile"]
+description = "Profile a real build — per-task timings, configuration time, dependency resolution (local HTML report)."
+# `--profile` writes build/reports/profile/profile-<timestamp>.html. It stays
+# LOCAL — unlike `--scan`, nothing is uploaded to scans.gradle.com.
+#
+# A REAL build, not `--dry-run`: a profile can only measure work that actually
+# happened. On a fully up-to-date tree there's little to see — run it after a
+# `mise run clean`, or right after a change that forces recompilation, when a
+# build feels slow. Deprecations and configuration-cache problems are listed
+# separately in build/reports/problems/problems-report.html on every build.
+run = "./gradlew assemble --profile"
 
 # --- dependencies ----------------------------------------------------------
 # Renovate (renovate.json5) opens PRs in CI; these are the local equivalents.
 
 [tasks."dependencies:outdated"]
-description = "List dependencies with newer stable versions (ben-manes gradle-versions-plugin)."
+description = "List dependencies with newer STABLE versions (ben-manes gradle-versions-plugin)."
+# Stable-only (no alpha/beta/rc/snapshot) is enforced by the `stableVersion`
+# predicate in build.gradle.kts (CLAUDE.md §3) — wired into this task's
+# rejectVersionIf and into dependencies:update's versionSelector alike.
 # --no-parallel is REQUIRED: this repo sets org.gradle.parallel=true, but
 # ben-manes' dependencyUpdates collects versions across projects single-threaded
 # and aborts under parallel project execution ("Parallel project execution is
@@ -218,12 +229,14 @@ run = "./gradlew dependencyUpdates -Drevision=release --no-parallel"
 
 [tasks."dependencies:update"]
 description = "Rewrite gradle/libs.versions.toml to the latest stable versions, then review the diff (version-catalog-update)."
-# Not truly interactive: it rewrites the catalog; review with `git diff
-# gradle/libs.versions.toml` and accept or revert. Web-search any bump that
-# crosses the Kotlin/SKIE pin before accepting (CLAUDE.md §3).
-# --no-parallel for the same reason as dependencies:outdated — versionCatalogUpdate
-# drives ben-manes' dependencyUpdates under the hood.
-run = "./gradlew versionCatalogUpdate --no-parallel"
+# Stable-only is enforced by the `stableVersion` predicate in build.gradle.kts,
+# passed to version-catalog-update's `versionSelector` — the same predicate
+# dependencies:outdated uses. VCU no longer drives ben-manes (since 1.0), so it
+# needs no --no-parallel. Not truly interactive: it rewrites the catalog; review
+# with `git diff gradle/libs.versions.toml` and accept or revert. The SKIE-bound
+# `kotlin` ref is VCU-pinned in the root build script: this task never writes it
+# (same policy as renovate.json5).
+run = "./gradlew versionCatalogUpdate"
 
 # --- publish ---------------------------------------------------------------
 

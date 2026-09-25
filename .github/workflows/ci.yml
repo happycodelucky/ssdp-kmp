@@ -50,19 +50,17 @@ jobs:
       # `check`, but an AndroidX bump can raise the compileSdk floor they need
       # (aar-metadata minCompileSdk) — only an app build notices.
       #
-      # `mise run dependencies:analyze` (buildHealth) is intentionally OMITTED:
-      # dependency-analysis 3.16.0 can't read Kotlin 2.4.0's bytecode metadata, so
-      # analysis is gated off in build.gradle.kts (see the `enableDependencyAnalysis`
-      # gate + DAGP issue #1724). With the gate off it's a no-op; running it here
-      # would only imply a hygiene check that isn't happening. Re-add the line
-      # below (and flip the build.gradle.kts gate on) once DAGP supports 2.4.0.
+      # `dependencies:analyze` (buildHealth) reports dependency-hygiene advice as
+      # WARNINGS and exits 0 — it surfaces the report in the log without gating
+      # the merge. Every category that misfires on hierarchical KMP source sets is
+      # tuned in the root build.gradle.kts; read the advice, don't apply it blindly.
       - name: Lint, JVM + Android tests
         run: |
           mise run lint
           mise run test:jvm
           mise run test:android
           mise run build:samples
-          # mise run dependencies:analyze   # re-enable with the DAGP gate (issue #1724)
+          mise run dependencies:analyze
 
       - name: Upload reports on failure
         if: failure()

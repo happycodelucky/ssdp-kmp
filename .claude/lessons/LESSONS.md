@@ -139,3 +139,9 @@ Want a nicer Kotlin call site (`device.description(client)` subject-verb) withou
 
 ### N-009 — AndroidX `minCompileSdk` only bites the app build — 2026-09-24
 AndroidX AARs carry `minCompileSdk` in `META-INF/com/android/build/gradle/aar-metadata.properties`; AGP's `checkAarMetadata` enforces it on the consuming *app*. lifecycle 2.11.0 needs 37, and `:androidApp` sat broken on main at compileSdk 36 because `check` never builds it. `mise run build:samples` does, on CI's fast leg. (kmp-template N-006.)
+
+### N-010 — version-catalog-update ≥ 1.0 doesn't read the ben-manes report — 2026-09-24
+VCU resolves versions itself with its own (different) stability rule, so `dependencies:update` ignored the stable-only filter and could write a Kotlin past SKIE's cap. The root build passes it the shared `stableVersion` predicate (`versionSelector`), `pin`s `kotlin`, `keep`s findVersion-only keys, and disables `sortByKey`. It still strips blank lines and end-of-line comments. Gradle Doctor was removed (its JDK checks were already disabled; it caused Gradle 10 deprecations) — `mise run build:profile` replaces `build:doctor`. (kmp-template N-001, N-009.)
+
+### N-011 — Catalog keys are kebab-case; a key must not be a segment-prefix of another — 2026-09-24
+Dashes become nested accessors, so `ktlint` beside `ktlint-gradle` turns `libs.versions.ktlint` into a group and `.get()` stops compiling. Name siblings by artifact: `ktlint-cli` / `ktlint-gradle` (accessor `libs.versions.ktlint.cli`). (kmp-template N-010.)

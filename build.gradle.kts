@@ -4,8 +4,11 @@
  * Plugins are declared here with `apply false`; they're applied in :ssdp and
  * :ssdp-testing (mostly via the `ssdp.kmp-library` convention plugin). This
  * keeps `gradle/libs.versions.toml` as the single source of truth for versions
- * (CLAUDE.md §10).
+ * (CLAUDE.md §3).
  */
+
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import nl.littlerobots.vcu.plugin.versionSelector
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
@@ -34,10 +37,7 @@ plugins {
 
     // Build-health tooling. dependency-analysis adds the root `buildHealth` task
     // (mise dependencies:analyze) — unused/misused/transitive dependency advice.
-    // gradle-doctor warns on slow config, JVM mismatches, and cache misses on
-    // every build (mise build:doctor surfaces its diagnostics explicitly).
     alias(libs.plugins.dependency.analysis)
-    alias(libs.plugins.gradle.doctor)
 }
 
 allprojects {
@@ -50,84 +50,49 @@ allprojects {
     version = providers.gradleProperty("version").getOrElse("0.1.0-SNAPSHOT")
 }
 
-// Gradle Doctor — build-health diagnostics. mise owns the JDK (via the [tools]
-// pins), so its JAVA_HOME checks are advisory here, not fatal: a fresh
-// `git clone && mise run check` must never fail on a tool's environment opinion.
-// The remaining checks (slow config, negative-avoidance, cache misuse) stay on.
-doctor {
-    javaHome {
-        // mise puts the right JDK on PATH; JAVA_HOME may be unset. Warn, don't fail.
-        ensureJavaHomeIsSet.set(false)
-        ensureJavaHomeMatches.set(false)
-        failOnError.set(false)
-    }
-    // Don't fail a build just because another Gradle daemon is alive (common
-    // when an IDE holds one open alongside a terminal build).
-    disallowMultipleDaemons.set(false)
-}
-
 // dependency-analysis (`mise run dependencies:analyze` → buildHealth). The
-// project plugin is applied per published KMP module in `subprojects {}` below —
-// currently GATED OFF (see that block: DAGP 3.16.0 can't read Kotlin 2.4.0
-// metadata, issue #1724). This `dependencyAnalysis { }` extension is registered
-// by the root plugin (still in `plugins {}`), so the config is valid regardless
-// of the gate and is ready the moment analysis is enabled.
+// project plugin is applied per published KMP module in the `subprojects {}`
+// block below.
 //
-// KMP analysis at dependency-analysis 3.16.0 is real but noisy on modules with
-// SHARED (hierarchical) source sets — a dependency declared once in commonMain
-// is *visible* in the jvm/android/apple leaf sets, and the plugin's per-leaf
-// analysis emits advice that contradicts the common-set declaration. Two whole
-// categories are unreliable here and are silenced; a third is narrowed:
+// KMP analysis is real but still noisy on modules with SHARED (hierarchical)
+// source sets — a dependency declared once in commonMain is *visible* in the
+// jvm/android/apple leaf sets, and the plugin's per-leaf analysis emits advice
+// that contradicts the common-set declaration. The tuning below was derived by
+// RUNNING buildHealth on this repo at DAGP 3.19.2, not copied forward:
 //
-//   * usedTransitiveDependencies → ignore. The plugin wants ktor-client-core's
-//     internal artifacts (ktor-http/ktor-io) and kermit's (kermit-core), plus
-//     the :ssdp project dep, "declared directly" in every leaf set. These are
-//     deliberately-curated single deps; splitting them into transitive internals
-//     would churn the catalog (CLAUDE.md §3). Always wrong here.
-//   * incorrectConfiguration → ignore. The api-vs-implementation suggestions
-//     (kotlinx.coroutines.core, androidx.startup.runtime) and the
-//     coroutines-android → runtimeOnly suggestion are the known KMP `api`
-//     over-suggestion (DAGP issue #1700) + intentional design — we keep these as
-//     `implementation`.
-//   * unusedDependencies → kept at `warn` (so a genuinely-unused NEW dependency
-//     still surfaces) but the project refs + kotest are excluded: FakeSsdpClient
-//     and the kotest property arbs ARE used in commonTest/jvmTest/androidHostTest,
-//     but DAGP under-detects cross-source-set test usage on KMP (issue #1345).
+//   * usedTransitiveDependencies → ignore. Structurally wrong on hierarchical
+//     KMP: it wants curated single deps (ktor-client-core's internals, kermit's
+//     kermit-core, the :ssdp project dep) re-declared in every leaf set.
+//     Splitting them into transitive internals would churn the catalog.
+//   * incorrectConfiguration → warn. The api-vs-implementation advice is NOT a
+//     false positive here: SsdpClient.devices/changes expose StateFlow/SharedFlow,
+//     so kotlinx-coroutines-core is part of the public API (and androidx.startup
+//     is the supertype of the public SsdpInitializer). Left visible on purpose.
+//   * runtimeOnly → warn, with ONE exclusion: coroutines-android is
+//     compile-invisible because its MainDispatcherFactory loads via
+//     ServiceLoader — kept as the conventional `implementation`.
+//   * unusedDependencies → warn, no exclusions. The old list excluded
+//     :ssdp-testing and kotest-assertions-core from :ssdp's tests as DAGP
+//     "under-detection"; buildHealth shows they really are unused there.
 //
-// When enabled, buildHealth analyzes :ssdp / :ssdp-testing for real and (with
-// this allowlist) reports EMPTY — a tripwire for genuinely-new problems rather
-// than a wall of known-false advice. Currently gated off for Kotlin 2.4.0; when
-// re-enabled, re-run buildHealth and confirm the exclude list still matches.
+// Warnings only — buildHealth exits 0, so CI surfaces the advice without gating.
 dependencyAnalysis {
     issues {
         all {
             onUsedTransitiveDependencies {
                 severity("ignore")
             }
-            // implementation↔api swaps. The api over-suggestion on
-            // kotlinx.coroutines.core and androidx.startup.runtime is the known
-            // KMP DAGP issue #1700 — we keep these as `implementation` by design.
             onIncorrectConfiguration {
-                severity("ignore")
+                severity("warn")
             }
             // compile→runtimeOnly downgrades (a SEPARATE handler from
-            // onIncorrectConfiguration — verified against DAGP 3.16.0's DSL).
-            // DAGP flags coroutines-android runtime-only because no compile-time
-            // symbol is referenced — the Android MainDispatcherFactory loads via
-            // ServiceLoader at runtime. Keeping it `implementation` is the
-            // conventional Android + coroutines wiring.
+            // onIncorrectConfiguration).
             onRuntimeOnly {
-                severity("ignore")
+                severity("warn")
+                exclude("org.jetbrains.kotlinx:kotlinx-coroutines-android")
             }
             onUnusedDependencies {
-                exclude(
-                    // FakeSsdpClient + the kotest property arbs ARE used in
-                    // commonTest/jvmTest/androidHostTest, but DAGP under-detects
-                    // cross-source-set test usage on KMP (issue #1345).
-                    ":ssdp",
-                    ":ssdp-testing",
-                    "io.kotest:kotest-assertions-core",
-                )
+                severity("warn")
             }
         }
     }
@@ -152,25 +117,19 @@ subprojects {
         // buildHealth actually inspect `:ssdp` / `:ssdp-testing`; the advice is
         // then tuned in the root `dependencyAnalysis { }` block below.
         //
-        // GATED OFF by default. dependency-analysis 3.16.0 bundles a
-        // kotlin-metadata-jvm that cannot read Kotlin 2.4.0's bytecode metadata
-        // (format 2.4.0 > its max 2.3.0): applying it makes `explodeJar*` — and
-        // therefore `buildHealth` — HARD-FAIL, not merely report noise. Upstream
-        // issue: https://github.com/autonomousapps/dependency-analysis-gradle-plugin/issues/1724
-        // (open as of 2026-06). Flip on with `-PenableDependencyAnalysis=true`
-        // once DAGP ships a Kotlin-2.4.0-compatible release (then also re-enable
-        // the `dependencies:analyze` step in .github/workflows/ci.yml and verify
-        // the exclude list below still matches this repo's graph). Until then the
-        // wiring stays inert so CI is green rather than red. This mirrors the
-        // sibling kmp-template, which is on the same Kotlin/DAGP versions.
-        if (providers.gradleProperty("enableDependencyAnalysis").orNull == "true") {
-            apply(plugin = "com.autonomousapps.dependency-analysis")
-        }
+        // This used to be gated behind `-PenableDependencyAnalysis=true`: DAGP
+        // 3.16.0 bundled a kotlin-metadata-jvm that could not read Kotlin 2.4.0
+        // bytecode metadata, so applying it made `explodeJar*` — and therefore
+        // `buildHealth` — HARD-FAIL. Fixed in 3.18.0, which isolates
+        // kotlin-metadata-jvm into workers
+        // (autonomousapps/dependency-analysis-gradle-plugin#1724). The gate is
+        // gone and CI runs `dependencies:analyze` again.
+        apply(plugin = "com.autonomousapps.dependency-analysis")
     }
 
     plugins.withId("org.jlleitschuh.gradle.ktlint") {
         configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
-            version.set(libs.versions.ktlint.get())
+            version.set(libs.versions.ktlint.cli.get())
             android.set(false)
             outputToConsole.set(true)
             ignoreFailures.set(false)
@@ -233,4 +192,54 @@ tasks.register<Copy>("copyDokkaToDocs") {
     dependsOn("dokkaGeneratePublicationHtml")
     from(layout.buildDirectory.dir("dokka/html"))
     into(layout.projectDirectory.dir("docs/api"))
+}
+
+// Stable-only dependency updates (CLAUDE.md §3: no EAP/RC/Beta on main).
+// `-Drevision=release` only chooses which Maven metadata channel ben-manes
+// reads — it does NOT reject versions whose string is a pre-release, so without
+// this rule `dependencyUpdates` happily suggests 1.5.0-alpha22 over 1.4.0. The
+// `stableVersion` predicate below is handed to BOTH plugins: `rejectVersionIf`
+// on ben-manes (`dependencies:outdated`, the report) and `versionSelector` on
+// version-catalog-update (`dependencies:update`, the rewrite). VCU has resolved
+// versions itself since 1.0 — it no longer reads the ben-manes report — and its
+// built-in default selector uses a DIFFERENT stability rule, so it must be given
+// this one explicitly to stay in lockstep (LESSONS N-010).
+//
+// A version is STABLE only if it is digits-and-dots and nothing else. Accepts:
+// 1.2.3, 2026.06.01. Rejects anything carrying a qualifier (-alpha/-beta/-rc/
+// -eap/-m1/-snapshot/…), because a qualifier necessarily introduces a non-digit,
+// non-dot character. That whitelist IS the whole stability test; if you ever
+// loosen it (e.g. to allow a `-jre` classifier), add a qualifier check back.
+val stableVersion = "^[0-9][0-9.]*$".toRegex()
+
+tasks.withType<DependencyUpdatesTask>().configureEach {
+    // Read the stable release channel, not integration/milestone metadata.
+    revision = "release"
+    rejectVersionIf {
+        // Only candidate upgrades pass through here; the current version is never
+        // rejected.
+        !stableVersion.matches(candidate.version)
+    }
+}
+
+versionCatalogUpdate {
+    versionSelector { stableVersion.matches(it.candidate.version) }
+    // Keep the catalog's hand-grouped sections (Toolchain, kotlinx, Testing, …)
+    // instead of alphabetizing them.
+    sortByKey.set(false)
+    keep {
+        // Keys no library/plugin references: android-compile-sdk, android-min-sdk
+        // and jvm-target (read via the string-based findVersion("…") API in the
+        // convention plugin, invisible to VCU's usage scan), and the Apple
+        // deployment targets (documentation for the floors spelled out in
+        // ssdp/build.gradle.kts and Package.swift). Without this, VCU prunes them.
+        keepUnusedVersions.set(true)
+    }
+    pin {
+        // Kotlin is bounded above by SKIE (CLAUDE.md §3): a Kotlin bump is a
+        // manual, SKIE-paired change — the same policy renovate.json5 encodes.
+        // Pinning the `kotlin` ref also holds the compose-compiler plugin, which
+        // versions in lockstep with it.
+        versions.add("kotlin")
+    }
 }
