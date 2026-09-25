@@ -17,12 +17,12 @@ plugins {
     // codegen for the UPnP description wire types in internal/DescriptionParser.kt.
     alias(libs.plugins.kotlin.serialization)
     // KMMBridge (CLAUDE.md §9): aggregates the per-target Apple frameworks the
-    // convention plugin declared into `Ssdp.xcframework`, publishes the release
+    // convention plugin declared into `SsdpKit.xcframework`, publishes the release
     // zip as a GitHub Release asset, and regenerates the root /Package.swift.
     // The `.github` plugin variant is a superset of the core plugin in 1.2.x —
     // applying both produces a duplicate-extension error, so only this one.
     //
-    // Do NOT redeclare `XCFramework("Ssdp")` in the kotlin { } block: KMMBridge
+    // Do NOT redeclare `XCFramework("SsdpKit")` in the kotlin { } block: KMMBridge
     // auto-creates the aggregator from the framework binaries at config time.
     alias(libs.plugins.kmmbridge.github)
 }
@@ -122,7 +122,7 @@ skie {
 //   1. Maven Central (`ssdp.publish` convention plugin) — Android AAR, the jvm
 //      jar, `kotlinMultiplatform` metadata, and per-target klibs. KMP consumers
 //      resolve these from `commonMain`; no XCFramework involved.
-//   2. GitHub Releases (this block) — the SKIE-enhanced `Ssdp.xcframework` zip
+//   2. GitHub Releases (this block) — the SKIE-enhanced `SsdpKit.xcframework` zip
 //      for pure-Swift consumers, referenced from the root /Package.swift by URL
 //      + checksum so `swift package resolve` needs no local Gradle build and no
 //      authentication.
@@ -135,11 +135,14 @@ skie {
 // entry point — see mise task `spm:dev`.
 gitHubReleaseArtifacts(releasString = "v${project.version}")
 
+// The XCFramework's Swift module name. DERIVED from the module name the same way
+// the convention plugin derives each framework binary's baseName (ssdp →
+// "SsdpKit"), so the two can never drift. If they disagreed, the generated
+// Package.swift would reference a binary that doesn't exist.
+val xcframeworkBaseName = project.name.split("-").joinToString("") { it.replaceFirstChar(Char::uppercase) } + "Kit"
+
 kmmbridge {
-    // The XCFramework's Swift module name. Must match the `baseName` the
-    // convention plugin sets on each framework binary, or the generated
-    // Package.swift references a binary that doesn't exist.
-    frameworkName.set("Ssdp")
+    frameworkName.set(xcframeworkBaseName)
 
     // `swiftToolVersion = "6.0"` because the platform constants `.iOS(.v18)`
     // and `.macOS(.v15)` need PackageDescription 6.0; KMMBridge defaults to

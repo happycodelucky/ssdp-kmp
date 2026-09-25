@@ -94,6 +94,8 @@ The same flows bridge to `AsyncSequence` and the sealed types to exhaustive Swif
 enums via SKIE:
 
 ```swift
+import SsdpKit
+
 let client = try SsdpClient(bindInterface: nil)
 try await client.search(targets: [SearchTargetAll.shared], maxWaitSeconds: 1, timeout: nil)
 
@@ -228,7 +230,7 @@ tasks:
 mise run check      # ktlint + detekt + all unit tests (iOS sim, macOS, Android host, JVM)
 mise run test:jvm   # JVM-only — the fast inner loop
 mise run cli        # live LAN discovery harness
-mise run build:xcframework  # assemble the release Ssdp.xcframework
+mise run build:xcframework  # assemble the release SsdpKit.xcframework
 mise run open:macos # generate + open the macOS sample in Xcode
 ```
 

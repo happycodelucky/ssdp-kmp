@@ -139,7 +139,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ssdp-kmp-${{ steps.version.outputs.VERSION }}.xcframework
-          path: ssdp/build/XCFrameworks/release/Ssdp.xcframework
+          path: ssdp/build/XCFrameworks/release/SsdpKit.xcframework
           if-no-files-found: error
 
       - name: Upload test reports on failure

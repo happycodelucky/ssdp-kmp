@@ -109,8 +109,12 @@ everywhere (`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()
 
 Two channels, copied from reachable: Maven Central (Android AAR + jvm jar + KMP
 metadata + klibs) via `ssdp.publish`/vanniktech; GitHub Releases (SKIE-enhanced
-`Ssdp.xcframework` for SPM) via KMMBridge in `ssdp/build.gradle.kts`. Don't
-redeclare `XCFramework("Ssdp")` — KMMBridge auto-creates it. CI-only publishing.
+`SsdpKit.xcframework` for SPM) via KMMBridge in `ssdp/build.gradle.kts`. Don't
+redeclare `XCFramework("SsdpKit")` — KMMBridge auto-creates it. The framework /
+Swift module is always `<Name>Kit` (`import SsdpKit`), derived from the module
+name in the convention plugin and `ssdp/build.gradle.kts`, so it never shares a
+name with a public type — `object Ssdp` in module `Ssdp` made SKIE rename it
+`Ssdp_` (LESSONS D-010). CI-only publishing.
 
 ## 9. Platform notes
 

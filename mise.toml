@@ -93,8 +93,8 @@ description = "Build the Gradle sample apps (Android debug APK, JVM CLI, emulato
 run = "./gradlew :androidApp:assembleDebug :cli:build :ssdp-bridge:build"
 
 [tasks."build:xcframework"]
-description = "Assemble the release Ssdp.xcframework (all slices — iosArm64, iosSimulatorArm64, macosArm64; sample-app local SPM + CI)."
-run = "./gradlew :ssdp:assembleSsdpXCFramework"
+description = "Assemble the release SsdpKit.xcframework (all slices — iosArm64, iosSimulatorArm64, macosArm64; sample-app local SPM + CI)."
+run = "./gradlew :ssdp:assembleSsdpKitXCFramework"
 
 [tasks."build:ios"]
 description = "Link debug iOS framework slices (device + Apple Silicon simulator)."
@@ -143,10 +143,10 @@ run = "./gradlew :ssdp-bridge:run --args=\"{{arg(name='port', default='1901')}}\
 # --- iteration helpers -----------------------------------------------------
 
 [tasks."spm:dev"]
-description = "Rebuild the debug Ssdp.xcframework and point /Package.swift at it (local dev mode)."
+description = "Rebuild the debug SsdpKit.xcframework and point /Package.swift at it (local dev mode)."
 # KMMBridge's `spmDevBuild` builds the debug XCFramework and REWRITES the root
 # /Package.swift to a `.binaryTarget(path: …)` pointing at
-# ssdp/build/XCFrameworks/debug/Ssdp.xcframework. After the first tagged release
+# ssdp/build/XCFrameworks/debug/SsdpKit.xcframework. After the first tagged release
 # the committed Package.swift is the *released* form (a remote
 # `.binaryTarget(url:checksum:)`). The local-dev rewrite is working-tree-only:
 # do NOT commit it. `mise run spm:restore` puts the committed version back.
@@ -248,7 +248,7 @@ run = "./gradlew publishToMavenLocal"
 
 [tasks.ci]
 description = "Run the exact CI sequence locally: check (ktlint + detekt + every test target + ABI) + release XCFramework."
-run = "./gradlew :ssdp:check :ssdp-testing:check :ssdp:assembleSsdpXCFramework"
+run = "./gradlew :ssdp:check :ssdp-testing:check :ssdp:assembleSsdpKitXCFramework"
 
 # --- housekeeping ----------------------------------------------------------
 

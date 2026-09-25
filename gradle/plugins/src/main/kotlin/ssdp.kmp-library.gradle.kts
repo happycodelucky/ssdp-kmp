@@ -4,12 +4,13 @@
  *
  * Owns everything the two modules would otherwise duplicate (CLAUDE.md §1, §2,
  * §4): the target matrix, the Android library block, the jvm() target,
- * compiler options, JVM target wiring, and the SKIE settings that must match across modules. Per-module identity
- * (framework base name, bundle id, Android namespace) is derived from the
- * project name so adding a module means applying this plugin and nothing else:
+ * compiler options, JVM target wiring, and the SKIE settings that must match
+ * across modules. Per-module identity (framework base name, bundle id, Android
+ * namespace) is derived from the project name so adding a module means applying
+ * this plugin and nothing else:
  *
- *   ssdp          → framework "Ssdp",        namespace com.happycodelucky.ssdp
- *   ssdp-testing  → framework "SsdpTesting",  namespace com.happycodelucky.ssdp.testing
+ *   ssdp          → framework "SsdpKit",        namespace com.happycodelucky.ssdp
+ *   ssdp-testing  → framework "SsdpTestingKit", namespace com.happycodelucky.ssdp.testing
  *
  * Module build scripts keep only what genuinely differs: dependencies, the
  * KMMBridge SPM distribution config (`:ssdp` only), and POM name/description.
@@ -38,8 +39,11 @@ plugins {
 // the named-lookup API reads the same catalog the main build uses.
 val libs = the<VersionCatalogsExtension>().named("libs")
 
-// ssdp → "Ssdp"; ssdp-testing → "SsdpTesting".
-val frameworkBaseName = name.split("-").joinToString("") { part -> part.replaceFirstChar(Char::uppercase) }
+// ssdp → "SsdpKit"; ssdp-testing → "SsdpTestingKit". The "Kit" suffix keeps the
+// Swift module name distinct from the library's public types: `object Ssdp` in a
+// module named `Ssdp` made SKIE rename the type in Swift (`Ssdp_`) and let the
+// bare type shadow the module qualifier in SKIE's generated code (LESSONS D-010).
+val frameworkBaseName = name.split("-").joinToString("") { part -> part.replaceFirstChar(Char::uppercase) } + "Kit"
 
 // ssdp → com.happycodelucky.ssdp; ssdp-testing → ….ssdp.testing.
 // Doubles as the framework bundle id, pinned so SKIE doesn't fall back to the
@@ -67,7 +71,7 @@ kotlin {
 
     // --- Apple targets (CLAUDE.md §1) ---------------------------------------
     // Static framework binaries with a stable bundle id. In `:ssdp`, KMMBridge
-    // aggregates these into `Ssdp.xcframework` at config time (no explicit
+    // aggregates these into `SsdpKit.xcframework` at config time (no explicit
     // XCFramework declaration — see ssdp/build.gradle.kts).
     listOf(iosArm64(), iosSimulatorArm64(), macosArm64()).forEach { target ->
         target.binaries.framework {

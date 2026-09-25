@@ -9,7 +9,7 @@
 //
 
 import SwiftUI
-import Ssdp
+import SsdpKit
 
 struct DeviceDetailView: View {
     let device: DeviceRow

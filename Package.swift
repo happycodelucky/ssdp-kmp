@@ -2,9 +2,9 @@
 import PackageDescription
 
 // BEGIN KMMBRIDGE VARIABLES BLOCK (do not edit)
-let remoteKotlinUrl = "https://github.com/happycodelucky/ssdp-kmp/releases/download/v0.1.0/Ssdp.xcframework.zip"
+let remoteKotlinUrl = "https://github.com/happycodelucky/ssdp-kmp/releases/download/v0.1.0/SsdpKit.xcframework.zip"
 let remoteKotlinChecksum = "0ef7d546904b232ff1a512496ce8517b8ff359dc1a5146aa43a9693e52519d2f"
-let packageName = "Ssdp"
+let packageName = "SsdpKit"
 // END KMMBRIDGE BLOCK
 
 let package = Package(

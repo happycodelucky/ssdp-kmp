@@ -86,10 +86,6 @@ from = "assembleSrcKitXCFramework"
 to = "assembleSsdpKitXCFramework"
 
 [[render.replace]]
-from = "assembleSrcXCFramework"
-to = "assembleSsdpXCFramework"
-
-[[render.replace]]
 from = "src-testing/build"
 to = "ssdp-testing/build"
 

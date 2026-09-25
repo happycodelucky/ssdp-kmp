@@ -252,7 +252,7 @@ dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 # kmmbridge-github — applied in ssdp/build.gradle.kts. Publishes the
-# SKIE-enhanced Ssdp.xcframework zip as a GitHub *Release* asset (public,
+# SKIE-enhanced SsdpKit.xcframework zip as a GitHub *Release* asset (public,
 # unauthenticated download) and regenerates the root Package.swift to reference
 # it by URL + checksum. The .github variant is a superset of the core plugin in
 # 1.2.x — applying both produces a duplicate-extension error.

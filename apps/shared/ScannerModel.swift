@@ -10,7 +10,7 @@
 //
 
 import Foundation
-import Ssdp
+import SsdpKit
 
 /// One physical device, aggregated from the SSDP responses that share a UDN.
 struct DeviceRow: Identifiable, Hashable {

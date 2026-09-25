@@ -6,6 +6,9 @@ Terse, symptom-first notes on bugs hit and decisions made, so a future session
 
 ## Decisions (D)
 
+### D-010 — The Apple framework / Swift module is `SsdpKit`, not `Ssdp` — 2026-09-24
+A module named like one of its public types (`object Ssdp` in module `Ssdp`) makes SKIE rename the type in Swift (`Ssdp_`) and lets the bare type shadow the module qualifier in SKIE's generated Swift. The name is `<PascalName>Kit`, derived identically in the convention plugin (`frameworkBaseName`) and `ssdp/build.gradle.kts` (KMMBridge `frameworkName`); `Package.swift`'s product and the zip follow. Renaming a shipped framework changes every Swift consumer's `import` (`import SsdpKit`) — a breaking change, released as a minor while 0.x. (kmp-template D-002.)
+
 ### D-009 — Line length: detekt's 140 is the only limit — 2026-09-24
 With no `.editorconfig`, ktlint 1.8 fell back to `ktlint_official`, which forces multiline class/function signatures by parameter count (≥ 1 constructor param, ≥ 2 function params) regardless of length. The root `.editorconfig` sets ktlint's `max_line_length = off` and unsets both thresholds, so detekt `MaxLineLength` (140) is the single rule. Gotcha: with `off`, ktlint's `function-signature` treats the width as infinite and demands expression bodies join the signature line — even past 140, which detekt then rejects. Shorten the line (e.g. import instead of an FQN) rather than fight either linter. Setting ktlint to 140 instead demanded ~230 signature joins. (kmp-template D-003.)
 

@@ -7,7 +7,7 @@
 //
 
 import SwiftUI
-import Ssdp
+import SsdpKit
 
 struct ScannerScreen: View {
     @StateObject private var model = ScannerModel()
