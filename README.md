@@ -34,8 +34,39 @@ Not published — repo tools and samples (excluded from the publish/check gate):
 | Module | What it is |
 |--------|------------|
 | <code>:ssdp&#8209;bridge</code> | Host-side daemon that relays SSDP to an Android emulator over TCP (see [Emulator bridge](#android-emulators)). Run with `mise run app:bridge`. |
-| <code>:jvm&#8209;cli</code> | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run cli` |
+| <code>:cli</code> | Command-line discovery harness — scans the LAN and prints devices + descriptions. Run with `mise run cli` |
 | <code>:androidApp</code> | The Android Compose sample scanner (see [apps/](apps/)) |
+
+## Install
+
+### Gradle (KMP / Android / JVM)
+
+<!-- x-release-version-start -->
+```toml
+# gradle/libs.versions.toml
+[libraries]
+ssdp = { module = "com.happycodelucky.ssdp:ssdp", version = "0.6.0" }
+ssdp-testing = { module = "com.happycodelucky.ssdp:ssdp-testing", version = "0.6.0" }
+```
+<!-- x-release-version-end -->
+
+```kotlin
+// build.gradle.kts
+commonMain.dependencies { implementation(libs.ssdp) }
+commonTest.dependencies { implementation(libs.ssdp.testing) }
+```
+
+### Swift (SPM)
+
+Add this repository as a package dependency, pinned to a release tag, and
+depend on the `SsdpKit` product (`Ssdp` before 0.7.0). The XCFramework ships as
+a GitHub Release asset (see [`.github/PUBLISHING.md`](.github/PUBLISHING.md)).
+
+<!-- x-release-version-start -->
+```swift
+.package(url: "https://github.com/happycodelucky/ssdp-kmp.git", from: "0.6.0")
+```
+<!-- x-release-version-end -->
 
 ## Quick examples
 
@@ -235,6 +266,11 @@ mise run open:macos # generate + open the macOS sample in Xcode
 ```
 
 Or directly: `./gradlew :ssdp:check :ssdp-testing:check`.
+
+Every PR that reaches consumers adds a changeset (`mise run changeset`); merges
+keep a rolling **Release vX.Y.Z** PR open, and merging it publishes — see
+[`.changeset/README.md`](.changeset/README.md) and
+[`.github/PUBLISHING.md`](.github/PUBLISHING.md).
 
 ## Repository conventions
 
