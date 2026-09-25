@@ -1,0 +1,158 @@
+name: Release PR
+
+# Keeps ONE rolling release PR open while changesets are pending on main.
+#
+# On every push to main with changesets in .changeset/, this rebuilds the
+# `release/next` branch from main: `scripts/changeset.py version` bumps
+# `version=` in gradle.properties (and every line marked x-release-version),
+# adds the release's section to CHANGELOG.md, and deletes the consumed
+# changesets. Then it force-pushes the branch and opens or updates the
+# "Release vX.Y.Z" PR. Rebuilding from main, rather than stacking commits, is
+# what folds later merges into the same PR: three merges before a release are
+# still one release PR, versioned from all of their changesets.
+#
+# Merging the PR IS the release: its version bump lands on main, and
+# release.yml publishes it.
+#
+# Nothing pending (the release PR itself just merged, or the last changeset
+# was removed): close any open release PR and delete the branch.
+#
+# --- Tokens ------------------------------------------------------------------
+# A push or PR made with GITHUB_TOKEN triggers no other workflow, so on its own
+# neither CI nor the Changeset check would run on the release PR. Two setups:
+#
+#   * GITHUB_TOKEN (default). This workflow dispatches ci.yml and
+#     changeset.yml on release/next itself (workflow_dispatch is exempt from
+#     that rule). Their check runs attach to the branch's head commit, so they
+#     show on the PR and satisfy required checks. Needs Settings → Actions →
+#     General → "Allow GitHub Actions to create and approve pull requests".
+#   * A GitHub App. Set the `RELEASE_APP_CLIENT_ID` variable and the
+#     `RELEASE_APP_PRIVATE_KEY` secret (an App with Contents + Pull requests
+#     read/write, installed on this repo). The push and the PR are then the
+#     App's and trigger CI like any other PR. Prefer it over a personal token:
+#     a PR opened as you can't be approved by you.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The newest main wins: a run that is superseded mid-flight would only
+# force-push a branch the next run rebuilds anyway.
+concurrency:
+  group: release-pr
+  cancel-in-progress: true
+
+permissions:
+  contents: write       # push release/next
+  pull-requests: write  # open / update / close the release PR
+  actions: write        # dispatch CI on release/next (GITHUB_TOKEN setup)
+
+env:
+  RELEASE_BRANCH: release/next
+
+jobs:
+  release-pr:
+    name: Open or update the release PR
+    # Release PRs are built from main only (a manual dispatch from another
+    # branch would version that branch).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mint the release App token
+        id: app-token
+        if: vars.RELEASE_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      # Full history: changeset.py dates each entry and links it to its PR
+      # from the commit that added the changeset.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token || github.token }}
+
+      # Stdlib-only Python on the runner's python3 — no mise/JDK needed here.
+      - name: Count pending changesets
+        id: plan
+        run: |
+          set -euo pipefail
+          python3 scripts/changeset.py status --json > "$RUNNER_TEMP/plan.json"
+          echo "count=$(jq -r .count "$RUNNER_TEMP/plan.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Close the release PR (nothing pending)
+        if: steps.plan.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          PR=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&head=$GITHUB_REPOSITORY_OWNER:$RELEASE_BRANCH" \
+            --jq '.[0].number // empty')
+          if [[ -n "$PR" ]]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -f state=closed >/dev/null
+            echo "Closed release PR #$PR: no changesets are pending on main."
+          fi
+          if git ls-remote --exit-code --heads origin "$RELEASE_BRANCH" >/dev/null; then
+            git push origin --delete "$RELEASE_BRANCH"
+          fi
+          echo "No pending changesets on main — nothing to release." >> "$GITHUB_STEP_SUMMARY"
+
+      # `version` rewrites the tree and prints the new version; its PR
+      # description (the plan, a table of changes, the changelog entry) goes to
+      # a file for the next step.
+      - name: Build the release commit
+        id: release
+        if: steps.plan.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git switch -C "$RELEASE_BRANCH"
+          VERSION=$(python3 scripts/changeset.py version --pr-body "$RUNNER_TEMP/pr-body.md")
+          git add -A
+          git commit -m "Release v$VERSION"
+          git push --force origin "HEAD:refs/heads/$RELEASE_BRANCH"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/pr-body.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # REST rather than `gh pr create/edit`: the same two calls whichever
+      # token is in use, with no GraphQL project lookups.
+      - name: Open or update the release PR
+        if: steps.plan.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          TITLE: Release v${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          PR=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&head=$GITHUB_REPOSITORY_OWNER:$RELEASE_BRANCH" \
+            --jq '.[0].number // empty')
+          if [[ -n "$PR" ]]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" \
+              -f title="$TITLE" -F body=@"$RUNNER_TEMP/pr-body.md" >/dev/null
+            echo "Updated release PR #$PR: $TITLE"
+          else
+            PR=$(gh api "repos/$GITHUB_REPOSITORY/pulls" \
+              -f base=main -f head="$RELEASE_BRANCH" -f title="$TITLE" \
+              -F body=@"$RUNNER_TEMP/pr-body.md" --jq .number)
+            echo "Opened release PR #$PR: $TITLE"
+          fi
+
+      # GITHUB_TOKEN setup only (see the header): the push above triggered
+      # nothing, so start the PR's checks by hand.
+      - name: Run CI on the release branch
+        if: steps.plan.outputs.count != '0' && vars.RELEASE_APP_CLIENT_ID == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+          gh workflow run changeset.yml --ref "$RELEASE_BRANCH"

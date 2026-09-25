@@ -42,12 +42,11 @@ plugins {
 
 allprojects {
     group = "com.happycodelucky.ssdp"
-    // The in-tree version carries `-SNAPSHOT` and a `0` patch slot. Humans bump
-    // major/minor here and commit the change; the patch slot stays `0`. CI
-    // overrides this at build time via `-Pversion=...` to stamp ephemeral
-    // patches (run numbers for CI builds, exact `vX.Y.Z` for releases) without
-    // ever committing the override back.
-    version = providers.gradleProperty("version").getOrElse("0.1.0-SNAPSHOT")
+    // `version` lives in gradle.properties: the last version released from
+    // main, bumped only by the release PR (scripts/changeset.py). CI stamps
+    // non-release builds with `-Pversion=…-ci.N`; a pre-release passes its own
+    // `-Pversion`. Nothing ever writes an override back.
+    version = providers.gradleProperty("version").get()
 }
 
 // dependency-analysis (`mise run dependencies:analyze` → buildHealth). The

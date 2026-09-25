@@ -20,12 +20,14 @@
 [tools]
 java   = "temurin-21.0.11+10.0.LTS"   # CLAUDE.md §3 — JDK 21 LTS, Apple Silicon aarch64.
 gradle = "9.5.1"                       # Matches gradle/wrapper/gradle-wrapper.properties.
-gh     = "2.94.0"                       # release.yml (deferred) uses `gh release create`.
+gh     = "2.94.0"                       # scripts/release.sh uses `gh release create`.
 
 # Deliberately NOT pinned here:
 #   - kotlin: gradle/libs.versions.toml owns it (CLAUDE.md §3).
 #   - cocoapods: forbidden (CLAUDE.md §12).
 #   - node: not used in this repo.
+#   - python: scripts/changeset.py is stdlib-only Python 3.9+ — the system
+#     python3 (and every GitHub runner's) is enough.
 #   - xcodegen / swiftlint / swiftformat: sample apps are deferred (CLAUDE.md §4).
 
 # ---------------------------------------------------------------------------
@@ -146,14 +148,15 @@ run = "./gradlew :ssdp-bridge:run --args=\"{{arg(name='port', default='1901')}}\
 description = "Rebuild the debug SsdpKit.xcframework and point /Package.swift at it (local dev mode)."
 # KMMBridge's `spmDevBuild` builds the debug XCFramework and REWRITES the root
 # /Package.swift to a `.binaryTarget(path: …)` pointing at
-# ssdp/build/XCFrameworks/debug/SsdpKit.xcframework. After the first tagged release
-# the committed Package.swift is the *released* form (a remote
-# `.binaryTarget(url:checksum:)`). The local-dev rewrite is working-tree-only:
-# do NOT commit it. `mise run spm:restore` puts the committed version back.
+# ssdp/build/XCFrameworks/debug/SsdpKit.xcframework. The committed Package.swift
+# on main is always a local-dev form; the released remote
+# `.binaryTarget(url:checksum:)` form exists only on each vX.Y.Z tag
+# (.github/PUBLISHING.md). KMMBridge's rewrite differs from the committed file:
+# don't commit it — `mise run spm:restore` restores it.
 run = "./gradlew :ssdp:spmDevBuild"
 
 [tasks."spm:restore"]
-description = "Restore the committed (released) /Package.swift after spm:dev rewrote it."
+description = "Restore the committed /Package.swift after spm:dev rewrote it."
 run = "git restore Package.swift"
 
 [tasks."xcodeproj:ios"]
@@ -241,8 +244,55 @@ run = "./gradlew versionCatalogUpdate"
 # --- publish ---------------------------------------------------------------
 
 [tasks."publish:local"]
-description = "Publish both modules to the local Maven repo (~/.m2)."
-run = "./gradlew publishToMavenLocal"
+description = "Publish both modules to the local Maven repo (~/.m2) as the next -SNAPSHOT (e.g. 0.7.0-SNAPSHOT)."
+# Never the plain gradle.properties version: that is the LAST RELEASE, and a
+# local build of it in ~/.m2 would shadow the real artifact from Maven Central
+# for every local project that lists mavenLocal() first. The version under
+# development instead — what the pending changesets add up to, else the next
+# patch — as a -SNAPSHOT, which a consumer opts into explicitly.
+run = './gradlew publishToMavenLocal -Pversion="$(python3 scripts/changeset.py snapshot)"'
+
+[tasks."publish:maven"]
+description = "Release by hand: gradle.properties' version, or --version X.Y.Z-rc.1 for a pre-release; --dryrun stages only. See scripts/release.sh."
+# The canonical path is CI: merging the release PR runs
+# .github/workflows/release.yml. This is the by-hand equivalent, same rules —
+# the version is gradle.properties' (set by the last release PR) unless
+# --version names a pre-release. scripts/release.sh orchestrates:
+#   --dryrun : publishToMavenCentral (Central STAGING only; nothing committed,
+#              tagged, or released). Safe to run repeatedly.
+#   (real)   : after a typed confirmation — build the XCFramework, publish +
+#              release to Maven Central (IRREVERSIBLE), tag vX.Y.Z on a release
+#              commit carrying Package.swift, and `gh release create`.
+usage = '''
+flag "--version <version>" help="Release this version instead of gradle.properties' — a pre-release like 0.7.0-rc.1."
+flag "--dryrun" help="Upload to Central staging only; no release, tag, or commit."
+'''
+run = '''
+ARGS=""
+[ "{{flag(name='dryrun')}}" = "true" ] && ARGS="$ARGS --dryrun"
+VERSION="{{option(name='version')}}"
+[ -n "$VERSION" ] && ARGS="$ARGS --version $VERSION"
+sh scripts/release.sh $ARGS
+'''
+
+# --- changesets / release notes ------------------------------------------------
+# Every PR that reaches consumers adds a changeset (.changeset/README.md); the
+# Release PR workflow turns the pending ones into the next version + changelog.
+
+[tasks.changeset]
+description = "Add a changeset for this branch (.changeset/<branch>.md). Prompts for title / change / description unless passed as flags."
+# raw: the prompts need the terminal. Flags pass straight through, e.g.
+#   mise run changeset --title "Add retries" --change minor --description "…"
+raw = true
+run = "python3 scripts/changeset.py new"
+
+[tasks."changeset:status"]
+description = "Pending changesets, the next version they add up to, and a preview of its changelog entry."
+run = "python3 scripts/changeset.py status"
+
+[tasks."changeset:check"]
+description = "Validate every pending changeset — the PR check runs this (plus: the PR must add one)."
+run = "python3 scripts/changeset.py check"
 
 # --- aggregates ------------------------------------------------------------
 

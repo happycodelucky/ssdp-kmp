@@ -6,6 +6,9 @@ Terse, symptom-first notes on bugs hit and decisions made, so a future session
 
 ## Decisions (D)
 
+### D-011 — Releases are changeset-driven — 2026-09-24
+`.changeset/*.md` per PR + `scripts/changeset.py`. `version=` in gradle.properties is the single source of the version — the last release from main (seeded at 0.6.0), bumped only by the rolling release PR; release.yml publishes when a push to main CHANGES it. While 0.x a `major` changeset bumps the minor; only an explicit `version:` pin leaves 0.x. A changeset's `change` is the author's call; bodies start as the PR template's Unfilled callout, which `check`/`version` refuse. Stable versions never come from a manual dispatch (only pre-releases / retries). Replaced the old dispatch-with-`bumpType` release.yml, whose push of Package.swift to main left main's Package.swift at v0.1.0 through v0.6.0. Changelog is the root `CHANGELOG.md` (no mkdocs site here). (kmp-template D-001.)
+
 ### D-010 — The Apple framework / Swift module is `SsdpKit`, not `Ssdp` — 2026-09-24
 A module named like one of its public types (`object Ssdp` in module `Ssdp`) makes SKIE rename the type in Swift (`Ssdp_`) and lets the bare type shadow the module qualifier in SKIE's generated Swift. The name is `<PascalName>Kit`, derived identically in the convention plugin (`frameworkBaseName`) and `ssdp/build.gradle.kts` (KMMBridge `frameworkName`); `Package.swift`'s product and the zip follow. Renaming a shipped framework changes every Swift consumer's `import` (`import SsdpKit`) — a breaking change, released as a minor while 0.x. (kmp-template D-002.)
 
@@ -151,3 +154,12 @@ VCU resolves versions itself with its own (different) stability rule, so `depend
 
 ### N-011 — Catalog keys are kebab-case; a key must not be a segment-prefix of another — 2026-09-24
 Dashes become nested accessors, so `ktlint` beside `ktlint-gradle` turns `libs.versions.ktlint` into a group and `.get()` stops compiling. Name siblings by artifact: `ktlint-cli` / `ktlint-gradle` (accessor `libs.versions.ktlint.cli`). (kmp-template N-010.)
+
+### N-012 — `GITHUB_TOKEN` pushes/PRs trigger no workflows — 2026-09-24
+A push or PR made with `GITHUB_TOKEN` triggers no workflows (workflow_dispatch excepted), and opening a PR with it needs Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests". release-pr.yml therefore dispatches ci.yml + changeset.yml on `release/next` itself — their check runs attach to the head SHA, so they show on the PR — unless a GitHub App (`RELEASE_APP_CLIENT_ID` var + `RELEASE_APP_PRIVATE_KEY` secret) is configured. (kmp-template N-013.)
+
+### N-013 — The released Package.swift lives only on the tag — 2026-09-24
+main is branch-protected, so no workflow can push to it. The release commit carrying the remote-binary Package.swift is a detached commit the `vX.Y.Z` tag is force-moved onto (Touchlab's flow); main keeps the local-dev `.binaryTarget(path:)` form. SPM resolves the manifest from the tag. (kmp-template N-014.)
+
+### N-014 — actionlint rejects `client-id` on create-github-app-token@v3 — 2026-09-24
+actionlint's bundled metadata for `actions/create-github-app-token@v3` is stale: it demands `app-id` and rejects `client-id`. v3's action.yml has `client-id` (and deprecates `app-id`) — the workflow is right, the lint is wrong. Expect exactly these two errors on release-pr.yml. (kmp-template N-015.)

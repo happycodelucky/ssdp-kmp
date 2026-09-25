@@ -114,7 +114,26 @@ redeclare `XCFramework("SsdpKit")` — KMMBridge auto-creates it. The framework 
 Swift module is always `<Name>Kit` (`import SsdpKit`), derived from the module
 name in the convention plugin and `ssdp/build.gradle.kts`, so it never shares a
 name with a public type — `object Ssdp` in module `Ssdp` made SKIE rename it
-`Ssdp_` (LESSONS D-010). CI-only publishing.
+`Ssdp_` (LESSONS D-010). `mise run publish:local` installs the next
+`X.Y.Z-SNAPSHOT` to `~/.m2` (never the released version, which would shadow
+Central's). The released `Package.swift` lives only on each `vX.Y.Z` tag; `main`
+keeps the local-dev form.
+
+**Releases are changeset-driven** (`.changeset/README.md`,
+`.github/PUBLISHING.md`; LESSONS D-011, N-012, N-013). Every PR that reaches
+consumers adds a changeset (`mise run changeset`: `title`, `change:
+major|minor|patch`, `description`, then the full note in place of its Unfilled
+callout); the Changeset PR check enforces it (label `no-changeset` to opt out).
+A changeset's `change` is the source of truth for the version — the author's
+call, which neither the PR nor tooling overrides. Merges to `main` keep one
+rolling **Release vX.Y.Z** PR up to date — it bumps `version=` in
+`gradle.properties` (the single source of the version), rewrites every
+`x-release-version`-marked copy, and writes `CHANGELOG.md`. Merging it runs
+`.github/workflows/release.yml`, which publishes exactly that version. While 0.x
+a `major` change bumps the minor; `version: X.Y.Z` in a changeset pins the
+version (the way to 1.0.0). Never edit `version=` by hand. Pre-releases and
+retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
+`mise run publish:maven` by hand.
 
 ## 9. Platform notes
 
@@ -163,13 +182,19 @@ done gate; a JVM-only run hides native-test-compile and detekt failures
 2. Adding a dependency? Web-search the latest stable; add to the catalog only.
 3. Platform-specific? Keep the `expect`/`actual` seam tiny; push logic to common.
 4. Public API crossing to Swift? Apply §7 at design time.
-5. Done when `./gradlew :ssdp:check :ssdp-testing:check` passes AND
+5. Add a changeset (`mise run changeset`, §8) when the change reaches
+   consumers, and replace its Unfilled callout with the release note. Its
+   `change` level is the version decision. The usual reading — removed/renamed
+   public API is `major` (even while 0.x), new API `minor`, a fix `patch` — is a
+   default, not a rule: a different level is the author's call (say why in the
+   body). Docs/CI/test/sample-only PRs get the `no-changeset` label.
+6. Done when `./gradlew :ssdp:check :ssdp-testing:check` passes AND
    `:ssdp:compileKotlinMacosArm64` / `compileKotlinIosArm64` /
    `compileAndroidMain` build clean (common-code bugs often only surface on
    Native — the JVM compile is not a sufficient gate, LESSONS B-004).
    `check` never builds the sample apps — `mise run build:samples` does (CI's
    fast leg runs it); it's what catches AndroidX compileSdk floors (LESSONS N-009).
-6. Learned something non-obvious? Add it to `.claude/lessons/LESSONS.md` (terse).
+7. Learned something non-obvious? Add it to `.claude/lessons/LESSONS.md` (terse).
 
 ## 12. Hard rules
 

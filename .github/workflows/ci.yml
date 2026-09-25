@@ -107,19 +107,14 @@ jobs:
           cache-provider: basic
           cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
 
-      # Read major.minor from the in-tree fallback literal in build.gradle.kts
-      # (the `getOrElse("X.Y.0-SNAPSHOT")` argument) and stamp the patch with the
-      # CI run number. Humans bump major/minor in build.gradle.kts; CI never
-      # writes back.
+      # Stamp CI builds `<gradle.properties version>-ci.<run>` — the last
+      # release on main (the next one, on a release PR) plus the run number.
+      # Only ever an artifact name; CI never writes the version back.
       - name: Compute version
         id: version
         run: |
-          MAJOR_MINOR=$(grep -oE 'getOrElse\("[0-9]+\.[0-9]+' build.gradle.kts | head -1 | cut -d'"' -f2)
-          if [[ -z "$MAJOR_MINOR" ]]; then
-            echo "Could not parse major.minor from build.gradle.kts" >&2
-            exit 1
-          fi
-          VERSION="${MAJOR_MINOR}.0-ci.${GITHUB_RUN_NUMBER}"
+          set -euo pipefail
+          VERSION="$(python3 scripts/changeset.py current)-ci.${GITHUB_RUN_NUMBER}"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Computed CI version: $VERSION"
 
