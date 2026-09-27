@@ -39,6 +39,7 @@ point of use already explains belongs in that comment, not here.
 - **B-010** — ktlint's `when-entry-bracing` rewrites a bare `else -> Unit` to `else -> { Unit }`, which K/N's warnings-as-errors then rejects as an unused expression. Use `if / else if` for a statement-`when` with a no-op catch-all.
 - **B-011** — `runTest` auto-advances virtual time while every coroutine is idle, so a `max-age` expiry timer can fire between two calls and evict the description cache. In tests asserting state across suspend points, build devices with `cacheControl = null`.
 - **B-012** — AGP stamps an AAR's `minCompileSdk` with the compileSdk it was built with, and consumers' `check<Variant>AarMetadata` enforces it: our 37 (raised for the sample, N-009) was forced on every consumer through v0.7.0. Fixed by `android { aarMetadata { minCompileSdk } }` from its own catalog key, `android-min-compile-sdk`.
+- **B-013** — A test on real dispatchers (`Dispatchers.IO`, own `SupervisorJob` scopes) must `cancelAndJoin` its scopes BEFORE closing sockets: closing first lets a read loop throw on EOF with no handler, and kotlinx-coroutines-test reports that uncaught exception against the NEXT `runTest` (`UncaughtExceptionsBeforeTest`), failing an unrelated, order-dependent test (`BridgeEndToEndTcpTest` → `BridgePipeTest`).
 
 ## Notes
 
