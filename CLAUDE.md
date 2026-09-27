@@ -72,7 +72,9 @@ which our `jvm()` target needs (D-003).
 ## 5. Libraries — Kotlin-first
 
 Ktor/Ktorfit for HTTP (v1.1 XML fetch), kotlinx.* family (coroutines, atomicfu,
-io), Kermit for logging, `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
+io), Kermit for logging (`implementation` in `:ssdp`, never `api` and never
+injected by the convention plugin — a library mustn't force a logger onto its
+consumers' classpath), `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
 `java.time` in common — and `kotlin.time.Instant`/`Clock` are stable since
 2.3.x, no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
 Kotest (property tests). Library code uses **constructor injection only** — no
@@ -104,6 +106,14 @@ enums. **`@Throws` on an `expect` must be replicated verbatim on every `actual`*
 and a `@Throws` on a `suspend fun` must list `CancellationException`
 (LESSONS B-001/B-002). Never `kotlin.Result<T>` at the boundary. Apple casing
 everywhere (`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()`).
+
+**Hand-written Swift** goes in `ssdp/src/<sourceSet>/swift/`. SKIE Swift bundling
+is off by default: the Swift reaches only this module's own framework. Enabling
+it (per module) ships the Swift to KMP consumers too — but then every framework
+that links the module must `export` it (LESSONS D-012).
+
+**Android consumers** compile against at least `android-min-compile-sdk` (the
+AAR's `minCompileSdk`, LESSONS B-012) — not our `compileSdk`.
 
 ## 8. Distribution
 

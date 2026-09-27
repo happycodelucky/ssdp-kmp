@@ -226,8 +226,8 @@ versionCatalogUpdate {
     // instead of alphabetizing them.
     sortByKey.set(false)
     keep {
-        // Keys no library/plugin references: android-compile-sdk, android-min-sdk
-        // and jvm-target (read via the string-based findVersion("…") API in the
+        // Keys no library/plugin references: android-compile-sdk,
+        // android-min-compile-sdk, android-min-sdk and jvm-target (read via the string-based findVersion("…") API in the
         // convention plugin, invisible to VCU's usage scan), and the Apple
         // deployment targets (documentation for the floors spelled out in
         // ssdp/build.gradle.kts and Package.swift). Without this, VCU prunes them.

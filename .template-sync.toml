@@ -7,8 +7,8 @@
 [template]
 repo = "https://github.com/happycodelucky/kmp-template"
 branch = "main"
-last_synced = "bc4b2035300a05b505590cf181144e73e3271122"
-last_synced_date = "2026-09-24"
+last_synced = "03b659567f421d1692043956563719f1b0764d4c"
+last_synced_date = "2026-09-27"
 
 # Render map: how template paths and text read in this repo. Generated from the template's
 # scripts/init.sh rules; edit it where this repo deliberately differs. Replacements are
@@ -24,6 +24,10 @@ repo_name = "ssdp-kmp"
 [[render.replace]]
 from = "github.com/happycodelucky/__PROJECT_NAME__"
 to = "github.com/happycodelucky/ssdp-kmp"
+
+[[render.replace]]
+from = "__REPO__"
+to = "ssdp-kmp"
 
 [[render.replace]]
 from = "__PROJECT_NAME__"
@@ -270,3 +274,27 @@ change = "0d90e73 — Apple framework named <Name>Kit"
 status = "adopted"
 reason = "Owner approved: Ssdp -> SsdpKit (object Ssdp was exported as Ssdp_). Breaking for Swift; changeset ssdpkit-framework (-> 0.7.0). LESSONS D-010."
 synced = "2026-09-24"
+
+[[decision]]
+change = "f5418f5 — init --repo / __REPO__ token for GitHub repo URLs"
+status = "adapted"
+reason = "init.sh is ignored; ssdp already renders every repo URL as ssdp-kmp. Added a `__REPO__ -> ssdp-kmp` render rule so future template text maps cleanly. Template LESSONS N-017 not carried (init-only)."
+synced = "2026-09-27"
+
+[[decision]]
+change = "f5418f5 — declare the AAR's minCompileSdk (android-min-compile-sdk = 34)"
+status = "adopted"
+reason = "Real consumer bug here too: v0.7.0's AAR demands compileSdk 37. aarMetadata block in the convention plugin + catalog key + VCU keep comment; patch changeset android-min-compile-sdk. LESSONS B-012."
+synced = "2026-09-27"
+
+[[decision]]
+change = "f5418f5 — Kermit as a per-module `implementation`, not injected `api`"
+status = "adapted"
+reason = "Already true in ssdp (`implementation` in :ssdp commonMain, never in the convention plugin, no DAGP exclude). Only CLAUDE.md §5 wording taken."
+synced = "2026-09-27"
+
+[[decision]]
+change = "f5418f5 — SKIE Swift-bundling trade-off documented"
+status = "adopted"
+reason = "Plugin comment + CLAUDE.md §7 notes (hand-written Swift, Android consumers' compile floor). LESSONS D-012."
+synced = "2026-09-27"
