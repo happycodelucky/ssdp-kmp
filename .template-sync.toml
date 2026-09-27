@@ -7,7 +7,7 @@
 [template]
 repo = "https://github.com/happycodelucky/kmp-template"
 branch = "main"
-last_synced = "03b659567f421d1692043956563719f1b0764d4c"
+last_synced = "3c348be806dced96c5d5a98809f73ff9d8f82f2b"
 last_synced_date = "2026-09-27"
 
 # Render map: how template paths and text read in this repo. Generated from the template's
@@ -175,6 +175,10 @@ path = "src-testing/api/*"
 reason = "Placeholder API dump; ABI validation is deliberately off for :ssdp-testing here."
 
 [[ignore]]
+path = "docs/reference.md"
+reason = "API reference page rendered by mkdocs-macros; no docs site here (covered by docs/[!c]* too)."
+
+[[ignore]]
 path = "apps/*"
 reason = "ssdp's sample apps (SSDP scanner, :cli, :ssdp-bridge) are its own; port sample-build infra (mise/CI) by hand."
 
@@ -297,4 +301,40 @@ synced = "2026-09-27"
 change = "f5418f5 — SKIE Swift-bundling trade-off documented"
 status = "adopted"
 reason = "Plugin comment + CLAUDE.md §7 notes (hand-written Swift, Android consumers' compile floor). LESSONS D-012."
+synced = "2026-09-27"
+
+[[decision]]
+change = "3a72ce5 — 140-column line length set once in .editorconfig (ktlint enforces, detekt off)"
+status = "adopted"
+reason = "Reverses ssdp's D-009 (ktlint off + detekt 140). ktlint 1.8.0 -F reformatted 37 library files (~230 signature joins); ktlint clean, no line > 140. D-009 rewritten in place."
+synced = "2026-09-27"
+
+[[decision]]
+change = "63cb1b9 — changeset required only for release-scope changes (.changeset/config.toml, changeset:scope)"
+status = "adapted"
+reason = "Scope globs rendered to /ssdp/, /ssdp-testing/; ssdp-bridge and apps/ stay out of scope (samples). CLAUDE.md §8/§11, CONTRIBUTING, PR template, PUBLISHING updated. LESSONS D-011."
+synced = "2026-09-27"
+
+[[decision]]
+change = "9f9a461 — trim + renumber LESSONS"
+status = "adapted"
+reason = "ssdp keeps stable IDs (code comments, this file and PRs cite them): header wording adopted, N-010 (VCU/doctor), N-011 (catalog keys) and N-014 (actionlint) dropped with their citations, no renumbering."
+synced = "2026-09-27"
+
+[[decision]]
+change = "d043158, 328aaa8 — llms.txt from mkdocs; API reference page"
+status = "skipped"
+reason = "Docs-site only (mkdocs.yml, main.py, docs/) — ssdp has no docs site."
+synced = "2026-09-27"
+
+[[decision]]
+change = "5077dff, c7f6248 — llms.txt + llms-full.txt inside every published jar and the AAR"
+status = "adapted"
+reason = "LlmsTxt.kt, ssdp.publish wiring, llms:generate/llms:check, CI Apple-leg step adopted. No docs site, so llms.txt links the GitHub README + CHANGELOG instead (siteUrl dropped). Minor changeset llms-txt. LESSONS D-013, N-017."
+synced = "2026-09-27"
+
+[[decision]]
+change = "b16e4c4 — remove Renovate"
+status = "adopted"
+reason = "renovate.json5 deleted; Renovate mentions removed from mise.toml, build.gradle.kts, changeset.yml, .changeset/README.md."
 synced = "2026-09-27"

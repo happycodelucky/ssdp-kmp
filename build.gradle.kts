@@ -201,7 +201,7 @@ tasks.register<Copy>("copyDokkaToDocs") {
 // version-catalog-update (`dependencies:update`, the rewrite). VCU has resolved
 // versions itself since 1.0 — it no longer reads the ben-manes report — and its
 // built-in default selector uses a DIFFERENT stability rule, so it must be given
-// this one explicitly to stay in lockstep (LESSONS N-010).
+// this one explicitly to stay in lockstep.
 //
 // A version is STABLE only if it is digits-and-dots and nothing else. Accepts:
 // 1.2.3, 2026.06.01. Rejects anything carrying a qualifier (-alpha/-beta/-rc/
@@ -235,7 +235,7 @@ versionCatalogUpdate {
     }
     pin {
         // Kotlin is bounded above by SKIE (CLAUDE.md §3): a Kotlin bump is a
-        // manual, SKIE-paired change — the same policy renovate.json5 encodes.
+        // manual, SKIE-paired change.
         // Pinning the `kotlin` ref also holds the compose-compiler plugin, which
         // versions in lockstep with it.
         versions.add("kotlin")

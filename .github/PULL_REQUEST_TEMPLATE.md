@@ -38,7 +38,7 @@ Closes #
 - `major` — breaking change · `.changeset/<file>.md`
 - `minor` — new, compatible feature · `.changeset/<file>.md`
 - `patch` — bug fix · `.changeset/<file>.md`
-- None — nothing here reaches consumers (docs, CI, tests, samples); labelled `no-changeset`
+- None — nothing here reaches consumers: no file in release scope (`.changeset/config.toml`), or labelled `no-changeset`
 
 ## Affected platforms
 
@@ -107,7 +107,7 @@ Closes #
 - [ ] Public API changes follow the Swift-interop rules (§7): sealed → exhaustive enum, `@Throws` replicated on every `actual` incl. `CancellationException`, no `kotlin.Result<T>` at the boundary
 - [ ] If the public API changed intentionally, `mise run api:dump` was run and the `api/` diff is committed and reviewed (§8)
 - [ ] New dependencies are Kotlin-first per §5, latest stable (web-searched, §3), and were added to `gradle/libs.versions.toml` only
-- [ ] A changeset is committed (`mise run changeset`) with its release note written in place of the Unfilled callout, or the PR is labelled `no-changeset` because nothing in it reaches consumers (§8) — the Changeset check enforces both
+- [ ] A changeset is committed (`mise run changeset`) with its release note written in place of the Unfilled callout, or nothing in it reaches consumers: it changes no file in release scope (`.changeset/config.toml`) or is labelled `no-changeset` (§8) — the Changeset check enforces both
 - [ ] Docs updated (README + KDoc) for any public API or behavior change
 - [ ] Anything non-obvious learned is recorded in `.claude/lessons/LESSONS.md` (§11)
 - [ ] No hard-rule violations (§12): no Compose MP, CocoaPods, Network.framework, `GlobalScope`, `!!` in production, `java.time` in common, `@Synchronized`/`volatile`, new callback public APIs (only `SsdpDeviceListener`), SSDP server code, EAP/RC/Beta deps

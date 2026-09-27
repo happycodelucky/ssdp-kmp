@@ -34,7 +34,9 @@ stderr):
 
     new       add a changeset for the current branch (prompts when interactive)
     check     validate every pending changeset; with --require-since REF, also
-              require the branch to add or edit one (the PR check)
+              require the branch to add or edit one when it changes a file in
+              release scope (the PR check)
+    scope     list changed files, in release scope or not (.changeset/config.toml)
     status    pending changesets, the next version, a changelog preview
               (--json for workflows)
     version   apply the pending changesets (the Release PR workflow's job)
@@ -42,7 +44,9 @@ stderr):
     current   print the version in gradle.properties (optionally at a git ref)
     snapshot  print the version under development as X.Y.Z-SNAPSHOT (publish:local)
 
-Standard library only, Python 3.9+ — it runs on bare GitHub runners.
+Standard library only, Python 3.9+ — it runs on bare GitHub runners. Reading
+the release scope (.changeset/config.toml: `check --require-since`, `scope`)
+needs 3.11+ for tomllib; every GitHub runner and mise's python have it.
 """
 
 from __future__ import annotations
@@ -60,6 +64,7 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 CHANGESET_DIR = ROOT / ".changeset"
+SCOPE_FILE = CHANGESET_DIR / "config.toml"
 VERSION_FILE = ROOT / "gradle.properties"
 CHANGELOG = ROOT / "CHANGELOG.md"
 
@@ -321,6 +326,94 @@ def load_changesets() -> list[Changeset]:
     if problems:
         raise ChangesetError(problems)
     return changesets
+
+
+# --- release scope ---------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Scope:
+    """Which paths reach consumers (.changeset/config.toml): a path is in scope
+    when it matches an `include` glob and no `exclude` glob."""
+
+    include: tuple[re.Pattern[str], ...]
+    exclude: tuple[re.Pattern[str], ...]
+
+    def contains(self, path: str) -> bool:
+        return any(g.fullmatch(path) for g in self.include) and not any(g.fullmatch(path) for g in self.exclude)
+
+
+def glob_regex(glob: str) -> re.Pattern[str]:
+    """A gitignore-style glob as a regex over repository-relative paths: `*`
+    stays inside one path segment, `**` spans segments, a trailing `/` means
+    everything under a directory, and a glob with no other `/` matches at any
+    depth. Like gitignore, a glob that names a directory covers its contents."""
+    anchored = "/" in glob.rstrip("/")
+    directory = glob.endswith("/")
+    pattern = glob.strip("/")
+    out, i = [], 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out.append("(?:.*/)?")
+            i += 3
+            continue
+        if pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+            continue
+        c = pattern[i]
+        close = pattern.find("]", i + 2) if c == "[" else -1
+        if c == "*":
+            out.append("[^/]*")
+        elif c == "?":
+            out.append("[^/]")
+        elif close != -1:
+            chars = pattern[i + 1 : close]
+            if chars.startswith("!"):
+                chars = "^" + chars[1:]
+            out.append("[" + chars.replace("\\", "\\\\") + "]")
+            i = close
+        else:
+            out.append(re.escape(c))
+        i += 1
+    regex = "".join(out)
+    if not anchored:
+        regex = "(?:.*/)?" + regex
+    return re.compile(regex + ("/.*" if directory else "(?:/.*)?"))
+
+
+def load_scope() -> Scope:
+    """The release scope; without a config file every path is in scope."""
+    if not SCOPE_FILE.is_file():
+        return Scope(include=(re.compile(".*"),), exclude=())
+    try:
+        import tomllib
+    except ImportError:
+        fail(f"reading {rel(SCOPE_FILE)} needs Python 3.11+ (tomllib) — run it through mise")
+    try:
+        config = tomllib.loads(SCOPE_FILE.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as e:
+        fail(f"not valid TOML: {e}", SCOPE_FILE)
+    unknown = sorted(set(config) - {"include", "exclude"})
+    if unknown:
+        fail(f"unknown key(s) {', '.join(unknown)} — only `include` and `exclude` are read", SCOPE_FILE)
+    globs = {}
+    for key in ("include", "exclude"):
+        value = config.get(key, [])
+        if not isinstance(value, list) or not all(isinstance(g, str) and g.strip("/") for g in value):
+            fail(f"`{key}` must be a list of non-empty glob strings", SCOPE_FILE)
+        globs[key] = tuple(glob_regex(g) for g in value)
+    return Scope(include=globs["include"], exclude=globs["exclude"])
+
+
+def changed_files(since: str, working_tree: bool = False) -> list[str]:
+    """Every path HEAD adds, edits, or deletes since its merge base with
+    `since` (a rename counts as both of its paths) — plus uncommitted edits to
+    tracked files with `working_tree`."""
+    if working_tree:
+        base = git("merge-base", since, "HEAD").strip()
+        return git("diff", "--name-only", "--no-renames", base).split()
+    return git("diff", "--name-only", "--no-renames", f"{since}...HEAD").split()
 
 
 # --- planning --------------------------------------------------------------------
@@ -654,22 +747,40 @@ def cmd_check(args: argparse.Namespace) -> int:
     with_section(CHANGELOG.read_text(encoding="utf-8"), "")  # the insertion marker exists
 
     if args.require_since:
+        scope = load_scope()
+        in_scope = [p for p in changed_files(args.require_since) if scope.contains(p)]
         touched = git(
             "diff", "--name-only", "--diff-filter=AM", f"{args.require_since}...HEAD", "--", ".changeset/"
         ).split()
         touched = [t for t in touched if t.endswith(".md") and Path(t).name.lower() != "readme.md"]
-        if not touched:
+        if touched:
+            print(f"changeset(s) on this branch: {', '.join(touched)}", file=sys.stderr)
+        elif in_scope:
+            shown = ", ".join(in_scope[:5]) + (f" and {len(in_scope) - 5} more" if len(in_scope) > 5 else "")
             fail(
-                "this branch adds no changeset. Run `mise run changeset` and commit the file it "
-                "creates — or, if nothing here reaches consumers (docs, CI, tests), add the "
-                "`no-changeset` label to the PR."
+                f"this branch changes files that reach consumers ({shown}) but adds no changeset. Run "
+                "`mise run changeset` and commit the file it creates — or, if none of it reaches "
+                f"consumers after all, add the `no-changeset` label to the PR (or narrow {rel(SCOPE_FILE)})."
             )
-        print(f"changeset(s) on this branch: {', '.join(touched)}", file=sys.stderr)
+        else:
+            print(f"nothing on this branch is in release scope ({rel(SCOPE_FILE)}) — no changeset needed", file=sys.stderr)
 
     summary = f"{len(changesets)} pending changeset(s)"
     if plan.next:
         summary += f"; next release {current} → {plan.next}"
     print(f"changesets ok — {summary}", file=sys.stderr)
+    return 0
+
+
+def cmd_scope(args: argparse.Namespace) -> int:
+    scope = load_scope()
+    paths = args.paths or changed_files(args.since, working_tree=True)
+    for path in paths:
+        print(f"{'in ' if scope.contains(path) else 'out'}  {path}")
+    if not args.paths:
+        count = sum(scope.contains(p) for p in paths)
+        verdict = "a changeset is required" if count else "no changeset needed"
+        print(f"{count} of {len(paths)} changed file(s) since {args.since} in release scope — {verdict}", file=sys.stderr)
     return 0
 
 
@@ -830,9 +941,16 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     check = sub.add_parser("check", help="validate every pending changeset")
     check.add_argument(
-        "--require-since", metavar="REF", help="also fail unless HEAD adds or edits a changeset since REF (the PR check)"
+        "--require-since",
+        metavar="REF",
+        help="also fail unless HEAD adds or edits a changeset since REF, when it changes a file in release scope (the PR check)",
     )
     check.set_defaults(run=cmd_check)
+
+    scope = sub.add_parser("scope", help="which changed files are in release scope (.changeset/config.toml)")
+    scope.add_argument("paths", nargs="*", help="classify these paths instead of the branch's changes")
+    scope.add_argument("--since", default="origin/main", metavar="REF", help="diff HEAD against REF (default: origin/main)")
+    scope.set_defaults(run=cmd_scope)
 
     status = sub.add_parser("status", help="pending changesets and the next version")
     status.add_argument("--json", action="store_true", help="machine-readable output")

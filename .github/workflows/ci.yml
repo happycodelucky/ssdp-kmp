@@ -130,6 +130,13 @@ jobs:
           mise run check
           mise run build:xcframework
 
+      # Every jar and the AAR a release uploads must carry llms.txt +
+      # llms-full.txt (ssdp.publish). Publishing to ~/.m2 builds exactly
+      # those artifacts, unsigned — the AAR and the Kotlin/Native sources jars
+      # are only built here, on the Apple leg.
+      - name: Verify llms.txt ships in every artifact
+        run: mise run llms:check
+
       - name: Upload XCFramework
         uses: actions/upload-artifact@v7
         with:

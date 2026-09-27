@@ -217,7 +217,7 @@ description = "Profile a real build — per-task timings, configuration time, de
 run = "./gradlew assemble --profile"
 
 # --- dependencies ----------------------------------------------------------
-# Renovate (renovate.json5) opens PRs in CI; these are the local equivalents.
+# Nothing bumps dependencies automatically: run these, review the diff, open a PR.
 
 [tasks."dependencies:outdated"]
 description = "List dependencies with newer STABLE versions (ben-manes gradle-versions-plugin)."
@@ -237,8 +237,7 @@ description = "Rewrite gradle/libs.versions.toml to the latest stable versions, 
 # dependencies:outdated uses. VCU no longer drives ben-manes (since 1.0), so it
 # needs no --no-parallel. Not truly interactive: it rewrites the catalog; review
 # with `git diff gradle/libs.versions.toml` and accept or revert. The SKIE-bound
-# `kotlin` ref is VCU-pinned in the root build script: this task never writes it
-# (same policy as renovate.json5).
+# `kotlin` ref is VCU-pinned in the root build script: this task never writes it.
 run = "./gradlew versionCatalogUpdate"
 
 # --- publish ---------------------------------------------------------------
@@ -251,6 +250,18 @@ description = "Publish both modules to the local Maven repo (~/.m2) as the next 
 # development instead — what the pending changesets add up to, else the next
 # patch — as a -SNAPSHOT, which a consumer opts into explicitly.
 run = './gradlew publishToMavenLocal -Pversion="$(python3 scripts/changeset.py snapshot)"'
+
+[tasks."llms:generate"]
+description = "Write each module's llms.txt + llms-full.txt (its public API, from Dokka) to <module>/build/llms/ to preview them."
+# Every published jar and AAR carries this pair under
+# META-INF/<groupId>/<artifactId>/ — packed only by builds that publish
+# (ssdp.publish), so check/test runs never pay for Dokka.
+run = "./gradlew :ssdp:generateLlmsTxt :ssdp-testing:generateLlmsTxt"
+
+[tasks."llms:check"]
+description = "publish:local, then verify every published jar and AAR carries llms.txt + llms-full.txt (CI's Apple leg runs this)."
+depends = ["publish:local"]
+run = 'sh scripts/check-llms.sh "$(python3 scripts/changeset.py snapshot)"'
 
 [tasks."publish:maven"]
 description = "Release by hand: gradle.properties' version, or --version X.Y.Z-rc.1 for a pre-release; --dryrun stages only. See scripts/release.sh."
@@ -289,6 +300,11 @@ run = "python3 scripts/changeset.py new"
 [tasks."changeset:status"]
 description = "Pending changesets, the next version they add up to, and a preview of its changelog entry."
 run = "python3 scripts/changeset.py status"
+
+[tasks."changeset:scope"]
+description = "Which files this branch changes since origin/main, in release scope (.changeset/config.toml) or not — whether the PR needs a changeset."
+# Pass paths to classify them instead, or --since REF for another base.
+run = "python3 scripts/changeset.py scope"
 
 [tasks."changeset:check"]
 description = "Validate every pending changeset — the PR check runs this (plus: the PR must add one)."

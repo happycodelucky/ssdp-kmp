@@ -45,10 +45,10 @@ YAML would misread. HTML comments in the body are dropped; a leftover
 
 ## From changesets to a release
 
-1. **PR check.** The `Changeset` check fails a PR that adds or edits no
-   changeset here. Label the PR `no-changeset` when nothing in it reaches
-   consumers: docs, CI, tests, sample apps. Renovate PRs carry that label
-   automatically.
+1. **PR check.** The `Changeset` check fails a PR that changes a file in
+   release scope (below) and adds or edits no changeset here. Label the PR
+   `no-changeset` when an in-scope change still reaches no consumer, such as a
+   build-only dependency bump.
 2. **Release PR.** Every merge to `main` with changesets pending rebuilds one
    rolling PR, **Release vX.Y.Z**, on the `release/next` branch. It bumps
    `version=` in `gradle.properties` and every line marked for release (below),
@@ -58,6 +58,26 @@ YAML would misread. HTML comments in the body are dropped; a leftover
 3. **Release.** Merging the release PR publishes that version to Maven Central
    and GitHub Releases (SPM). See
    [`.github/PUBLISHING.md`](../.github/PUBLISHING.md).
+
+### Release scope
+
+[`config.toml`](config.toml) lists what reaches consumers as gitignore-style
+globs: a file is in scope when it matches an `include` glob and no `exclude`
+glob. It covers the published modules (`ssdp/`, `ssdp-testing/`) and the build
+logic that shapes them (`gradle/`, the root build scripts, `gradle.properties`,
+`Package.swift`), minus test source sets and Markdown. Everything else (docs,
+CI, the sample apps and `ssdp-bridge/`, scripts, agent files) never needs a
+changeset, though a PR may still add one to get a line in the changelog.
+
+```toml
+include = ["/ssdp/", "/ssdp-testing/", "/gradle/"]
+exclude = ["*/src/*Test/", "*.md"]
+```
+
+A glob starting with `/` is anchored at the repository root; one with no other
+`/` matches at any depth; a trailing `/` means everything under that
+directory. `mise run changeset:scope` shows how this branch's changes (or
+paths you pass) fall. Without `config.toml`, every file is in scope.
 
 ### Picking the version
 
