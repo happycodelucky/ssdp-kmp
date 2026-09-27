@@ -7,7 +7,7 @@
  *
  * The constructor takes its collaborators by injection (socket factory, clock,
  * scope) so the whole client is drivable under `runTest` virtual time with a
- * fake socket — no real multicast needed in tests (LESSONS N-011). The public
+ * fake socket — no real multicast needed in tests (LESSONS N-002). The public
  * platform factory `SsdpClient()` supplies the production wiring.
  */
 package com.happycodelucky.ssdp.internal

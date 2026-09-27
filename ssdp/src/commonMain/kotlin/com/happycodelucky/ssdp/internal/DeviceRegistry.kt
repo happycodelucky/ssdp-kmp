@@ -46,7 +46,7 @@ import kotlin.time.Instant
  * @param scope the coroutine scope expiry timers run on — owned by the client,
  *   cancelled on close. Injecting it (rather than reading a wall clock from a
  *   timer) keeps the whole registry drivable from `runTest` virtual time
- *   (LESSONS N-011 / T-003).
+ *   (LESSONS N-002).
  * @param clock source of "now" for firstSeen/lastSeen/expiresAt. Inject a test
  *   clock under virtual time; production passes [Clock.System].
  */

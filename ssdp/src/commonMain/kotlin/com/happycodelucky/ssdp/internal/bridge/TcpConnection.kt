@@ -11,7 +11,7 @@
  *     full-duplex (one M-SEARCH out → many datagrams in), not request/response.
  *   - [ktorTcpConnect] — the production [Connect] backed by ktor-network's
  *     multiplatform TCP client. Injected into [BridgeMulticastSocket] so tests
- *     pass an in-memory duplex and never open a real socket (LESSONS N-011-style
+ *     pass an in-memory duplex and never open a real socket (LESSONS N-002-style
  *     injection, mirroring the socketFactory / MockEngine seams already in use).
  *
  * Kept deliberately tiny and `java.*`-free so the whole bridge transport lives
