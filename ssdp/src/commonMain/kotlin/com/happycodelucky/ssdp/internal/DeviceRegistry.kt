@@ -50,10 +50,7 @@ import kotlin.time.Instant
  * @param clock source of "now" for firstSeen/lastSeen/expiresAt. Inject a test
  *   clock under virtual time; production passes [Clock.System].
  */
-internal class DeviceRegistry(
-    private val scope: CoroutineScope,
-    private val clock: Clock,
-) {
+internal class DeviceRegistry(private val scope: CoroutineScope, private val clock: Clock) {
     private val mutex = Mutex()
     private val devices = MutableStateFlow<Map<String, DiscoveredDevice>>(emptyMap())
 
@@ -176,19 +173,13 @@ internal class DeviceRegistry(
         if (change != null) _changes.emit(change)
     }
 
-    private fun isMaterialChange(
-        old: DiscoveredDevice,
-        new: DiscoveredDevice,
-    ): Boolean =
+    private fun isMaterialChange(old: DiscoveredDevice, new: DiscoveredDevice): Boolean =
         old.bootId != new.bootId ||
             old.location != new.location ||
             old.cacheControl != new.cacheControl ||
             old.configId != new.configId
 
-    private suspend fun remove(
-        usn: String,
-        reason: DeviceChange.Removed.Reason,
-    ) {
+    private suspend fun remove(usn: String, reason: DeviceChange.Removed.Reason) {
         val removed =
             mutex.withLock {
                 val device = devices.value[usn] ?: return@withLock null
@@ -200,11 +191,7 @@ internal class DeviceRegistry(
     }
 
     /** Must be called while holding [mutex]. */
-    private fun rescheduleExpiryLocked(
-        usn: String,
-        expiresAt: Instant?,
-        now: Instant,
-    ) {
+    private fun rescheduleExpiryLocked(usn: String, expiresAt: Instant?, now: Instant) {
         expiryJobs.remove(usn)?.cancel()
         if (expiresAt == null) return
         val ttl = expiresAt - now

@@ -31,10 +31,8 @@ import kotlin.native.HiddenFromObjC
  */
 @HiddenFromObjC
 @Throws(CancellationException::class)
-public suspend fun DiscoveredDevice.description(
-    client: SsdpClient,
-    refresh: Boolean = false,
-): DescriptionResult = client.description(this, refresh)
+public suspend fun DiscoveredDevice.description(client: SsdpClient, refresh: Boolean = false): DescriptionResult =
+    client.description(this, refresh)
 
 /**
  * The already-fetched description for this device held by [client], or `null`

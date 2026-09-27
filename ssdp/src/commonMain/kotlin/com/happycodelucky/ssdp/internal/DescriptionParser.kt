@@ -42,10 +42,7 @@ internal interface DescriptionParser {
      * @throws Exception if the XML can't be parsed; the caller maps this to
      *   [com.happycodelucky.ssdp.DescriptionResult.ParseFailed].
      */
-    fun parse(
-        body: String,
-        sourceUrl: String,
-    ): DeviceDescription
+    fun parse(body: String, sourceUrl: String): DeviceDescription
 }
 
 /** The production xmlutil-backed parser. */
@@ -70,10 +67,7 @@ internal object XmlDescriptionParser : DescriptionParser {
             }
         }
 
-    override fun parse(
-        body: String,
-        sourceUrl: String,
-    ): DeviceDescription {
+    override fun parse(body: String, sourceUrl: String): DeviceDescription {
         val root = xml.decodeFromString(WireRoot.serializer(), body)
         // Second, additive pass: the xmlutil deserialization above intentionally
         // drops unknown/vendor elements (ignoreUnknownChildren). Walk the same
@@ -98,10 +92,7 @@ internal object XmlDescriptionParser : DescriptionParser {
      * the typed [Device] tree structurally (by position), independent of how
      * xmlutil orders its own deserialization.
      */
-    private class DeviceExtras(
-        val properties: Map<String, String>,
-        val children: List<DeviceExtras>,
-    )
+    private class DeviceExtras(val properties: Map<String, String>, val children: List<DeviceExtras>)
 
     /**
      * Parse [body] with the multiplatform generic pull-reader and return the

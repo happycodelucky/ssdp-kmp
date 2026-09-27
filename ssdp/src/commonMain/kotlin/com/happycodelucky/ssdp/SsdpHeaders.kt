@@ -18,9 +18,7 @@ package com.happycodelucky.ssdp
  * (`SEARCHPORT.UPNP.ORG`, `SECURELOCATION.UPNP.ORG`, …) that aren't surfaced as
  * typed properties.
  */
-public class SsdpHeaders private constructor(
-    private val storage: Map<String, String>,
-) {
+public class SsdpHeaders private constructor(private val storage: Map<String, String>) {
     /** Case-insensitive lookup by header name. */
     public operator fun get(key: String): String? = storage[key.uppercase()]
 

@@ -144,11 +144,7 @@ internal class SsdpClientImpl(
         }
     }
 
-    override suspend fun search(
-        targets: Set<SearchTarget>,
-        maxWaitSeconds: Int,
-        timeout: Duration?,
-    ) {
+    override suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int, timeout: Duration?) {
         if (closed.value) return
         searchMutex.withLock {
             // Replace any prior search.
@@ -203,15 +199,10 @@ internal class SsdpClientImpl(
         synchronized(listenerLock) { listeners.remove(listener) }
     }
 
-    override suspend fun description(
-        device: DiscoveredDevice,
-        refresh: Boolean,
-    ): DescriptionResult = if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device, refresh)
+    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): DescriptionResult =
+        if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device, refresh)
 
-    override suspend fun description(
-        usn: String,
-        refresh: Boolean,
-    ): DescriptionResult {
+    override suspend fun description(usn: String, refresh: Boolean): DescriptionResult {
         if (closed.value) return DescriptionResult.NotFound
         val device = registry.deviceSet.value[usn] ?: return DescriptionResult.NotFound
         return descriptionService.describe(device, refresh)

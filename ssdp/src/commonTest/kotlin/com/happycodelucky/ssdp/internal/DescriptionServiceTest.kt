@@ -39,10 +39,7 @@ import kotlin.time.Instant
 class DescriptionServiceTest {
     private val sonosUrl = "http://192.168.4.20:1400/xml/device_description.xml"
 
-    private fun device(
-        usn: String = "uuid:RINCON_C438751026E501400",
-        location: String? = sonosUrl,
-    ): DiscoveredDevice =
+    private fun device(usn: String = "uuid:RINCON_C438751026E501400", location: String? = sonosUrl): DiscoveredDevice =
         DiscoveredDevice(
             usn = usn,
             target = SearchTarget.RootDevice,

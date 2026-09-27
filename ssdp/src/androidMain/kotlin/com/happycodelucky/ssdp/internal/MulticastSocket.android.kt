@@ -35,10 +35,7 @@ private const val SSDP_PORT = 1900
 private const val MAX_DATAGRAM = 65_507
 private const val MULTICAST_LOCK_TAG = "ssdp-kmp"
 
-internal class AndroidMulticastSocket(
-    bindInterface: String?,
-    context: Context?,
-) : MulticastSocket {
+internal class AndroidMulticastSocket(bindInterface: String?, context: Context?) : MulticastSocket {
     private val group = InetAddress.getByName(SSDP_GROUP)
     private val socket: JdkMulticastSocket
     private val networkInterface: NetworkInterface?

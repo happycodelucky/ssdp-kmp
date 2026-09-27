@@ -58,10 +58,7 @@ public class DeviceDescription(
  * The UPnP architecture version a description declares (`<specVersion>`).
  * Almost always 1.0 or 1.1.
  */
-public class SpecVersion(
-    public val major: Int,
-    public val minor: Int,
-) {
+public class SpecVersion(public val major: Int, public val minor: Int) {
     override fun equals(other: Any?): Boolean = other is SpecVersion && other.major == major && other.minor == minor
 
     override fun hashCode(): Int = 31 * major + minor

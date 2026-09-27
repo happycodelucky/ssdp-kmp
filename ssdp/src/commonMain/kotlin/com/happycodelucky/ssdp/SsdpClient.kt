@@ -92,11 +92,7 @@ public interface SsdpClient : AutoCloseable {
      * @throws SsdpError if the multicast group cannot be joined.
      */
     @Throws(SsdpError::class, kotlin.coroutines.cancellation.CancellationException::class)
-    public suspend fun search(
-        targets: Set<SearchTarget>,
-        maxWaitSeconds: Int = DEFAULT_MAX_WAIT_SECONDS,
-        timeout: Duration? = null,
-    )
+    public suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int = DEFAULT_MAX_WAIT_SECONDS, timeout: Duration? = null)
 
     /** Stop active M-SEARCH retransmission. Passive NOTIFY listening continues. */
     public suspend fun stopSearch()
@@ -148,10 +144,7 @@ public interface SsdpClient : AutoCloseable {
      */
     @Throws(kotlin.coroutines.cancellation.CancellationException::class)
     @ObjCName("description")
-    public suspend fun description(
-        device: DiscoveredDevice,
-        refresh: Boolean = false,
-    ): DescriptionResult
+    public suspend fun description(device: DiscoveredDevice, refresh: Boolean = false): DescriptionResult
 
     /**
      * Like [description], but looks the device up by [usn] in the current
@@ -163,10 +156,7 @@ public interface SsdpClient : AutoCloseable {
      */
     @Throws(kotlin.coroutines.cancellation.CancellationException::class)
     @ObjCName("descriptionForUsn")
-    public suspend fun description(
-        usn: String,
-        refresh: Boolean = false,
-    ): DescriptionResult
+    public suspend fun description(usn: String, refresh: Boolean = false): DescriptionResult
 
     /**
      * The already-fetched device description for [device], or `null` if none is

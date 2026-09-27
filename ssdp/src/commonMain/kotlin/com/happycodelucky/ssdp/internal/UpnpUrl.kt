@@ -23,10 +23,7 @@ internal object UpnpUrl {
      * - [ref] is a relative path (`path`) → merge onto [base]'s directory.
      * - [ref] blank → [base].
      */
-    fun resolve(
-        ref: String,
-        base: String,
-    ): String {
+    fun resolve(ref: String, base: String): String {
         val r = ref.trim()
         if (r.isEmpty()) return base
         if (hasScheme(r)) return r
@@ -83,11 +80,7 @@ internal object UpnpUrl {
         return candidate.all { it.isLetterOrDigit() || it == '+' || it == '-' || it == '.' }
     }
 
-    private data class Parts(
-        val scheme: String,
-        val authority: String,
-        val path: String,
-    )
+    private data class Parts(val scheme: String, val authority: String, val path: String)
 
     /** Parse `scheme://authority/path...` — the only base shape UPnP LOCATION/URLBase take. */
     private fun parse(url: String): Parts? {
@@ -113,10 +106,7 @@ internal object UpnpUrl {
      * §5.3 "merge"): everything up to and including the last '/' of [basePath],
      * then [rel]. If [basePath] has no '/', the merged path is just `/rel`.
      */
-    private fun mergePath(
-        basePath: String,
-        rel: String,
-    ): String {
+    private fun mergePath(basePath: String, rel: String): String {
         val lastSlash = basePath.lastIndexOf('/')
         val dir = if (lastSlash < 0) "/" else basePath.substring(0, lastSlash + 1)
         return dir + rel

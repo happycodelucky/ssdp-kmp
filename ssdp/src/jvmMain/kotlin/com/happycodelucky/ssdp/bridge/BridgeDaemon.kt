@@ -48,10 +48,7 @@ public const val DEFAULT_BRIDGE_PORT: Int = 1901
  * @param bindInterface optional host interface hint for the real multicast
  *   socket (multi-homed hosts) — forwarded to [openMulticastSocket].
  */
-public fun runSsdpBridgeDaemon(
-    port: Int = DEFAULT_BRIDGE_PORT,
-    bindInterface: String? = null,
-): Unit =
+public fun runSsdpBridgeDaemon(port: Int = DEFAULT_BRIDGE_PORT, bindInterface: String? = null): Unit =
     runBlocking {
         val selector = SelectorManager(Dispatchers.IO)
         val server = aSocket(selector).tcp().bind(hostname = "0.0.0.0", port = port)
@@ -89,10 +86,7 @@ public fun runSsdpBridgeDaemon(
  * Pulled out of [runSsdpBridgeDaemon] so it is unit-testable with an in-memory
  * [DuplexConnection] and a fake [MulticastSocket].
  */
-internal suspend fun runBridgePipe(
-    conn: DuplexConnection,
-    transport: MulticastSocket,
-): Unit =
+internal suspend fun runBridgePipe(conn: DuplexConnection, transport: MulticastSocket): Unit =
     coroutineScope {
         // multicast → client: frame every datagram the real socket received.
         val forwarder =

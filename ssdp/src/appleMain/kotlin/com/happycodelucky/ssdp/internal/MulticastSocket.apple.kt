@@ -97,9 +97,7 @@ private fun ipv4ToNetworkOrder(dotted: String): UInt {
     return result
 }
 
-internal class AppleMulticastSocket(
-    bindInterface: String?,
-) : MulticastSocket {
+internal class AppleMulticastSocket(bindInterface: String?) : MulticastSocket {
     private val fd: Int
 
     // Dispatchers.IO is internal on Kotlin/Native; Default is the public choice.

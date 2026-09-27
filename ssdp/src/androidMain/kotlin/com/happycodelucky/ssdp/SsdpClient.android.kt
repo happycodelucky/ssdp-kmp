@@ -42,10 +42,7 @@ public const val EMULATOR_HOST_LOOPBACK: String = "10.0.2.2"
  * @throws SsdpError if the multicast group cannot be joined.
  */
 @Throws(SsdpError::class)
-public fun SsdpClient(
-    context: Context,
-    bindInterface: String? = null,
-): SsdpClient =
+public fun SsdpClient(context: Context, bindInterface: String? = null): SsdpClient =
     SsdpClientImpl(
         socketFactory = { AndroidMulticastSocket(bindInterface, context.applicationContext) },
         parentScope = newClientScope(),
@@ -95,10 +92,7 @@ public actual fun SsdpClient(bindInterface: String?): SsdpClient =
  *   `DEFAULT_BRIDGE_PORT`).
  */
 @Suppress("UnusedReceiverParameter")
-public fun SsdpClient.Companion.bridged(
-    host: String = EMULATOR_HOST_LOOPBACK,
-    port: Int = 1901,
-): SsdpClient =
+public fun SsdpClient.Companion.bridged(host: String = EMULATOR_HOST_LOOPBACK, port: Int = 1901): SsdpClient =
     SsdpClientImpl(
         socketFactory = { BridgeMulticastSocket(host = host, port = port) },
         parentScope = newClientScope(),

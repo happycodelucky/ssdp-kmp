@@ -9,9 +9,7 @@ package com.happycodelucky.ssdp.internal
 /**
  * SSDP announcement type used in `MAN` (M-SEARCH) and `NTS` (NOTIFY) headers.
  */
-internal enum class MessageAnnouncement(
-    val rawValue: String,
-) {
+internal enum class MessageAnnouncement(val rawValue: String) {
     /** `MAN: "ssdp:discover"` — used in M-SEARCH requests. */
     DISCOVER("ssdp:discover"),
 

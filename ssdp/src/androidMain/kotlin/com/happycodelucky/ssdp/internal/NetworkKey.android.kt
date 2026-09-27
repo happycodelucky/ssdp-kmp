@@ -27,10 +27,7 @@ internal actual fun localSubnetKey(): String? =
             }
     }.getOrNull()
 
-private fun networkAddress(
-    addr: ByteArray,
-    prefix: Int,
-): String {
+private fun networkAddress(addr: ByteArray, prefix: Int): String {
     val masked = ByteArray(4)
     for (i in 0 until 4) {
         val bitsInByte = (prefix - i * 8).coerceIn(0, 8)

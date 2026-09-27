@@ -43,9 +43,10 @@ style:
     # style with many returns is the readable shape for "tolerate and bail".
     max: 12
   MaxLineLength:
-    # The project's only line-length limit — ktlint's is off in the root
-    # .editorconfig, so the two linters can't disagree (LESSONS D-009).
-    maxLineLength: 140
+    # ktlint enforces the line length from the root .editorconfig (140), the
+    # single place the number lives; a second copy here could drift from it
+    # (LESSONS D-009).
+    active: false
   LoopWithTooManyJumpStatements:
     # The recvfrom / interface-enumeration loops legitimately break/continue on
     # several socket conditions.

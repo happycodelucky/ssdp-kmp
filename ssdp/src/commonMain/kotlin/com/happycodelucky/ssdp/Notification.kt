@@ -25,23 +25,17 @@ public sealed interface Notification {
     public val notificationTarget: SearchTarget get() = advertisement.notificationTarget
 
     /** `NTS: ssdp:alive` — device is reachable. */
-    public data class Alive(
-        override val advertisement: Advertisement,
-    ) : Notification
+    public data class Alive(override val advertisement: Advertisement) : Notification
 
     /**
      * `NTS: ssdp:byebye` — device is leaving the network. Carries no `LOCATION`
      * header (the device is going away, so there's nothing to fetch); the
      * advertisement's [Advertisement.location] will be `null`.
      */
-    public data class Byebye(
-        override val advertisement: Advertisement,
-    ) : Notification
+    public data class Byebye(override val advertisement: Advertisement) : Notification
 
     /** `NTS: ssdp:update` — device's `BOOTID.UPNP.ORG` is changing (UPnP 1.1). */
-    public data class Update(
-        override val advertisement: Advertisement,
-    ) : Notification
+    public data class Update(override val advertisement: Advertisement) : Notification
 }
 
 /**

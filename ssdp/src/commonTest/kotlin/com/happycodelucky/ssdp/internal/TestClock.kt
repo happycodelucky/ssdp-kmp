@@ -18,9 +18,7 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class TestClock(
-    private val scheduler: TestCoroutineScheduler,
-) : Clock {
+internal class TestClock(private val scheduler: TestCoroutineScheduler) : Clock {
     override fun now(): Instant = Instant.fromEpochMilliseconds(scheduler.currentTime)
 }
 
@@ -31,9 +29,7 @@ internal class TestClock(
  * which isn't available in the pinned kotlinx-coroutines-test version.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class TestTimeSource(
-    private val scheduler: TestCoroutineScheduler,
-) : TimeSource {
+internal class TestTimeSource(private val scheduler: TestCoroutineScheduler) : TimeSource {
     override fun markNow(): TimeMark {
         val startMillis = scheduler.currentTime
         return object : TimeMark {

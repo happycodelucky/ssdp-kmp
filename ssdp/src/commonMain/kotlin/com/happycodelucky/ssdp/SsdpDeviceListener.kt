@@ -50,8 +50,5 @@ public interface SsdpDeviceListener {
      * A device left the registry. [reason] distinguishes byebye / expiry /
      * network reset / manual clear. Mirrors [DeviceChange.Removed].
      */
-    public fun onRemoved(
-        device: DiscoveredDevice,
-        reason: DeviceChange.Removed.Reason,
-    )
+    public fun onRemoved(device: DiscoveredDevice, reason: DeviceChange.Removed.Reason)
 }

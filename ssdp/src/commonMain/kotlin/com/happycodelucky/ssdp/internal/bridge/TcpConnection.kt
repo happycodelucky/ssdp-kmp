@@ -59,10 +59,7 @@ internal interface DuplexConnection {
  * in-memory duplex; production passes [ktorTcpConnect].
  */
 internal fun interface Connect {
-    suspend fun connect(
-        host: String,
-        port: Int,
-    ): DuplexConnection
+    suspend fun connect(host: String, port: Int): DuplexConnection
 }
 
 /**

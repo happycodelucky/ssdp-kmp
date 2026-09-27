@@ -45,10 +45,7 @@ internal object RetransmitScheduler {
      * wall clock (LESSONS N-011). Cancellation propagates cleanly through
      * [delay] and is rethrown.
      */
-    suspend fun run(
-        elapsedSince: () -> Duration,
-        retransmit: suspend () -> Unit,
-    ) {
+    suspend fun run(elapsedSince: () -> Duration, retransmit: suspend () -> Unit) {
         while (true) {
             val wait = nextDelay(elapsedSince())
             delay(wait)

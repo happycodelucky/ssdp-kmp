@@ -48,10 +48,7 @@ class SsdpClientImplTest {
             },
         )
 
-    private fun TestScope.newClient(
-        socket: FakeMulticastSocket,
-        httpClient: HttpClient = descriptionMock(),
-    ): SsdpClientImpl =
+    private fun TestScope.newClient(socket: FakeMulticastSocket, httpClient: HttpClient = descriptionMock()): SsdpClientImpl =
         SsdpClientImpl(
             socketFactory = { socket },
             parentScope = this,
@@ -367,9 +364,7 @@ class SsdpClientImplTest {
     // --- Listener fan-out (SsdpDeviceListener) -------------------------------
 
     /** Records listener callbacks as tagged strings for order/content assertions. */
-    private class RecordingListener(
-        private val onEach: (() -> Unit)? = null,
-    ) : SsdpDeviceListener {
+    private class RecordingListener(private val onEach: (() -> Unit)? = null) : SsdpDeviceListener {
         val events = mutableListOf<String>()
 
         override fun onFound(device: DiscoveredDevice) {
@@ -382,10 +377,7 @@ class SsdpClientImplTest {
             onEach?.invoke()
         }
 
-        override fun onRemoved(
-            device: DiscoveredDevice,
-            reason: DeviceChange.Removed.Reason,
-        ) {
+        override fun onRemoved(device: DiscoveredDevice, reason: DeviceChange.Removed.Reason) {
             events.add("removed:${device.usn}:$reason")
             onEach?.invoke()
         }

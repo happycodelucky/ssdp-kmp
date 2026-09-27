@@ -24,9 +24,7 @@ private const val SSDP_GROUP = "239.255.255.250"
 private const val SSDP_PORT = 1900
 private const val MAX_DATAGRAM = 65_507
 
-internal class JvmMulticastSocket(
-    bindInterface: String?,
-) : MulticastSocket {
+internal class JvmMulticastSocket(bindInterface: String?) : MulticastSocket {
     private val group = InetAddress.getByName(SSDP_GROUP)
     private val socket: JdkMulticastSocket
     private val networkInterface: NetworkInterface?

@@ -30,10 +30,7 @@ internal class FakeMulticastSocket : MulticastSocket {
     }
 
     /** Push a raw SSDP wire message to the client's receive loop. */
-    suspend fun deliver(
-        raw: String,
-        source: String = "192.168.1.10:1900",
-    ) {
+    suspend fun deliver(raw: String, source: String = "192.168.1.10:1900") {
         _incoming.emit(Datagram(text = raw, source = source))
     }
 }

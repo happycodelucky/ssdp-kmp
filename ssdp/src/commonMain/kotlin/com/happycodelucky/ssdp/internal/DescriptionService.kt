@@ -89,10 +89,7 @@ internal class DescriptionService(
      *   any) is left intact rather than clobbered by a transient error — see
      *   [fetchParseAndStore].
      */
-    suspend fun describe(
-        device: DiscoveredDevice,
-        refresh: Boolean = false,
-    ): DescriptionResult {
+    suspend fun describe(device: DiscoveredDevice, refresh: Boolean = false): DescriptionResult {
         val location = device.location ?: return DescriptionResult.NotFound
         val usn = device.usn
 
@@ -146,11 +143,7 @@ internal class DescriptionService(
      */
     fun cachedDescription(usn: String): DeviceDescription? = successSnapshot.value[usn]
 
-    private suspend fun fetchParseAndStore(
-        usn: String,
-        location: String,
-        refresh: Boolean,
-    ): DescriptionResult {
+    private suspend fun fetchParseAndStore(usn: String, location: String, refresh: Boolean): DescriptionResult {
         val result = fetchAndParse(location)
         mutex.withLock {
             // Only publish if this fetch is still the one of record (a concurrent
@@ -232,10 +225,7 @@ internal class DescriptionService(
      * cancellation propagates) and routing any other throwable to [onError].
      * One throw site for the whole fetch/parse path.
      */
-    private suspend inline fun <T> runCancellable(
-        block: () -> T,
-        onError: (Throwable) -> T,
-    ): T =
+    private suspend inline fun <T> runCancellable(block: () -> T, onError: (Throwable) -> T): T =
         try {
             block()
         } catch (e: CancellationException) {
@@ -267,16 +257,9 @@ internal class DescriptionService(
     private sealed interface Entry {
         val sourceUrl: String
 
-        data class Success(
-            override val sourceUrl: String,
-            val result: DescriptionResult.Success,
-        ) : Entry
+        data class Success(override val sourceUrl: String, val result: DescriptionResult.Success) : Entry
 
-        data class Failure(
-            override val sourceUrl: String,
-            val result: DescriptionResult,
-            val expiresAt: Instant,
-        ) : Entry
+        data class Failure(override val sourceUrl: String, val result: DescriptionResult, val expiresAt: Instant) : Entry
     }
 
     private companion object {
