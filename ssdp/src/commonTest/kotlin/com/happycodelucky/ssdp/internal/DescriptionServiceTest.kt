@@ -6,7 +6,7 @@
  */
 package com.happycodelucky.ssdp.internal
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
@@ -106,8 +106,7 @@ class DescriptionServiceTest {
             val (client, hits) = countingClient()
             val service = newService(client)
             val result = service.describe(device())
-            assertTrue(result is DescriptionResult.Success)
-            assertEquals("Sonos Arc Ultra", result.description.device.modelName)
+            assertEquals("Sonos Arc Ultra", result.assertSuccess().device.modelName)
             assertEquals(1, hits())
         }
 
@@ -146,7 +145,8 @@ class DescriptionServiceTest {
             val ra = a.await()
             val rb = b.await()
 
-            assertTrue(ra is DescriptionResult.Success && rb is DescriptionResult.Success)
+            ra.assertSuccess()
+            rb.assertSuccess()
             assertEquals(1, count.value) // ONE fetch despite two concurrent callers.
         }
 
@@ -157,8 +157,7 @@ class DescriptionServiceTest {
             val service = newService(client, negativeTtl = 30.seconds)
 
             val first = service.describe(device())
-            assertTrue(first is DescriptionResult.FetchFailed)
-            assertEquals(404, first.statusCode)
+            assertEquals(404, first.assertFailure<DescriptionException.FetchFailed>().statusCode)
 
             // Within TTL → no new hit, same failure.
             service.describe(device())
@@ -177,7 +176,7 @@ class DescriptionServiceTest {
             val (client, hits) = countingClient()
             val service = newService(client)
             val result = service.describe(device(location = null))
-            assertEquals(DescriptionResult.NotFound, result)
+            result.assertFailure<DescriptionException.NotFound>()
             assertEquals(0, hits()) // never fetched.
         }
 
@@ -233,10 +232,10 @@ class DescriptionServiceTest {
             val (client, _) = countingClient(body = DescriptionFixtures.MALFORMED)
             val service = newService(client)
             val result = service.describe(device())
-            assertTrue(result is DescriptionResult.ParseFailed)
+            val error = result.assertFailure<DescriptionException.ParseFailed>()
             // A genuinely-XML-but-broken body keeps the parser's detail (the xmlutil
             // message), so the friendly "not an XML document" wording must NOT apply.
-            assertFalse(result.message.contains("not an XML document"))
+            assertFalse(error.message.contains("not an XML document"))
         }
 
     @Test
@@ -248,12 +247,12 @@ class DescriptionServiceTest {
             val (client, _) = countingClient(body = DescriptionFixtures.NOT_XML)
             val service = newService(client)
             val result = service.describe(device())
-            assertTrue(result is DescriptionResult.ParseFailed)
+            val error = result.assertFailure<DescriptionException.ParseFailed>()
             // Friendly, actionable message that echoes what came back — not the raw
             // "1:10 - Non-whitespace text where not expected" from xmlutil.
-            assertTrue(result.message.contains("not an XML document"))
-            assertTrue(result.message.contains("status=ok"))
-            assertFalse(result.message.contains("Non-whitespace text"))
+            assertTrue(error.message.contains("not an XML document"))
+            assertTrue(error.message.contains("status=ok"))
+            assertFalse(error.message.contains("Non-whitespace text"))
         }
 
     @Test
@@ -264,8 +263,7 @@ class DescriptionServiceTest {
             val (client, _) = countingClient(body = DescriptionFixtures.BOM_PREFIXED_XML)
             val service = newService(client)
             val result = service.describe(device())
-            assertTrue(result is DescriptionResult.Success)
-            assertEquals("Sonos Arc Ultra", result.description.device.modelName)
+            assertEquals("Sonos Arc Ultra", result.assertSuccess().device.modelName)
         }
 
     // --- refresh -------------------------------------------------------------
@@ -279,7 +277,7 @@ class DescriptionServiceTest {
             assertEquals(1, hits())
             // A non-refresh call would serve the cache; refresh forces a new hit.
             val result = service.describe(device(), refresh = true)
-            assertTrue(result is DescriptionResult.Success)
+            result.assertSuccess()
             assertEquals(2, hits())
         }
 
@@ -331,14 +329,13 @@ class DescriptionServiceTest {
             val service = newService(HttpClient(engine))
 
             val first = service.describe(device())
-            assertTrue(first is DescriptionResult.Success)
-            assertEquals(first.description, service.cachedDescription(device().usn))
+            assertEquals(first.assertSuccess(), service.cachedDescription(device().usn))
 
             fail = true
             val refreshed = service.describe(device(), refresh = true)
-            assertTrue(refreshed is DescriptionResult.FetchFailed)
+            refreshed.assertFailure<DescriptionException.FetchFailed>()
             // The cached Success is intact despite the failed refresh.
-            assertEquals(first.description, service.cachedDescription(device().usn))
+            assertEquals(first.assertSuccess(), service.cachedDescription(device().usn))
         }
 
     // --- synchronous cache peek ----------------------------------------------
@@ -351,8 +348,7 @@ class DescriptionServiceTest {
             assertEquals(null, service.cachedDescription(device().usn)) // never fetched.
 
             val result = service.describe(device())
-            assertTrue(result is DescriptionResult.Success)
-            assertEquals(result.description, service.cachedDescription(device().usn))
+            assertEquals(result.assertSuccess(), service.cachedDescription(device().usn))
         }
 
     @Test
@@ -408,7 +404,7 @@ class DescriptionServiceTest {
             val service = newService(client, changes = changes)
             runCurrent()
             val first = service.describe(device())
-            assertTrue(first is DescriptionResult.Success)
+            first.assertSuccess()
 
             service.switchNetwork(home, cafe)
             service.switchNetwork(cafe, home)
@@ -417,8 +413,8 @@ class DescriptionServiceTest {
 
             changes.emit(DeviceChange.Found(device()))
             runCurrent()
-            assertEquals(first.description, service.cachedDescription(device().usn))
-            assertTrue(service.describe(device()) is DescriptionResult.Success)
+            assertEquals(first.assertSuccess(), service.cachedDescription(device().usn))
+            service.describe(device()).assertSuccess()
             assertEquals(1, hits()) // restored, never refetched.
         }
 
@@ -431,7 +427,7 @@ class DescriptionServiceTest {
 
             service.switchNetwork(home, cafe)
             service.switchNetwork(cafe, home)
-            assertTrue(service.describe(device()) is DescriptionResult.Success)
+            service.describe(device()).assertSuccess()
             assertEquals(1, hits())
         }
 
@@ -549,7 +545,7 @@ class DescriptionServiceTest {
             runCurrent()
             service.switchNetwork(home, cafe)
             gate.complete(Unit)
-            assertTrue(pending.await() is DescriptionResult.Success) // its caller still gets a result…
+            pending.await().assertSuccess() // its caller still gets a result…
             assertEquals(null, service.cachedDescription(device().usn)) // …but it isn't cached here.
         }
 }

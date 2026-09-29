@@ -12,7 +12,8 @@
  */
 package com.happycodelucky.ssdp.internal
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
@@ -199,12 +200,12 @@ internal class SsdpClientImpl(
         synchronized(listenerLock) { listeners.remove(listener) }
     }
 
-    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): DescriptionResult =
-        if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device, refresh)
+    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): Result<DeviceDescription> =
+        if (closed.value) Result.failure(DescriptionException.NotFound(device.usn)) else descriptionService.describe(device, refresh)
 
-    override suspend fun description(usn: String, refresh: Boolean): DescriptionResult {
-        if (closed.value) return DescriptionResult.NotFound
-        val device = registry.deviceSet.value[usn] ?: return DescriptionResult.NotFound
+    override suspend fun description(usn: String, refresh: Boolean): Result<DeviceDescription> {
+        if (closed.value) return Result.failure(DescriptionException.NotFound(usn))
+        val device = registry.deviceSet.value[usn] ?: return Result.failure(DescriptionException.NotFound(usn))
         return descriptionService.describe(device, refresh)
     }
 

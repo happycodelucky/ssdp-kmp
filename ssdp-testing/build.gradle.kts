@@ -27,6 +27,9 @@ kotlin {
             // DeviceChange, SearchTarget) transitively — they will assert
             // against those types.
             api(project(":ssdp"))
+            // FakeSsdpClient's description stubs take a KotlinResult `Result`,
+            // so declare it directly rather than lean on `:ssdp`'s transitive `api`.
+            api(libs.kotlinresult)
 
             // StateFlow / SharedFlow plumbing inside FakeSsdpClient. `api`:
             // its public surface exposes those flow types.
@@ -52,6 +55,31 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
+        }
+    }
+}
+
+skie {
+    // Swift bundling ON here, unlike the convention plugin's default (LESSONS
+    // D-012, D-015): SKIE compiles a linked klib's bundled Swift only when the
+    // framework's module has bundling enabled, and KotlinResult's
+    // `KotlinResult+Swift.swift` (`try r.get()`, `r.result(as:)`,
+    // `KotlinThrowable: Error`) is how Swift consumes `description()`. This module
+    // has no Swift sources of its own, so it ships nothing new in its klib and
+    // adds no `export` of this module downstream.
+    swiftBundling {
+        enabled.set(true)
+    }
+}
+
+// Export KotlinResult into SsdpTestingKit. Required, not optional: its bundled Swift
+// only compiles where `KotlinResult` keeps its plain Swift name, which the
+// export guarantees ("cannot find type 'KotlinResult' in scope" otherwise).
+// Any consumer framework that links this module needs the same export (README).
+kotlin {
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
+        binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.Framework>().configureEach {
+            export(libs.kotlinresult)
         }
     }
 }

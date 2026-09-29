@@ -72,8 +72,9 @@ which our `jvm()` target needs (D-003).
 ## 5. Libraries — Kotlin-first
 
 Ktor for HTTP (the description fetch), kotlinx.* family (coroutines, atomicfu,
-io), Kermit for logging (`implementation` in `:ssdp`, never `api` and never
-injected by the convention plugin — a library mustn't force a logger onto its
+io), KotlinResult for results (`api` — it's in the public API, §7), Kermit for
+logging (`implementation` in `:ssdp`, never `api` and never injected by the
+convention plugin — a library mustn't force a logger onto its
 consumers' classpath), `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
 `java.time` in common — and `kotlin.time.Instant`/`Clock` are stable since
 2.3.x, no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
@@ -101,11 +102,26 @@ Koin/service locator inside `:ssdp`.
 
 SKIE mandatory (convention plugin configures it; `produceDistributableFramework()`
 in `:ssdp`). `Flow`/`StateFlow` → `AsyncSequence`. Sealed types
-(`SearchTarget`, `Notification`, `DeviceChange`, `SsdpError`) → exhaustive Swift
-enums. **`@Throws` on an `expect` must be replicated verbatim on every `actual`**,
-and a `@Throws` on a `suspend fun` must list `CancellationException`
-(LESSONS B-001/B-002). Never `kotlin.Result<T>` at the boundary. Apple casing
-everywhere (`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()`).
+(`SearchTarget`, `Notification`, `DeviceChange`, `SsdpError`,
+`DescriptionException`) → exhaustive Swift enums. **`@Throws` on an `expect` must
+be replicated verbatim on every `actual`**, and a `@Throws` on a `suspend fun`
+must list `CancellationException` (LESSONS B-001/B-002). Apple casing everywhere
+(`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()`).
+
+**Results: KotlinResult's `Result<T>` + a sealed exception** (LESSONS D-015,
+shared with wake-kmp). A fallible public API that returns a value returns
+`com.happycodelucky.kotlinresult.Result<T>` (`api(libs.kotlinresult)`) and fails
+with a project `sealed class …Exception` — `description()` →
+`Result<DeviceDescription>` / `DescriptionException`. Kotlin gets the
+`kotlin.Result` API; Swift gets `KotlinResult<T>` with `try r.get()` /
+`r.result(as:)`, which throws the Kotlin exception itself. Never `kotlin.Result<T>`
+in a Swift-visible signature (a value class, erased to `Any?`); internals may use
+it and convert with `toResult()`. Build failures from the specific exceptions you
+handle and let everything else — cancellation included — propagate: no catch-all
+(`runCatching`, `catch (e: Throwable)`) around a suspending call without
+rethrowing `CancellationException`. Every framework that links KotlinResult must
+`export(libs.kotlinresult)` and run SKIE with Swift bundling on, or its Swift
+helpers don't compile in (`ssdp/` and `ssdp-testing/build.gradle.kts`).
 
 **Hand-written Swift** goes in `ssdp/src/<sourceSet>/swift/`. SKIE Swift bundling
 is off by default: the Swift reaches only this module's own framework. Enabling
@@ -236,5 +252,5 @@ only). No x86/Intel Macs/watchOS/tvOS. No `GlobalScope`, no `!!` in production,
 no `java.time` in common, no `kotlin.synchronized`/`@Synchronized`/`volatile`.
 No callback-based public APIs — **except** the one sanctioned `SsdpDeviceListener`
 (additive fan-out over `changes`; the Flow API stays primary — see §6 and LESSONS
-D-008); don't add others. No `kotlin.Result<T>` at the Swift boundary. No
+D-008); don't add others. No `kotlin.Result<T>` at the Swift boundary (return KotlinResult's `Result<T>`). No
 SSDP server. No EAP/RC/Beta on `main`. `reachable` ≥ 0.14.0.

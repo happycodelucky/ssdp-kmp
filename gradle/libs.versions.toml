@@ -86,6 +86,14 @@ ktor = "3.5.1"
 # supersedes the 1.0.0-rc line. Verified via GitHub releases 2026-06-30.
 xmlutil = "1.0.0"
 
+# --- Result type ------------------------------------------------------------
+# KotlinResult (happycodelucky/kotlinresult-kmp): `Result<T>`, a Swift-friendly
+# mirror of kotlin.Result (Swift: `KotlinResult`). `description()` returns it,
+# so :ssdp exposes it as `api` and `export`s it into SsdpKit (see
+# ssdp/build.gradle.kts). Same pin as the sibling wake-kmp; 1.1.0 is the latest
+# release (kotlinresult-kmp main, 2026-09-29).
+kotlinresult = "1.1.0"
+
 # --- Logging ----------------------------------------------------------------
 # Kermit — multiplatform logging (CLAUDE.md §5). 2.1.0 is latest stable with all
 # our native slices (iosArm64/iosSimulatorArm64/macosArm64/jvm). Verified on
@@ -171,13 +179,17 @@ kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 # --- HTTP + XML (description-XML fetch + cache) ------------------------------
 # All `implementation` in :ssdp — the public API returns ssdp's own
-# DescriptionResult/DeviceDescription, never a Ktor or xmlutil type.
+# DeviceDescription / DescriptionException, never a Ktor or xmlutil type.
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 # ktor-client-mock — test-only engine so commonTest drives the description fetch
 # under runTest with no real HTTP.
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
+
+# --- Result type ------------------------------------------------------------
+# `api` in :ssdp and :ssdp-testing — their public signatures return/take it.
+kotlinresult = { module = "com.happycodelucky.kotlinresult:kotlinresult", version.ref = "kotlinresult" }
 
 # --- TCP (emulator host-bridge) ---------------------------------------------
 # ktor-network — multiplatform raw TCP sockets used by the Android-emulator host

@@ -4,8 +4,8 @@
 //
 //  Fetches the selected device's UPnP description document via
 //  client.description() and renders manufacturer / model / services / icons.
-//  SKIE renders the sealed DescriptionResult as a Swift enum, switched here via
-//  `onEnum(of:)`.
+//  A failure carries the Kotlin DescriptionException, whose sealed cases SKIE
+//  renders as a Swift enum, switched here via `onEnum(of:)`.
 //
 
 import SwiftUI
@@ -15,7 +15,7 @@ struct DeviceDetailView: View {
     let device: DeviceRow
     let model: ScannerModel
 
-    @State private var result: DescriptionResult?
+    @State private var result: Swift.Result<DeviceDescription, Error>?
 
     var body: some View {
         List {
@@ -43,10 +43,10 @@ struct DeviceDetailView: View {
     }
 
     @ViewBuilder
-    private func descriptionContent(_ result: DescriptionResult) -> some View {
-        switch onEnum(of: result) {
-        case .success(let success):
-            let d = success.description_.device
+    private func descriptionContent(_ result: Swift.Result<DeviceDescription, Error>) -> some View {
+        switch result {
+        case .success(let description):
+            let d = description.device
             labeled("Friendly name", d.friendlyName ?? "—")
             labeled("Manufacturer", d.manufacturer ?? "—")
             labeled("Model", [d.modelName, d.modelNumber].compactMap { $0 }.joined(separator: " "))
@@ -63,13 +63,20 @@ struct DeviceDetailView: View {
                     }
                 }
             }
-        case .notFound:
-            Text("No description URL for this device.").foregroundStyle(.secondary)
-        case .fetchFailed(let failure):
-            Text("Fetch failed: \(failure.statusCode.map { "\($0)" } ?? "transport") \(failure.message)")
-                .foregroundStyle(.red)
-        case .parseFailed(let failure):
-            Text("Parse failed: \(failure.message)").foregroundStyle(.red)
+        case .failure(let error):
+            if let error = error as? DescriptionException {
+                switch onEnum(of: error) {
+                case .notFound:
+                    Text("No description URL for this device.").foregroundStyle(.secondary)
+                case .fetchFailed(let failure):
+                    Text("Fetch failed: \(failure.statusCode.map { "\($0)" } ?? "transport") \(failure.message)")
+                        .foregroundStyle(.red)
+                case .parseFailed(let failure):
+                    Text("Parse failed: \(failure.message)").foregroundStyle(.red)
+                }
+            } else {
+                Text("Failed: \(error.localizedDescription)").foregroundStyle(.red)
+            }
         }
     }
 

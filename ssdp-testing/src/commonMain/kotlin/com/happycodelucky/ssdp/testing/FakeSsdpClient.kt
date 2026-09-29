@@ -8,7 +8,8 @@
  */
 package com.happycodelucky.ssdp.testing
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
@@ -103,14 +104,15 @@ public class FakeSsdpClient : SsdpClient {
 
     // --- Description scripting -----------------------------------------------
 
-    private val scriptedDescriptions = mutableMapOf<String, DescriptionResult>()
+    private val scriptedDescriptions = mutableMapOf<String, Result<DeviceDescription>>()
 
     /**
-     * Result returned by [description] for a USN with no specific stub. Defaults
-     * to [DescriptionResult.NotFound] (discovery doesn't auto-fetch, so an
-     * un-stubbed device legitimately has no description yet).
+     * Result returned by [description] for a USN with no specific stub. `null`
+     * (the default) fails with [DescriptionException.NotFound] for that USN
+     * (discovery doesn't auto-fetch, so an un-stubbed device legitimately has no
+     * description yet).
      */
-    public var defaultDescriptionResult: DescriptionResult = DescriptionResult.NotFound
+    public var defaultDescriptionResult: Result<DeviceDescription>? = null
 
     /** USNs passed to [description], in call order — asserts lazy-fetch timing. */
     public val descriptionRequests: MutableList<String> = mutableListOf()
@@ -126,8 +128,11 @@ public class FakeSsdpClient : SsdpClient {
     // directly settable via [stubCachedDescription].
     private val cachedDescriptions = mutableMapOf<String, DeviceDescription>()
 
-    /** Script the [description] result for a specific USN. */
-    public fun stubDescription(usn: String, result: DescriptionResult) {
+    /**
+     * Script the [description] result for a specific USN: `Result.success(...)`,
+     * or `Result.failure(...)` with a [DescriptionException].
+     */
+    public fun stubDescription(usn: String, result: Result<DeviceDescription>) {
         scriptedDescriptions[usn] = result
     }
 
@@ -219,16 +224,20 @@ public class FakeSsdpClient : SsdpClient {
         }
     }
 
-    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): DescriptionResult = recordAndResolve(device.usn, refresh)
+    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): Result<DeviceDescription> =
+        recordAndResolve(device.usn, refresh)
 
-    override suspend fun description(usn: String, refresh: Boolean): DescriptionResult = recordAndResolve(usn, refresh)
+    override suspend fun description(usn: String, refresh: Boolean): Result<DeviceDescription> = recordAndResolve(usn, refresh)
 
-    private fun recordAndResolve(usn: String, refresh: Boolean): DescriptionResult {
+    private fun recordAndResolve(usn: String, refresh: Boolean): Result<DeviceDescription> {
         descriptionRequests.add(usn)
         if (refresh) descriptionRefreshRequests.add(usn)
-        val result = scriptedDescriptions[usn] ?: defaultDescriptionResult
+        val result =
+            scriptedDescriptions[usn]
+                ?: defaultDescriptionResult
+                ?: Result.failure(DescriptionException.NotFound(usn))
         // Mirror the real client: a successful fetch populates the sync cache.
-        if (result is DescriptionResult.Success) cachedDescriptions[usn] = result.description
+        result.getOrNull()?.let { cachedDescriptions[usn] = it }
         return result
     }
 

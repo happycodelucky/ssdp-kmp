@@ -40,7 +40,7 @@ internal interface DescriptionParser {
      * @param sourceUrl the LOCATION url it was fetched from (becomes
      *   [DeviceDescription.sourceUrl] for relative-URL resolution).
      * @throws Exception if the XML can't be parsed; the caller maps this to
-     *   [com.happycodelucky.ssdp.DescriptionResult.ParseFailed].
+     *   [com.happycodelucky.ssdp.DescriptionException.ParseFailed].
      */
     fun parse(body: String, sourceUrl: String): DeviceDescription
 }

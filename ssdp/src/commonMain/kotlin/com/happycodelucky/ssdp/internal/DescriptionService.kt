@@ -17,7 +17,8 @@
  */
 package com.happycodelucky.ssdp.internal
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
@@ -68,7 +69,7 @@ internal class DescriptionService(
 ) {
     private val mutex = Mutex()
     private val entries = mutableMapOf<String, Entry>() // key = usn
-    private val inFlight = mutableMapOf<String, Deferred<DescriptionResult>>() // key = usn
+    private val inFlight = mutableMapOf<String, Deferred<Result<DeviceDescription>>>() // key = usn
 
     // Lock-free snapshot of successfully-parsed descriptions (usn -> DeviceDescription),
     // mirrored from [entries] on every mutation while the [mutex] is held. Enables a
@@ -105,18 +106,19 @@ internal class DescriptionService(
 
     /**
      * Get (or fetch+parse+cache) the description for [device]. Concurrent calls
-     * for the same USN share one fetch. Returns [DescriptionResult.NotFound] when
-     * the device has no LOCATION.
+     * for the same USN share one fetch. Fails with [DescriptionException.NotFound]
+     * when the device has no LOCATION; every other failure is a
+     * [DescriptionException] too, and only cancellation is thrown.
      *
      * @param refresh when true, bypass a valid cached result and force a fresh
      *   fetch. The refetch still coalesces with any in-flight fetch for this USN
      *   (a concurrent refresh won't cause two HTTP GETs). On success the cache is
-     *   replaced; on failure the previous cached [DescriptionResult.Success] (if
+     *   replaced; on failure the previous cached success (if
      *   any) is left intact rather than clobbered by a transient error — see
      *   [fetchParseAndStore].
      */
-    suspend fun describe(device: DiscoveredDevice, refresh: Boolean = false): DescriptionResult {
-        val location = device.location ?: return DescriptionResult.NotFound
+    suspend fun describe(device: DiscoveredDevice, refresh: Boolean = false): Result<DeviceDescription> {
+        val location = device.location ?: return Result.failure(DescriptionException.NotFound(device.usn))
         val usn = device.usn
 
         val deferred =
@@ -133,7 +135,7 @@ internal class DescriptionService(
                     when (val cached = entries[usn]) {
                         is Entry.Success -> {
                             if (cached.sourceUrl == location) {
-                                return cached.result // still the same URL → serve cached success.
+                                return Result.success(cached.description) // still the same URL → serve cached success.
                             } else {
                                 entries.remove(usn) // device moved (new LOCATION) → stale, drop.
                                 successSnapshot.value = successSnapshot.value - usn
@@ -142,7 +144,7 @@ internal class DescriptionService(
 
                         is Entry.Failure -> {
                             if (cached.sourceUrl == location && clock.now() < cached.expiresAt) {
-                                return cached.result // negative cache still valid → don't re-hit.
+                                return Result.failure(cached.error) // negative cache still valid → don't re-hit.
                             } else {
                                 entries.remove(usn)
                             }
@@ -218,51 +220,52 @@ internal class DescriptionService(
         val saved = warm.remove(usn) ?: return
         if (saved.sourceUrl != location || usn in entries) return
         entries[usn] = saved
-        successSnapshot.value = successSnapshot.value + (usn to saved.result.description)
+        successSnapshot.value = successSnapshot.value + (usn to saved.description)
     }
 
-    private suspend fun fetchParseAndStore(usn: String, location: String, refresh: Boolean): DescriptionResult {
+    private suspend fun fetchParseAndStore(usn: String, location: String, refresh: Boolean): Result<DeviceDescription> {
         val result = fetchAndParse(location)
         mutex.withLock {
             // Only publish if this fetch is still the one of record (a concurrent
             // evict()/reset may have cancelled+removed our slot).
             if (inFlight.remove(usn) != null) {
-                when (result) {
-                    is DescriptionResult.Success -> {
-                        entries[usn] = Entry.Success(location, result)
-                        successSnapshot.value = successSnapshot.value + (usn to result.description)
-                    }
-
-                    else -> {
+                result.fold(
+                    onSuccess = { description ->
+                        entries[usn] = Entry.Success(location, description)
+                        successSnapshot.value = successSnapshot.value + (usn to description)
+                    },
+                    onFailure = { error ->
                         // A failed *refresh* must not clobber a still-valid cached
                         // Success (a transient blip shouldn't evict good data); leave
                         // the existing entry untouched. A failed *initial* fetch (no
                         // prior Success) records a negative-cache entry as before.
                         val keepPriorSuccess = refresh && entries[usn] is Entry.Success
-                        if (!keepPriorSuccess) {
-                            entries[usn] = Entry.Failure(location, result, clock.now() + negativeTtl)
+                        if (!keepPriorSuccess && error is DescriptionException) {
+                            entries[usn] = Entry.Failure(location, error, clock.now() + negativeTtl)
                         }
-                    }
-                }
+                    },
+                )
             }
         }
         return result
     }
 
-    private suspend fun fetchAndParse(location: String): DescriptionResult {
+    private suspend fun fetchAndParse(location: String): Result<DeviceDescription> {
         // [runCancellable] rethrows CancellationException and routes any other
         // throwable to its onError mapping — so cooperative cancellation always
         // propagates (CLAUDE.md §6) from a single throw site.
         val response =
             runCancellable({ httpClient.get(location) }) { e ->
-                return DescriptionResult.FetchFailed(statusCode = null, message = e.message ?: "fetch error")
+                return Result.failure(DescriptionException.FetchFailed(statusCode = null, message = e.message ?: "fetch error", cause = e))
             }
         if (!response.status.isSuccess()) {
-            return DescriptionResult.FetchFailed(statusCode = response.status.value, message = response.status.description)
+            return Result.failure(
+                DescriptionException.FetchFailed(statusCode = response.status.value, message = response.status.description),
+            )
         }
         val body =
             runCancellable({ response.bodyAsText() }) { e ->
-                return DescriptionResult.FetchFailed(statusCode = null, message = e.message ?: "read error")
+                return Result.failure(DescriptionException.FetchFailed(statusCode = null, message = e.message ?: "read error", cause = e))
             }
         // Many LAN devices answer a path-less LOCATION (or a health endpoint) with
         // a 200 that is NOT an XML description — e.g. a plain `status=ok`. Handing
@@ -272,12 +275,12 @@ internal class DescriptionService(
         // skip the parse; a genuinely-XML body still flows through, so a real
         // malformed document keeps the parser's line:col detail (useful to debug).
         if (!looksLikeXml(body)) {
-            return DescriptionResult.ParseFailed(
-                message = "response was not an XML document (got: ${snippet(body)})",
+            return Result.failure(
+                DescriptionException.ParseFailed(message = "response was not an XML document (got: ${snippet(body)})"),
             )
         }
-        return runCancellable({ DescriptionResult.Success(parser.parse(body, sourceUrl = location)) }) { e ->
-            DescriptionResult.ParseFailed(message = e.message ?: "invalid description XML")
+        return runCancellable({ Result.success(parser.parse(body, sourceUrl = location)) }) { e ->
+            Result.failure(DescriptionException.ParseFailed(message = e.message ?: "invalid description XML", cause = e))
         }
     }
 
@@ -322,7 +325,7 @@ internal class DescriptionService(
      *
      * We deliberately do NOT cancel the in-flight `Deferred`: callers already
      * awaiting it would then receive a raw `JobCancellationException` instead of
-     * a clean [DescriptionResult]. Removing the `inFlight` slot is enough —
+     * a clean `Result`. Removing the `inFlight` slot is enough —
      * [fetchParseAndStore] checks slot ownership before caching, so an evicted
      * fetch completes for its awaiters but its result is simply not cached. The
      * detached coroutine finishes quickly (the HTTP request is already in flight)
@@ -345,16 +348,16 @@ internal class DescriptionService(
     private sealed interface Entry {
         val sourceUrl: String
 
-        data class Success(override val sourceUrl: String, val result: DescriptionResult.Success) : Entry
+        data class Success(override val sourceUrl: String, val description: DeviceDescription) : Entry
 
-        data class Failure(override val sourceUrl: String, val result: DescriptionResult, val expiresAt: Instant) : Entry
+        data class Failure(override val sourceUrl: String, val error: DescriptionException, val expiresAt: Instant) : Entry
     }
 
     private companion object {
         /** Networks whose descriptions [switchNetwork] keeps (home, work, a couple more). */
         const val DEFAULT_MAX_PARKED_NETWORKS = 4
 
-        /** Max characters of a non-XML body echoed back in a [DescriptionResult.ParseFailed]. */
+        /** Max characters of a non-XML body echoed back in a [DescriptionException.ParseFailed]. */
         const val SNIPPET_MAX = 40
 
         /** UTF-8 byte-order mark some devices prepend to the description document. */

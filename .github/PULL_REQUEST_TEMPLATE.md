@@ -104,7 +104,7 @@ Closes #
 - [ ] Native + Android compile clean (`:ssdp:compileKotlinMacosArm64` / `compileKotlinIosArm64` / `compileAndroidMain`) — the JVM compile alone is not a sufficient gate (LESSONS B-004)
 - [ ] `mise run build:samples` passes if dependencies or the public API changed — `check` never builds the sample apps (LESSONS N-009)
 - [ ] New/changed logic has `commonTest` coverage (`runTest` virtual time, no `Thread.sleep`)
-- [ ] Public API changes follow the Swift-interop rules (§7): sealed → exhaustive enum, `@Throws` replicated on every `actual` incl. `CancellationException`, no `kotlin.Result<T>` at the boundary
+- [ ] Public API changes follow the Swift-interop rules (§7): sealed → exhaustive enum, `@Throws` replicated on every `actual` incl. `CancellationException`, results are KotlinResult's `Result<T>` + a sealed exception, never `kotlin.Result<T>` at the boundary
 - [ ] If the public API changed intentionally, `mise run api:dump` was run and the `api/` diff is committed and reviewed (§8)
 - [ ] New dependencies are Kotlin-first per §5, latest stable (web-searched, §3), and were added to `gradle/libs.versions.toml` only
 - [ ] A changeset is committed (`mise run changeset`) with its release note written in place of the Unfilled callout, or nothing in it reaches consumers: it changes no file in release scope (`.changeset/config.toml`) or is labelled `no-changeset` (§8) — the Changeset check enforces both
