@@ -139,7 +139,7 @@ internal class SsdpClientImpl(
                 scope = scope,
                 transportTags = networkTransportTags,
                 subnetProbe = subnetProbe,
-                onChange = { onNetworkChanged() },
+                onChange = { previous, current -> onNetworkChanged(previous, current) },
             ).start()
         }
     }
@@ -256,13 +256,14 @@ internal class SsdpClientImpl(
     }
 
     /**
-     * Reset the registry — invoked by the platform network-change wiring
-     * (task #5) when the active network's identity changes. Exposed internally
-     * so the platform `SsdpClient()` factory can connect a reachable-driven
-     * trigger without widening the public API.
+     * Reset the registry — invoked by [NetworkMonitor] when the active network's
+     * identity changes from [previous] to [current]. The description cache parks
+     * the old network's descriptions (and restores the new one's) *before* the
+     * reset, so the reset's `Removed(_, NetworkChanged)` events can't race it.
      */
-    internal suspend fun onNetworkChanged() {
+    internal suspend fun onNetworkChanged(previous: NetworkKey, current: NetworkKey) {
         if (closed.value) return
+        descriptionService.switchNetwork(previous, current)
         registry.reset()
     }
 

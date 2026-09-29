@@ -18,7 +18,7 @@ contract a contributor (human or agent) reads first. Start here, then
   ssdp-kmp ports its parser, retransmit cadence, and lifecycle, and goes
   *further* with a built-in device registry and per-network reset.
 
-## 2. Decisions (load-bearing — see `.claude/lessons/LESSONS.md` D-001..D-004)
+## 2. Decisions (load-bearing — see `.claude/lessons/LESSONS.md` D-001..D-004, D-014)
 
 1. **Core + registry + lazy description.** Discovery + retransmit + NOTIFY + a
    device registry (`StateFlow<Map<USN, DiscoveredDevice>>` + `SharedFlow<DeviceChange>`)
@@ -32,7 +32,8 @@ contract a contributor (human or agent) reads first. Start here, then
 4. **Per-network reset via reachable + subnet.** Depend on
    `com.happycodelucky.reachable` for the change *signal*; derive the *key* from
    the local IPv4 subnet (no SSID entitlement). The registry resets when the key
-   changes (`NetworkMonitor`).
+   changes (`NetworkMonitor`); the description cache parks the old network's
+   descriptions and restores them on return (D-014).
 
 ## 3. Versions
 

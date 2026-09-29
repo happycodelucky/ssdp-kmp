@@ -19,6 +19,8 @@ Android, and the JVM:
   (via `byebye`, `CACHE-CONTROL: max-age` expiry, or a network change)
 - Lazily fetches and caches each device's **UPnP description document** (the
   XML at its `LOCATION`), parsed into a friendly-name / manufacturer / model / services / icons tree.
+  Descriptions are remembered per network, so returning to a network restores
+  them without refetching.
 
 ## Modules
 

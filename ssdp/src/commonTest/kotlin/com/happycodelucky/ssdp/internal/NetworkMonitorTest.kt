@@ -18,7 +18,7 @@ class NetworkMonitorTest {
         runTest {
             var resets = 0
             val tags = MutableSharedFlow<String>(extraBufferCapacity = 8)
-            NetworkMonitor(this, tags, subnetProbe = { "192.168.1.0/24" }, onChange = { resets++ }).start()
+            NetworkMonitor(this, tags, subnetProbe = { "192.168.1.0/24" }, onChange = { _, _ -> resets++ }).start()
             runCurrent()
 
             tags.emit("Wifi")
@@ -33,7 +33,7 @@ class NetworkMonitorTest {
         runTest {
             var resets = 0
             val tags = MutableSharedFlow<String>(extraBufferCapacity = 8)
-            NetworkMonitor(this, tags, subnetProbe = { "192.168.1.0/24" }, onChange = { resets++ }).start()
+            NetworkMonitor(this, tags, subnetProbe = { "192.168.1.0/24" }, onChange = { _, _ -> resets++ }).start()
             runCurrent()
 
             tags.emit("Wifi")
@@ -51,7 +51,7 @@ class NetworkMonitorTest {
             var resets = 0
             var subnet = "192.168.1.0/24"
             val tags = MutableSharedFlow<String>(extraBufferCapacity = 8)
-            NetworkMonitor(this, tags, subnetProbe = { subnet }, onChange = { resets++ }).start()
+            NetworkMonitor(this, tags, subnetProbe = { subnet }, onChange = { _, _ -> resets++ }).start()
             runCurrent()
 
             tags.emit("Wifi")
@@ -68,11 +68,30 @@ class NetworkMonitorTest {
         }
 
     @Test
+    fun changePassesPreviousAndCurrentKeys() =
+        runTest {
+            val seen = mutableListOf<Pair<NetworkKey, NetworkKey>>()
+            var subnet = "192.168.1.0/24"
+            val tags = MutableSharedFlow<String>(extraBufferCapacity = 8)
+            NetworkMonitor(this, tags, subnetProbe = { subnet }, onChange = { previous, current -> seen += previous to current }).start()
+            runCurrent()
+
+            tags.emit("Wifi")
+            runCurrent()
+            subnet = "10.0.0.0/24"
+            tags.emit("Wifi")
+            runCurrent()
+            assertEquals(listOf(NetworkKey("Wifi", "192.168.1.0/24") to NetworkKey("Wifi", "10.0.0.0/24")), seen)
+
+            coroutineContext.cancelChildren()
+        }
+
+    @Test
     fun repeatedIdenticalKeyDoesNotFire() =
         runTest {
             var resets = 0
             val tags = MutableSharedFlow<String>(extraBufferCapacity = 8)
-            NetworkMonitor(this, tags, subnetProbe = { "192.168.1.0/24" }, onChange = { resets++ }).start()
+            NetworkMonitor(this, tags, subnetProbe = { "192.168.1.0/24" }, onChange = { _, _ -> resets++ }).start()
             runCurrent()
 
             tags.emit("Wifi")

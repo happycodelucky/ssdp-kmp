@@ -5,7 +5,8 @@
  * Subscribes to a Flow<String> of transport tags (sourced from reachable's
  * Reachability.status by the platform factory) and recomputes a NetworkKey on
  * each change. When the key actually changes — a different transport OR a
- * different IPv4 subnet — it invokes [onChange]. The first observed key seeds
+ * different IPv4 subnet — it invokes [onChange] with the old and new keys (the
+ * description cache parks by network key). The first observed key seeds
  * the baseline and does NOT fire a reset (there's nothing to clear yet).
  *
  * Pure orchestration: the reachable dependency and the subnet probe are passed
@@ -21,7 +22,7 @@ internal class NetworkMonitor(
     private val scope: CoroutineScope,
     private val transportTags: Flow<String>,
     private val subnetProbe: () -> String?,
-    private val onChange: suspend () -> Unit,
+    private val onChange: suspend (previous: NetworkKey, current: NetworkKey) -> Unit,
 ) {
     private var lastKey: NetworkKey? = null
 
@@ -44,7 +45,7 @@ internal class NetworkMonitor(
                 }
                 if (previous != key) {
                     lastKey = key
-                    onChange()
+                    onChange(previous, key)
                 }
             }
         }

@@ -32,6 +32,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -86,6 +87,8 @@ class DescriptionServiceTest {
         client: HttpClient,
         changes: MutableSharedFlow<DeviceChange> = MutableSharedFlow(extraBufferCapacity = 16),
         negativeTtl: kotlin.time.Duration = 30.seconds,
+        maxParkedNetworks: Int = 4,
+        parkedTtl: kotlin.time.Duration = 24.hours,
     ): DescriptionService =
         DescriptionService(
             scope = backgroundScope,
@@ -93,6 +96,8 @@ class DescriptionServiceTest {
             httpClient = client,
             registryChanges = changes,
             negativeTtl = negativeTtl,
+            maxParkedNetworks = maxParkedNetworks,
+            parkedTtl = parkedTtl,
         )
 
     @Test
@@ -375,5 +380,176 @@ class DescriptionServiceTest {
             changes.emit(DeviceChange.Removed(device(), DeviceChange.Removed.Reason.Byebye))
             runCurrent()
             assertEquals(null, service.cachedDescription(device().usn)) // evicted from snapshot too.
+        }
+
+    // --- per-network memory ----------------------------------------------------
+
+    private val home = NetworkKey(transportTag = "Wifi", subnet = "192.168.4.0/24")
+    private val cafe = NetworkKey(transportTag = "Wifi", subnet = "10.0.0.0/24")
+
+    @Test
+    fun switchingNetworkClearsTheCache() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client)
+            service.describe(device())
+
+            service.switchNetwork(home, cafe)
+            assertEquals(null, service.cachedDescription(device().usn))
+            service.describe(device())
+            assertEquals(2, hits()) // nothing cached on the new network.
+        }
+
+    @Test
+    fun returningToANetworkRestoresDescriptionWhenDeviceIsFoundAgain() =
+        runTest {
+            val (client, hits) = countingClient()
+            val changes = MutableSharedFlow<DeviceChange>(extraBufferCapacity = 16)
+            val service = newService(client, changes = changes)
+            runCurrent()
+            val first = service.describe(device())
+            assertTrue(first is DescriptionResult.Success)
+
+            service.switchNetwork(home, cafe)
+            service.switchNetwork(cafe, home)
+            // Parked, not yet live: the device hasn't been re-found on this network.
+            assertEquals(null, service.cachedDescription(device().usn))
+
+            changes.emit(DeviceChange.Found(device()))
+            runCurrent()
+            assertEquals(first.description, service.cachedDescription(device().usn))
+            assertTrue(service.describe(device()) is DescriptionResult.Success)
+            assertEquals(1, hits()) // restored, never refetched.
+        }
+
+    @Test
+    fun describeRestoresParkedDescriptionBeforeFoundIsSeen() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client)
+            service.describe(device())
+
+            service.switchNetwork(home, cafe)
+            service.switchNetwork(cafe, home)
+            assertTrue(service.describe(device()) is DescriptionResult.Success)
+            assertEquals(1, hits())
+        }
+
+    @Test
+    fun deviceBackAtADifferentLocationIsRefetched() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client)
+            service.describe(device())
+
+            service.switchNetwork(home, cafe)
+            service.switchNetwork(cafe, home)
+            service.describe(device(location = "http://192.168.4.21:1400/xml/device_description.xml"))
+            assertEquals(2, hits()) // the parked document is for the old LOCATION.
+        }
+
+    @Test
+    fun networkWithoutASubnetIsNotParked() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client)
+            val unknown = NetworkKey(transportTag = "Wifi", subnet = null)
+            service.describe(device())
+
+            service.switchNetwork(unknown, cafe)
+            service.switchNetwork(cafe, unknown)
+            service.describe(device())
+            assertEquals(2, hits()) // two LANs could share this key, so nothing was kept.
+        }
+
+    @Test
+    fun parkedNetworkExpiresAfterItsTtl() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client, parkedTtl = 1.hours)
+            service.describe(device())
+
+            service.switchNetwork(home, cafe)
+            advanceTimeBy(2.hours)
+            service.switchNetwork(cafe, home)
+            service.describe(device())
+            assertEquals(2, hits())
+        }
+
+    @Test
+    fun leastRecentlyLeftNetworkIsDroppedPastTheLimit() =
+        runTest {
+            val (client, hits) = countingClient()
+            val service = newService(client, maxParkedNetworks = 1)
+            val office = NetworkKey(transportTag = "Ethernet", subnet = "172.16.0.0/24")
+            service.describe(device()) // on home
+
+            service.switchNetwork(home, cafe)
+            service.describe(device()) // on cafe
+            service.switchNetwork(cafe, office) // parks cafe, dropping home
+            service.switchNetwork(office, home)
+            service.describe(device())
+            assertEquals(3, hits())
+        }
+
+    @Test
+    fun byebyeDropsAParkedDescription() =
+        runTest {
+            val (client, hits) = countingClient()
+            val changes = MutableSharedFlow<DeviceChange>(extraBufferCapacity = 16)
+            val service = newService(client, changes = changes)
+            runCurrent()
+            service.describe(device())
+
+            service.switchNetwork(home, cafe)
+            service.switchNetwork(cafe, home)
+            changes.emit(DeviceChange.Removed(device(), DeviceChange.Removed.Reason.Byebye))
+            runCurrent()
+            service.describe(device())
+            assertEquals(2, hits())
+        }
+
+    @Test
+    fun oldNetworksResetDoesNotDropTheNewNetworksParkedDescription() =
+        runTest {
+            val (client, hits) = countingClient()
+            val changes = MutableSharedFlow<DeviceChange>(extraBufferCapacity = 16)
+            val service = newService(client, changes = changes)
+            runCurrent()
+            service.describe(device())
+
+            service.switchNetwork(home, cafe)
+            service.switchNetwork(cafe, home)
+            // The registry reset that follows a switch emits Removed(NetworkChanged)
+            // for the old network's devices, which can share a USN with a parked one.
+            changes.emit(DeviceChange.Removed(device(), DeviceChange.Removed.Reason.NetworkChanged))
+            runCurrent()
+            service.describe(device())
+            assertEquals(1, hits())
+        }
+
+    @Test
+    fun fetchInFlightAcrossASwitchIsNotCachedOnTheNewNetwork() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val count = atomic(0)
+            val engine =
+                MockEngine {
+                    count.incrementAndGet()
+                    gate.await()
+                    respond(
+                        content = ByteReadChannel(DescriptionFixtures.SONOS_ZONEPLAYER),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf("Content-Type", "text/xml"),
+                    )
+                }
+            val service = newService(HttpClient(engine))
+
+            val pending = async { service.describe(device()) }
+            runCurrent()
+            service.switchNetwork(home, cafe)
+            gate.complete(Unit)
+            assertTrue(pending.await() is DescriptionResult.Success) // its caller still gets a result…
+            assertEquals(null, service.cachedDescription(device().usn)) // …but it isn't cached here.
         }
 }

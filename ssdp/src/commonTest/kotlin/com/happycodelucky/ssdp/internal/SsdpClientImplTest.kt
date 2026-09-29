@@ -186,7 +186,7 @@ class SsdpClientImplTest {
                 runCurrent()
                 assertTrue(awaitItem() is DeviceChange.Found)
 
-                client.onNetworkChanged()
+                client.onNetworkChanged(NetworkKey("Wifi", "192.168.1.0/24"), NetworkKey("Wifi", "10.0.0.0/24"))
                 val change = awaitItem()
                 assertTrue(change is DeviceChange.Removed)
                 assertEquals(DeviceChange.Removed.Reason.NetworkChanged, change.reason)
