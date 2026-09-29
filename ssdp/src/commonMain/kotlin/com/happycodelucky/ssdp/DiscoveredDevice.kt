@@ -24,7 +24,7 @@ import kotlin.time.Instant
  *   ([SearchTarget]). For a device that matches several targets, this is the
  *   most recently observed one.
  * @property location `LOCATION` — URL string of the device description document
- *   (for the v1.1 description-XML fetch). `null` only in the rare case the
+ *   (fetched by `SsdpClient.description`). `null` only in the rare case the
  *   device was first seen via a `byebye` (which carries no location).
  * @property server `SERVER` — server identification string, when provided.
  * @property cacheControl `CACHE-CONTROL: max-age` advertised by the device, if

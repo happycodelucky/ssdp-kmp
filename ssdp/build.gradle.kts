@@ -13,7 +13,7 @@
 plugins {
     id("ssdp.kmp-library")
     id("ssdp.publish")
-    // kotlin-serialization (v1.1 description-XML): drives xmlutil's @Serializable
+    // kotlin-serialization (description XML): drives xmlutil's @Serializable
     // codegen for the UPnP description wire types in internal/DescriptionParser.kt.
     alias(libs.plugins.kotlin.serialization)
     // KMMBridge (CLAUDE.md §9): aggregates the per-target Apple frameworks the
@@ -42,7 +42,7 @@ kotlin {
             // needed — SSDP does not expose reachable types in its public API;
             // it consumes the status Flow internally.
             implementation(libs.reachable)
-            // v1.1 description-XML fetch + cache. All `implementation`: the
+            // Description-XML fetch + cache. All `implementation`: the
             // public API returns ssdp's own DescriptionResult/DeviceDescription,
             // never a Ktor or xmlutil type. CIO is the multiplatform engine, so
             // one dep covers every target with zero expect/actual.

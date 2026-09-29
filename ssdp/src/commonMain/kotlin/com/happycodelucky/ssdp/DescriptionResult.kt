@@ -1,5 +1,5 @@
 /*
- * ssdp-kmp — result of a description fetch (v1.1 feature).
+ * ssdp-kmp — result of a description fetch.
  *
  * A sealed interface, NOT kotlin.Result (CLAUDE.md §7): SKIE renders it as an
  * exhaustive Swift enum so consumers `switch` over it with no default branch,

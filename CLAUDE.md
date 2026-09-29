@@ -8,23 +8,22 @@ contract a contributor (human or agent) reads first. Start here, then
 ## 1. Scope
 
 - **Shared (in `:ssdp`):** SSDP wire parsing, multicast send/receive, M-SEARCH
-  with retransmit, NOTIFY (alive/byebye/update) handling, and a live device
-  registry. Headless — no UI dependencies.
+  with retransmit, NOTIFY (alive/byebye/update) handling, a live device
+  registry, and a lazy, cached description-XML fetch/parse
+  (`SsdpClient.description`). Headless — no UI dependencies.
 - **Not shared:** UI. Each platform app has its own native UI and consumes the
   library's `StateFlow`/`SharedFlow`.
 - **Client only.** No SSDP *server*/responder. We discover; we don't advertise.
 - **Behavioral source of truth:** the Swift client at `/Users/paulbates/Developer/swift-ssdp`.
   ssdp-kmp ports its parser, retransmit cadence, and lifecycle, and goes
   *further* with a built-in device registry and per-network reset.
-- **Deferred to v1.1 (not in scope now):** description-XML fetch/parse and a
-  per-network XML cache. The registry already resets on network change; the XML
-  cache builds on that later.
 
-## 2. Decisions (load-bearing — see `.claude/lessons/LESSONS.md` D-001..D-003)
+## 2. Decisions (load-bearing — see `.claude/lessons/LESSONS.md` D-001..D-004)
 
-1. **v1 = core + registry, defer XML.** Discovery + retransmit + NOTIFY + a
+1. **Core + registry + lazy description.** Discovery + retransmit + NOTIFY + a
    device registry (`StateFlow<Map<USN, DiscoveredDevice>>` + `SharedFlow<DeviceChange>`)
-   with byebye + `max-age` expiry. No description-XML fetch yet.
+   with byebye + `max-age` expiry. Description XML is fetched only when asked
+   (`description()`), cached by USN, and evicted with the device (D-004).
 2. **Apple socket = POSIX BSD sockets** (`platform.posix`/`platform.darwin`),
    shared 1:1 by iOS+macOS. NOT Network.framework (`NWConnectionGroup` isn't in
    K/N cinterop). See `MulticastSocket.apple.kt`.
@@ -71,7 +70,7 @@ which our `jvm()` target needs (D-003).
 
 ## 5. Libraries — Kotlin-first
 
-Ktor/Ktorfit for HTTP (v1.1 XML fetch), kotlinx.* family (coroutines, atomicfu,
+Ktor for HTTP (the description fetch), kotlinx.* family (coroutines, atomicfu,
 io), Kermit for logging (`implementation` in `:ssdp`, never `api` and never
 injected by the convention plugin — a library mustn't force a logger onto its
 consumers' classpath), `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
@@ -156,7 +155,7 @@ retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
 - **iOS — multicast:** joining `239.255.255.250` needs the
   `com.apple.developer.networking.multicast` entitlement (Apple gates it behind
   a request form). Without it, `IP_ADD_MEMBERSHIP` fails → `MulticastJoinFailed`.
-- **iOS/macOS — description fetch (v1.1) & App Transport Security:** UPnP
+- **iOS/macOS — description fetch & App Transport Security:** UPnP
   `LOCATION` URLs are plain `http://` to a LAN IP. iOS/macOS ATS blocks
   arbitrary plain-HTTP by default, so `description()` will fail with
   `FetchFailed` unless the **host app** adds to its `Info.plist`:

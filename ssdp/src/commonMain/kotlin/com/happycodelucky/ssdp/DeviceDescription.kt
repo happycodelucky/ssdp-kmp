@@ -1,5 +1,5 @@
 /*
- * ssdp-kmp — parsed UPnP device description document (v1.1 feature).
+ * ssdp-kmp — parsed UPnP device description document.
  *
  * The SSDP response/advertisement carries only a LOCATION URL; the document at
  * that URL is the device's full self-description (friendly name, manufacturer,

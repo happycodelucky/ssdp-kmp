@@ -69,12 +69,12 @@ kotlinx-atomicfu = "0.33.0"
 # commonMain, so the wire-format code never reaches for java.* (CLAUDE.md §5).
 kotlinx-io = "0.9.0"
 # kotlinx-serialization — drives xmlutil's @Serializable codegen for the UPnP
-# description wire types (v1.1 description-XML feature). 1.11.0 is latest stable;
+# description wire types (description-XML feature). 1.11.0 is latest stable;
 # xmlutil 0.91.x floors at 1.9.x and is binary-compatible. Verified on Maven
 # Central 2026-06-26.
 kotlinx-serialization = "1.11.0"
 
-# --- HTTP + XML (v1.1 description-XML fetch + cache) -------------------------
+# --- HTTP + XML (description-XML fetch + cache) ------------------------------
 # Ktor client for the description-XML HTTP GET. 3.5.1 is latest stable; the CIO
 # engine is multiplatform (iosArm64/iosSimulatorArm64/macosArm64/android/jvm),
 # so one engine covers every target with zero expect/actual (CLAUDE.md §4).
@@ -169,7 +169,7 @@ kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "k
 kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 
-# --- HTTP + XML (v1.1 description-XML fetch + cache) -------------------------
+# --- HTTP + XML (description-XML fetch + cache) ------------------------------
 # All `implementation` in :ssdp — the public API returns ssdp's own
 # DescriptionResult/DeviceDescription, never a Ktor or xmlutil type.
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

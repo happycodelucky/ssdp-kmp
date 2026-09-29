@@ -57,7 +57,7 @@ import kotlin.time.TimeSource
  *   that don't exercise it, or platforms without a reachable dependency).
  * @param subnetProbe resolves the active interface's IPv4 subnet; defaults to
  *   the platform [localSubnetKey]. Injected so tests drive it deterministically.
- * @param httpClient Ktor client for fetching device description documents (v1.1).
+ * @param httpClient Ktor client for fetching device description documents.
  *   Owned by this impl and closed in [close]. The platform factories pass
  *   [descriptionHttpClient]; tests pass a MockEngine-backed client.
  */
@@ -78,7 +78,7 @@ internal class SsdpClientImpl(
 
     private val registry = DeviceRegistry(scope, clock)
 
-    // v1.1 description fetch + cache. Built after `registry` so it can subscribe
+    // Description fetch + cache. Built after `registry` so it can subscribe
     // to registry.changes for eviction. Shares the client's child scope, so its
     // eviction collector and fetch coroutines are cancelled on close().
     private val descriptionService =

@@ -1,5 +1,5 @@
 /*
- * ssdp-kmp — UPnP description XML parser (v1.1 feature).
+ * ssdp-kmp — UPnP description XML parser.
  *
  * Parses the <root> device-description document (namespace
  * urn:schemas-upnp-org:device-1-0) into the public DeviceDescription tree.

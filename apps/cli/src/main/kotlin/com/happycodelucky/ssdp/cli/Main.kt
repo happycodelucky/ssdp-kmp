@@ -60,7 +60,7 @@ fun main(args: Array<String>) =
             println("    cacheCtrl:  ${d.cacheControl ?: "—"}")
         }
 
-        // v1.1: fetch + parse each device's description document. Proves the real
+        // Fetch + parse each device's description document. Proves the real
         // HTTP-fetch + XML-parse + cache path against live UPnP hardware.
         // De-duplicate by location so we don't fetch the same document once per
         // service USN a device exposes.

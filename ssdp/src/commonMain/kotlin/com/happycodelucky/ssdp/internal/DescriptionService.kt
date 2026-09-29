@@ -1,5 +1,5 @@
 /*
- * ssdp-kmp — description fetch + cache (v1.1 feature).
+ * ssdp-kmp — description fetch + cache.
  *
  * One collaborator owning the Ktor HTTP client, the XML parser, and the cache.
  * Folds the design's three concerns:
