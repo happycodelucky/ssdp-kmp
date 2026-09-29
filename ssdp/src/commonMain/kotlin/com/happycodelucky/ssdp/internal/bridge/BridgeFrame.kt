@@ -28,10 +28,7 @@ import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 
 /** A decoded bridge frame: a type tag and its raw payload. */
-internal data class BridgeFrame(
-    val type: Byte,
-    val payload: ByteArray,
-) {
+internal data class BridgeFrame(val type: Byte, val payload: ByteArray) {
     // ByteArray needs value-based equals/hashCode for test assertions.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -67,10 +64,7 @@ internal object BridgeFrameCodec {
      * Frame an inbound datagram (`0x02`) for the daemon→app direction, packing
      * the source endpoint and SSDP text into one length-prefixed payload.
      */
-    fun encodeIn(
-        source: String,
-        text: String,
-    ): ByteArray {
+    fun encodeIn(source: String, text: String): ByteArray {
         val sourceBytes = source.encodeToByteArray()
         require(sourceBytes.size <= UShort.MAX_VALUE.toInt()) { "source too long: ${sourceBytes.size}" }
         val payload =
@@ -118,10 +112,7 @@ internal object BridgeFrameCodec {
 
     private val EMPTY = ByteArray(0)
 
-    private fun frame(
-        type: Byte,
-        payload: ByteArray,
-    ): ByteArray {
+    private fun frame(type: Byte, payload: ByteArray): ByteArray {
         require(payload.size <= MAX_PAYLOAD) { "payload too large: ${payload.size}" }
         val buffer =
             Buffer().apply {

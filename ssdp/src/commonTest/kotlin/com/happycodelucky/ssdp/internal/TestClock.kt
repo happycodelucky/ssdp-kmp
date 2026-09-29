@@ -5,7 +5,7 @@
  * schedules expiry via `delay`. To keep the two consistent under `runTest`, this
  * clock reads the test scheduler's virtual `currentTime` (millis since the test
  * started), so advancing virtual time (via delay) advances "now" in lockstep —
- * no wall-clock reads anywhere (LESSONS N-011).
+ * no wall-clock reads anywhere (LESSONS N-002).
  */
 package com.happycodelucky.ssdp.internal
 
@@ -18,22 +18,18 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class TestClock(
-    private val scheduler: TestCoroutineScheduler,
-) : Clock {
+internal class TestClock(private val scheduler: TestCoroutineScheduler) : Clock {
     override fun now(): Instant = Instant.fromEpochMilliseconds(scheduler.currentTime)
 }
 
 /**
  * A monotonic [TimeSource] reading the test scheduler's virtual `currentTime`,
  * so retransmit elapsed-time advances in lockstep with `delay()` under
- * `runTest` (LESSONS N-011). Used in place of the `testTimeSource` extension,
+ * `runTest` (LESSONS N-002). Used in place of the `testTimeSource` extension,
  * which isn't available in the pinned kotlinx-coroutines-test version.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class TestTimeSource(
-    private val scheduler: TestCoroutineScheduler,
-) : TimeSource {
+internal class TestTimeSource(private val scheduler: TestCoroutineScheduler) : TimeSource {
     override fun markNow(): TimeMark {
         val startMillis = scheduler.currentTime
         return object : TimeMark {

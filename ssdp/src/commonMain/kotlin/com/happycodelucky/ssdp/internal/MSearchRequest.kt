@@ -13,10 +13,7 @@ package com.happycodelucky.ssdp.internal
  *   Devices choose a random delay in `[0, MX]` before replying, to avoid
  *   response storms. Per UPnP recommendations this should be 1–5 seconds.
  */
-internal data class MSearchRequest(
-    val searchTarget: com.happycodelucky.ssdp.SearchTarget,
-    val maxWaitSeconds: Int = DEFAULT_MX,
-) {
+internal data class MSearchRequest(val searchTarget: com.happycodelucky.ssdp.SearchTarget, val maxWaitSeconds: Int = DEFAULT_MX) {
     /**
      * The fully serialized M-SEARCH wire message. Headers are emitted in
      * deterministic (alphabetical) order so the output is testable. UPnP does

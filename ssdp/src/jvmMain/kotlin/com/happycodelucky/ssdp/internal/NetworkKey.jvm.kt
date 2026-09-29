@@ -31,10 +31,7 @@ internal fun jvmLocalSubnetKey(): String? =
     }.getOrNull()
 
 /** Mask an IPv4 address (4 bytes) to its network address string for the prefix. */
-private fun networkAddress(
-    addr: ByteArray,
-    prefix: Int,
-): String {
+private fun networkAddress(addr: ByteArray, prefix: Int): String {
     val masked = ByteArray(4)
     for (i in 0 until 4) {
         val bitsInByte = (prefix - i * 8).coerceIn(0, 8)

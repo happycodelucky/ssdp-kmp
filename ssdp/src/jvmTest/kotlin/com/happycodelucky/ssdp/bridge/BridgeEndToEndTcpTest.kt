@@ -25,9 +25,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -67,32 +68,38 @@ class BridgeEndToEndTcpTest {
 
             // Real client socket over loopback TCP.
             val socket = BridgeMulticastSocket(host = "127.0.0.1", port = port, parentScope = clientScope)
-
-            // 1) Client → daemon: an M-SEARCH must arrive at the transport.
-            val mSearch = "M-SEARCH * HTTP/1.1\r\nST: ssdp:all\r\n\r\n".encodeToByteArray()
-            withTimeout(10_000) {
-                while (transport.sent.isEmpty()) {
-                    socket.send(mSearch)
-                    delay(50)
-                }
-            }
-            assertTrue(mSearch.contentEquals(transport.sent.first()))
-
-            // 2) Daemon → client: a datagram on the transport must surface on incoming.
-            val received =
+            try {
+                // 1) Client → daemon: an M-SEARCH must arrive at the transport.
+                val mSearch = "M-SEARCH * HTTP/1.1\r\nST: ssdp:all\r\n\r\n".encodeToByteArray()
                 withTimeout(10_000) {
-                    val incoming = clientScope.async { socket.incoming.first() }
-                    delay(200)
-                    transport.deliver("HTTP/1.1 200 OK\r\nUSN: uuid:real\r\n\r\n", source = "10.0.0.5:1900")
-                    incoming.await()
+                    while (transport.sent.isEmpty()) {
+                        socket.send(mSearch)
+                        delay(50)
+                    }
                 }
-            assertEquals("10.0.0.5:1900", received.source)
-            assertTrue(received.text.contains("USN: uuid:real"))
+                assertTrue(mSearch.contentEquals(transport.sent.first()))
 
-            socket.close()
-            server.close()
-            selector.close()
-            serverScope.cancel()
-            clientScope.cancel()
+                // 2) Daemon → client: a datagram on the transport must surface on incoming.
+                val received =
+                    withTimeout(10_000) {
+                        val incoming = clientScope.async { socket.incoming.first() }
+                        delay(200)
+                        transport.deliver("HTTP/1.1 200 OK\r\nUSN: uuid:real\r\n\r\n", source = "10.0.0.5:1900")
+                        incoming.await()
+                    }
+                assertEquals("10.0.0.5:1900", received.source)
+                assertTrue(received.text.contains("USN: uuid:real"))
+            } finally {
+                // Cancel the daemon and client coroutines BEFORE closing the sockets.
+                // Closing first lets runBridgePipe hit EOF and throw on Dispatchers.IO
+                // with no handler; kotlinx-coroutines-test then reports that uncaught
+                // exception against the NEXT runTest (UncaughtExceptionsBeforeTest in
+                // BridgePipeTest). LESSONS B-013.
+                serverScope.coroutineContext.job.cancelAndJoin()
+                clientScope.coroutineContext.job.cancelAndJoin()
+                socket.close()
+                server.close()
+                selector.close()
+            }
         }
 }

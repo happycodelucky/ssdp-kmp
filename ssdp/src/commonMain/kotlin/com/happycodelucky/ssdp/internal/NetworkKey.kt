@@ -21,10 +21,7 @@ package com.happycodelucky.ssdp.internal
  *   (e.g. "192.168.1.0/24"), or `null` when it can't be determined. Distinguishes
  *   two different Wi-Fi networks that share the same transport tag.
  */
-internal data class NetworkKey(
-    val transportTag: String,
-    val subnet: String?,
-) {
+internal data class NetworkKey(val transportTag: String, val subnet: String?) {
     companion object {
         /** A sentinel for "no usable network". */
         val NONE = NetworkKey(transportTag = "None", subnet = null)

@@ -25,14 +25,10 @@ internal sealed interface SsdpMessage {
     data object SearchRequest : SsdpMessage
 
     /** A unicast response to an M-SEARCH (`HTTP/1.1 200 OK`). */
-    data class SearchResponse(
-        val response: MSearchResponse,
-    ) : SsdpMessage
+    data class SearchResponse(val response: MSearchResponse) : SsdpMessage
 
     /** A NOTIFY broadcast — alive, byebye, or update. */
-    data class Notify(
-        val notification: Notification,
-    ) : SsdpMessage
+    data class Notify(val notification: Notification) : SsdpMessage
 }
 
 internal object SsdpMessageParser {

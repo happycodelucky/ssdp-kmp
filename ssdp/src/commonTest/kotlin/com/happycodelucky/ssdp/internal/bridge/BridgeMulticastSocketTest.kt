@@ -215,12 +215,7 @@ class BridgeMulticastSocketTest {
         val warnings = mutableListOf<String>()
         val infos = mutableListOf<String>()
 
-        override fun log(
-            severity: Severity,
-            message: String,
-            tag: String,
-            throwable: Throwable?,
-        ) {
+        override fun log(severity: Severity, message: String, tag: String, throwable: Throwable?) {
             when (severity) {
                 Severity.Warn -> warnings.add(message)
                 Severity.Info -> infos.add(message)
@@ -230,10 +225,7 @@ class BridgeMulticastSocketTest {
     }
 
     /** Run [block] with [writer] attached to the global Kermit logger, then restore. */
-    private inline fun withGlobalLogWriter(
-        writer: LogWriter,
-        block: () -> Unit,
-    ) {
+    private inline fun withGlobalLogWriter(writer: LogWriter, block: () -> Unit) {
         Logger.addLogWriter(writer)
         try {
             block()

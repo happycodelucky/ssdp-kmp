@@ -36,8 +36,9 @@ flowchart LR
    `.changeset/<branch>.md` with a `title`, a `change` level
    (`major`/`minor`/`patch` — the source of truth for the version, and the
    author's call) and a `description`, followed by the full note in Markdown in
-   place of an *Unfilled* callout the check refuses to let through. The **Changeset** check (`changeset.yml`) fails a PR without one;
-   label it `no-changeset` if nothing in it reaches consumers. Format and rules:
+   place of an *Unfilled* callout the check refuses to let through. The **Changeset** check (`changeset.yml`) fails a PR without one
+   when it changes a file in release scope (`.changeset/config.toml`); label
+   it `no-changeset` if nothing in it reaches consumers anyway. Format and rules:
    [`.changeset/README.md`](../.changeset/README.md).
 2. **One rolling release PR.** On every push to `main` with changesets
    pending, `release-pr.yml` rebuilds the `release/next` branch from `main` and

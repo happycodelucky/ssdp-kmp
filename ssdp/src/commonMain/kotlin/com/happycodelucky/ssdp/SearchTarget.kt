@@ -45,9 +45,7 @@ public sealed interface SearchTarget {
     }
 
     /** `uuid:<UUID>` — match a specific device by its UUID. */
-    public data class Uuid(
-        val id: String,
-    ) : SearchTarget {
+    public data class Uuid(val id: String) : SearchTarget {
         override val rawValue: String get() = "uuid:$id"
     }
 
@@ -56,11 +54,7 @@ public sealed interface SearchTarget {
      * type. Per RFC 2141, period characters in the schema must be replaced
      * with hyphens.
      */
-    public data class DeviceType(
-        val schema: String,
-        val deviceType: String,
-        val version: Int,
-    ) : SearchTarget {
+    public data class DeviceType(val schema: String, val deviceType: String, val version: Int) : SearchTarget {
         override val rawValue: String get() = "urn:$schema:device:$deviceType:$version"
     }
 
@@ -69,11 +63,7 @@ public sealed interface SearchTarget {
      * type. Per RFC 2141, period characters in the schema must be replaced
      * with hyphens.
      */
-    public data class ServiceType(
-        val schema: String,
-        val serviceType: String,
-        val version: Int,
-    ) : SearchTarget {
+    public data class ServiceType(val schema: String, val serviceType: String, val version: Int) : SearchTarget {
         override val rawValue: String get() = "urn:$schema:service:$serviceType:$version"
     }
 
@@ -86,9 +76,7 @@ public sealed interface SearchTarget {
      * Prefer the canonical cases where one applies; [SearchTarget.parseOrCustom]
      * only produces a [Custom] when no canonical form matches.
      */
-    public data class Custom(
-        override val rawValue: String,
-    ) : SearchTarget
+    public data class Custom(override val rawValue: String) : SearchTarget
 
     public companion object {
         /** Schema string for UPnP-forum working-committee devices and services. */

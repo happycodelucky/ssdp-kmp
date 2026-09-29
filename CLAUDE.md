@@ -72,7 +72,9 @@ which our `jvm()` target needs (D-003).
 ## 5. Libraries — Kotlin-first
 
 Ktor/Ktorfit for HTTP (v1.1 XML fetch), kotlinx.* family (coroutines, atomicfu,
-io), Kermit for logging, `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
+io), Kermit for logging (`implementation` in `:ssdp`, never `api` and never
+injected by the convention plugin — a library mustn't force a logger onto its
+consumers' classpath), `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
 `java.time` in common — and `kotlin.time.Instant`/`Clock` are stable since
 2.3.x, no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
 Kotest (property tests). Library code uses **constructor injection only** — no
@@ -105,6 +107,14 @@ and a `@Throws` on a `suspend fun` must list `CancellationException`
 (LESSONS B-001/B-002). Never `kotlin.Result<T>` at the boundary. Apple casing
 everywhere (`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()`).
 
+**Hand-written Swift** goes in `ssdp/src/<sourceSet>/swift/`. SKIE Swift bundling
+is off by default: the Swift reaches only this module's own framework. Enabling
+it (per module) ships the Swift to KMP consumers too — but then every framework
+that links the module must `export` it (LESSONS D-012).
+
+**Android consumers** compile against at least `android-min-compile-sdk` (the
+AAR's `minCompileSdk`, LESSONS B-012) — not our `compileSdk`.
+
 ## 8. Distribution
 
 Two channels, copied from reachable: Maven Central (Android AAR + jvm jar + KMP
@@ -117,13 +127,19 @@ name with a public type — `object Ssdp` in module `Ssdp` made SKIE rename it
 `Ssdp_` (LESSONS D-010). `mise run publish:local` installs the next
 `X.Y.Z-SNAPSHOT` to `~/.m2` (never the released version, which would shadow
 Central's). The released `Package.swift` lives only on each `vX.Y.Z` tag; `main`
-keeps the local-dev form.
+keeps the local-dev form. Every published jar and the AAR carry `llms.txt` +
+`llms-full.txt` (the module's public API with KDoc, for AI tools) under
+`META-INF/com.happycodelucky.ssdp/<artifactId>/`, generated from Dokka by any
+publishing build (LESSONS D-013); `mise run llms:generate` previews them and
+`mise run llms:check` verifies a local publish.
 
 **Releases are changeset-driven** (`.changeset/README.md`,
 `.github/PUBLISHING.md`; LESSONS D-011, N-012, N-013). Every PR that reaches
 consumers adds a changeset (`mise run changeset`: `title`, `change:
 major|minor|patch`, `description`, then the full note in place of its Unfilled
-callout); the Changeset PR check enforces it (label `no-changeset` to opt out).
+callout); the Changeset PR check enforces it for any PR that changes a file in
+release scope — `include`/`exclude` globs in `.changeset/config.toml` (label
+`no-changeset` to opt out).
 A changeset's `change` is the source of truth for the version — the author's
 call, which neither the PR nor tooling overrides. Merges to `main` keep one
 rolling **Release vX.Y.Z** PR up to date — it bumps `version=` in
@@ -187,7 +203,9 @@ done gate; a JVM-only run hides native-test-compile and detekt failures
    `change` level is the version decision. The usual reading — removed/renamed
    public API is `major` (even while 0.x), new API `minor`, a fix `patch` — is a
    default, not a rule: a different level is the author's call (say why in the
-   body). Docs/CI/test/sample-only PRs get the `no-changeset` label.
+   body). Docs/CI/test/sample-only PRs are out of release scope and need none
+   (`mise run changeset:scope`); label an in-scope PR that still reaches no
+   consumer `no-changeset`.
 6. Done when `./gradlew :ssdp:check :ssdp-testing:check` passes AND
    `:ssdp:compileKotlinMacosArm64` / `compileKotlinIosArm64` /
    `compileAndroidMain` build clean (common-code bugs often only surface on

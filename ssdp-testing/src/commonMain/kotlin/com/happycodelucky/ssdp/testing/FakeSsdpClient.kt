@@ -127,10 +127,7 @@ public class FakeSsdpClient : SsdpClient {
     private val cachedDescriptions = mutableMapOf<String, DeviceDescription>()
 
     /** Script the [description] result for a specific USN. */
-    public fun stubDescription(
-        usn: String,
-        result: DescriptionResult,
-    ) {
+    public fun stubDescription(usn: String, result: DescriptionResult) {
         scriptedDescriptions[usn] = result
     }
 
@@ -138,10 +135,7 @@ public class FakeSsdpClient : SsdpClient {
      * Seed the synchronous [cachedDescription] cache for [usn] directly, without a
      * [description] call — for testing a consumer's render-time cache peek.
      */
-    public fun stubCachedDescription(
-        usn: String,
-        description: DeviceDescription,
-    ) {
+    public fun stubCachedDescription(usn: String, description: DeviceDescription) {
         cachedDescriptions[usn] = description
     }
 
@@ -170,10 +164,7 @@ public class FakeSsdpClient : SsdpClient {
     /** Remove [device] from [devices] and emit a [DeviceChange.Removed] with [reason]. */
     @OptIn(ExperimentalObjCName::class)
     @ObjCName("emitRemoved")
-    public suspend fun emitRemoved(
-        device: DiscoveredDevice,
-        reason: DeviceChange.Removed.Reason,
-    ) {
+    public suspend fun emitRemoved(device: DiscoveredDevice, reason: DeviceChange.Removed.Reason) {
         _devices.value = _devices.value - device.usn
         val change = DeviceChange.Removed(device, reason)
         _changes.emit(change)
@@ -187,11 +178,7 @@ public class FakeSsdpClient : SsdpClient {
 
     // --- SsdpClient ---------------------------------------------------------
 
-    override suspend fun search(
-        targets: Set<SearchTarget>,
-        maxWaitSeconds: Int,
-        timeout: kotlin.time.Duration?,
-    ) {
+    override suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int, timeout: kotlin.time.Duration?) {
         _searchCallCount.incrementAndGet()
         searchedTargets.add(targets)
         searchedTimeouts.add(timeout)
@@ -232,20 +219,11 @@ public class FakeSsdpClient : SsdpClient {
         }
     }
 
-    override suspend fun description(
-        device: DiscoveredDevice,
-        refresh: Boolean,
-    ): DescriptionResult = recordAndResolve(device.usn, refresh)
+    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): DescriptionResult = recordAndResolve(device.usn, refresh)
 
-    override suspend fun description(
-        usn: String,
-        refresh: Boolean,
-    ): DescriptionResult = recordAndResolve(usn, refresh)
+    override suspend fun description(usn: String, refresh: Boolean): DescriptionResult = recordAndResolve(usn, refresh)
 
-    private fun recordAndResolve(
-        usn: String,
-        refresh: Boolean,
-    ): DescriptionResult {
+    private fun recordAndResolve(usn: String, refresh: Boolean): DescriptionResult {
         descriptionRequests.add(usn)
         if (refresh) descriptionRefreshRequests.add(usn)
         val result = scriptedDescriptions[usn] ?: defaultDescriptionResult

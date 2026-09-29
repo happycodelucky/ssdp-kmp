@@ -6,7 +6,7 @@
  * the UPnP Device Architecture, an M-SEARCH should be re-sent on a stepped
  * cadence to fill in for lost packets while the same receive socket keeps
  * draining replies. This is that cadence, as a `delay`-driven coroutine so it
- * runs under `runTest` virtual time with no wall-clock reads (LESSONS N-011).
+ * runs under `runTest` virtual time with no wall-clock reads (LESSONS N-002).
  */
 package com.happycodelucky.ssdp.internal
 
@@ -42,13 +42,10 @@ internal object RetransmitScheduler {
      * Loop forever (until the coroutine is cancelled), invoking [retransmit]
      * on the stepped cadence. [elapsedSince] returns the time since the search
      * began; inject it so tests can drive it from virtual time rather than a
-     * wall clock (LESSONS N-011). Cancellation propagates cleanly through
+     * wall clock (LESSONS N-002). Cancellation propagates cleanly through
      * [delay] and is rethrown.
      */
-    suspend fun run(
-        elapsedSince: () -> Duration,
-        retransmit: suspend () -> Unit,
-    ) {
+    suspend fun run(elapsedSince: () -> Duration, retransmit: suspend () -> Unit) {
         while (true) {
             val wait = nextDelay(elapsedSince())
             delay(wait)

@@ -280,6 +280,9 @@ jobs:
       # publication the KMP plugin registered (Android AAR, jvm jar,
       # kotlinMultiplatform metadata, per-target klibs) plus sources / javadoc
       # jars and detached GPG signatures.
+      # Both publish tasks also generate each module's llms.txt +
+      # llms-full.txt from Dokka and pack them into every jar and the AAR,
+      # stamped with RELEASE_VERSION (ssdp.publish; LESSONS D-013).
       - name: Publish to Maven Central (dry run — staging only)
         if: env.DRY_RUN == 'true'
         env:

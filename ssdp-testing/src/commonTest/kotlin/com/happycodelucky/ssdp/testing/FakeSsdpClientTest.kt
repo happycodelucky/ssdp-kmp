@@ -133,10 +133,7 @@ class FakeSsdpClientTest {
             events.add("updated:${device.usn}")
         }
 
-        override fun onRemoved(
-            device: DiscoveredDevice,
-            reason: DeviceChange.Removed.Reason,
-        ) {
+        override fun onRemoved(device: DiscoveredDevice, reason: DeviceChange.Removed.Reason) {
             events.add("removed:${device.usn}:$reason")
         }
     }

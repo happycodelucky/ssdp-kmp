@@ -1,0 +1,34 @@
+# Release scope: which files reach consumers, and so need a changeset.
+#
+# The Changeset PR check requires a changeset only when the PR changes a file
+# in scope: one that matches an `include` glob and no `exclude` glob. A PR that
+# touches nothing in scope (docs, CI, tests, sample apps, tooling) passes
+# without one and without the `no-changeset` label. A PR may still add a
+# changeset for an out-of-scope change it wants in the changelog.
+#
+# Globs match repository-relative paths, gitignore-style:
+#   *    anything but `/`          **    any number of directories
+#   dir/ everything under dir      /path anchored at the repository root
+# A glob with no `/` except a trailing one matches at any depth (`*.md`,
+# `build/`); start it with `/` to mean the root only.
+#
+# `mise run changeset:scope` lists what this branch changes, in scope or not.
+
+include = [
+    # The published modules: sources, resources, public-API dumps, build scripts.
+    "/ssdp/",
+    "/ssdp-testing/",
+    # Shared build logic: the version catalog, convention plugins, wrapper.
+    "/gradle/",
+    "/build.gradle.kts",
+    "/settings.gradle.kts",
+    "/gradle.properties",
+    # The SPM manifest Swift consumers resolve.
+    "/Package.swift",
+]
+
+exclude = [
+    # Test source sets (commonTest, jvmTest, iosTest, androidHostTest, …).
+    "*/src/*Test/",
+    "*.md",
+]

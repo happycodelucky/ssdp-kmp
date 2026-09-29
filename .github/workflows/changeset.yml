@@ -1,11 +1,13 @@
 name: Changeset
 
 # Every PR that reaches consumers carries a changeset (.changeset/README.md).
-# This check validates every pending changeset and, on a PR, fails unless the
-# branch adds or edits one. Two ways past the requirement:
+# This check validates every pending changeset and, on a PR that changes a
+# file in release scope (.changeset/config.toml), fails unless the branch adds
+# or edits one. Docs, CI, tests and samples are out of scope. Two more ways
+# past the requirement:
 #
-#   * the `no-changeset` label — docs, CI, tests, samples: nothing a consumer
-#     gets. Renovate adds it to dependency PRs (renovate.json5).
+#   * the `no-changeset` label — an in-scope change no consumer gets, such as
+#     a build-only dependency bump.
 #   * being the release PR itself (release/next), which consumes changesets.
 #
 # Its own workflow, not a ci.yml job: toggling the label re-runs this check
@@ -30,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Full history: the requirement diffs the PR against its base branch.
+      # Python 3.11+ (tomllib) reads the scope; ubuntu-latest has it.
       - name: Check out repository
         uses: actions/checkout@v7
         with:

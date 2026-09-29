@@ -19,28 +19,21 @@ public sealed interface DeviceChange {
     public val device: DiscoveredDevice
 
     /** A device was seen for the first time (added to the registry). */
-    public data class Found(
-        override val device: DiscoveredDevice,
-    ) : DeviceChange
+    public data class Found(override val device: DiscoveredDevice) : DeviceChange
 
     /**
      * An already-tracked device re-announced with changed material — a new
      * `BOOTID.UPNP.ORG` (reboot), a changed `LOCATION`, or a refreshed
      * `max-age`. [device] is the post-update record.
      */
-    public data class Updated(
-        override val device: DiscoveredDevice,
-    ) : DeviceChange
+    public data class Updated(override val device: DiscoveredDevice) : DeviceChange
 
     /**
      * A device left the registry. [reason] distinguishes an explicit
      * `ssdp:byebye` from a silent cache-control expiry from a network reset
      * from a manual clear.
      */
-    public data class Removed(
-        override val device: DiscoveredDevice,
-        val reason: Reason,
-    ) : DeviceChange {
+    public data class Removed(override val device: DiscoveredDevice, val reason: Reason) : DeviceChange {
         /** Why a device was removed. */
         public enum class Reason {
             /** The device broadcast an `ssdp:byebye`. */

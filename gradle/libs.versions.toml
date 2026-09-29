@@ -23,7 +23,6 @@
 # so a key must never be a whole-segment prefix of another: adding
 # `ktlint-gradle` beside `ktlint` turns libs.versions.ktlint into a group and
 # breaks `.get()`. Name siblings by artifact instead (ktlint-cli, ktlint-gradle).
-# LESSONS N-011.
 # =============================================================================
 
 [versions]
@@ -50,6 +49,12 @@ maven-publish = "0.36.0"
 # their aar-metadata, which AGP's checkAarMetadata enforces on :androidApp
 # (LESSONS N-009). Builds clean on AGP 9.2.1.
 android-compile-sdk = "37"
+# The compileSdk CONSUMERS must use — written into the AAR's aar-metadata as
+# minCompileSdk (convention plugin). Decoupled from android-compile-sdk above, so
+# the sample's need for 37 isn't forced on every consumer (LESSONS B-012).
+# Policy: roughly the API level from ~3 years back. 34 = Android 14 (2023).
+# Raise it only if the library's public API exposes newer Android types.
+android-min-compile-sdk = "34"
 android-min-sdk = "30"         # arm64-v8a only (CLAUDE.md §1).
 jvm-target = "21"              # CLAUDE.md §2.
 

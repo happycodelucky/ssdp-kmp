@@ -25,9 +25,7 @@ package com.happycodelucky.ssdp
  */
 public sealed interface DescriptionResult {
     /** The document was fetched and parsed. [description] is the model tree. */
-    public data class Success(
-        public val description: DeviceDescription,
-    ) : DescriptionResult
+    public data class Success(public val description: DeviceDescription) : DescriptionResult
 
     /**
      * No description could be requested: the device has no `LOCATION` URL (it was
@@ -41,13 +39,8 @@ public sealed interface DescriptionResult {
      * failure (timeout, connection refused, host unreachable). [message] is a
      * human-readable detail.
      */
-    public data class FetchFailed(
-        public val statusCode: Int?,
-        public val message: String,
-    ) : DescriptionResult
+    public data class FetchFailed(public val statusCode: Int?, public val message: String) : DescriptionResult
 
     /** The document was fetched but the XML could not be parsed. */
-    public data class ParseFailed(
-        public val message: String,
-    ) : DescriptionResult
+    public data class ParseFailed(public val message: String) : DescriptionResult
 }

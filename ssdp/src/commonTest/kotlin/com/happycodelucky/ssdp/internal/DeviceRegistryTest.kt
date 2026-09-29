@@ -181,10 +181,7 @@ class DeviceRegistryTest {
 
     // --- helpers ------------------------------------------------------------
 
-    private suspend fun ingestAlive(
-        registry: DeviceRegistry,
-        bootId: Int = 7,
-    ) {
+    private suspend fun ingestAlive(registry: DeviceRegistry, bootId: Int = 7) {
         registry.ingestNotification(
             parseNotify(
                 wire(

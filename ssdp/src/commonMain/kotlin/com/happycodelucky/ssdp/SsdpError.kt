@@ -14,15 +14,10 @@ package com.happycodelucky.ssdp
  * search/listen APIs annotate `@Throws(SsdpError::class)` so Swift sees typed
  * throwing functions, and SKIE renders the subtypes for exhaustive handling.
  */
-public sealed class SsdpError(
-    message: String,
-    cause: Throwable? = null,
-) : Exception(message, cause) {
+public sealed class SsdpError(message: String, cause: Throwable? = null) : Exception(message, cause) {
     /** The underlying network transport failed (UDP send, socket setup, etc.). */
-    public class TransportFailed(
-        public val details: String,
-        cause: Throwable? = null,
-    ) : SsdpError("SSDP transport failed: $details", cause)
+    public class TransportFailed(public val details: String, cause: Throwable? = null) :
+        SsdpError("SSDP transport failed: $details", cause)
 
     /**
      * Joining the SSDP multicast group (`239.255.255.250:1900`) failed. On
@@ -30,10 +25,8 @@ public sealed class SsdpError(
      * `com.apple.developer.networking.multicast` entitlement (iOS); on Android,
      * a missing or unacquired `WifiManager.MulticastLock`.
      */
-    public class MulticastJoinFailed(
-        public val details: String,
-        cause: Throwable? = null,
-    ) : SsdpError("SSDP multicast join failed: $details", cause)
+    public class MulticastJoinFailed(public val details: String, cause: Throwable? = null) :
+        SsdpError("SSDP multicast join failed: $details", cause)
 
     /**
      * The multicast entitlement (`com.apple.developer.networking.multicast`) is
@@ -44,7 +37,5 @@ public sealed class SsdpError(
     public class MulticastEntitlementMissing : SsdpError("Missing com.apple.developer.networking.multicast entitlement")
 
     /** A wire-format SSDP message could not be parsed. */
-    public class InvalidResponse(
-        public val reason: String,
-    ) : SsdpError("Invalid SSDP response: $reason")
+    public class InvalidResponse(public val reason: String) : SsdpError("Invalid SSDP response: $reason")
 }
