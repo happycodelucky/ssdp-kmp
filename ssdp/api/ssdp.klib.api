@@ -18,8 +18,8 @@ abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { /
     abstract fun close() // com.happycodelucky.ssdp/SsdpClient.close|close(){}[0]
     abstract fun removeListener(com.happycodelucky.ssdp/SsdpDeviceListener) // com.happycodelucky.ssdp/SsdpClient.removeListener|removeListener(com.happycodelucky.ssdp.SsdpDeviceListener){}[0]
     abstract suspend fun clearDevices() // com.happycodelucky.ssdp/SsdpClient.clearDevices|clearDevices(){}[0]
-    abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice, kotlin/Boolean = ...): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice;kotlin.Boolean){}[0]
-    abstract suspend fun description(kotlin/String, kotlin/Boolean = ...): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String;kotlin.Boolean){}[0]
+    abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice, kotlin/Boolean = ...): com.happycodelucky.kotlinresult/Result<com.happycodelucky.ssdp/DeviceDescription> // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice;kotlin.Boolean){}[0]
+    abstract suspend fun description(kotlin/String, kotlin/Boolean = ...): com.happycodelucky.kotlinresult/Result<com.happycodelucky.ssdp/DeviceDescription> // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String;kotlin.Boolean){}[0]
     abstract suspend fun search(kotlin.collections/Set<com.happycodelucky.ssdp/SearchTarget>, kotlin/Int = ..., kotlin.time/Duration? = ...) // com.happycodelucky.ssdp/SsdpClient.search|search(kotlin.collections.Set<com.happycodelucky.ssdp.SearchTarget>;kotlin.Int;kotlin.time.Duration?){}[0]
     abstract suspend fun stopSearch() // com.happycodelucky.ssdp/SsdpClient.stopSearch|stopSearch(){}[0]
 
@@ -33,56 +33,6 @@ abstract interface com.happycodelucky.ssdp/SsdpDeviceListener { // com.happycode
     abstract fun onFound(com.happycodelucky.ssdp/DiscoveredDevice) // com.happycodelucky.ssdp/SsdpDeviceListener.onFound|onFound(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
     abstract fun onRemoved(com.happycodelucky.ssdp/DiscoveredDevice, com.happycodelucky.ssdp/DeviceChange.Removed.Reason) // com.happycodelucky.ssdp/SsdpDeviceListener.onRemoved|onRemoved(com.happycodelucky.ssdp.DiscoveredDevice;com.happycodelucky.ssdp.DeviceChange.Removed.Reason){}[0]
     abstract fun onUpdated(com.happycodelucky.ssdp/DiscoveredDevice) // com.happycodelucky.ssdp/SsdpDeviceListener.onUpdated|onUpdated(com.happycodelucky.ssdp.DiscoveredDevice){}[0]
-}
-
-sealed interface com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult|null[0]
-    final class FetchFailed : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.FetchFailed|null[0]
-        constructor <init>(kotlin/Int?, kotlin/String) // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.<init>|<init>(kotlin.Int?;kotlin.String){}[0]
-
-        final val message // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.message|{}message[0]
-            final fun <get-message>(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.message.<get-message>|<get-message>(){}[0]
-        final val statusCode // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.statusCode|{}statusCode[0]
-            final fun <get-statusCode>(): kotlin/Int? // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.statusCode.<get-statusCode>|<get-statusCode>(){}[0]
-
-        final fun component1(): kotlin/Int? // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.component1|component1(){}[0]
-        final fun component2(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.component2|component2(){}[0]
-        final fun copy(kotlin/Int? = ..., kotlin/String = ...): com.happycodelucky.ssdp/DescriptionResult.FetchFailed // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.copy|copy(kotlin.Int?;kotlin.String){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.FetchFailed.toString|toString(){}[0]
-    }
-
-    final class ParseFailed : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.ParseFailed|null[0]
-        constructor <init>(kotlin/String) // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.<init>|<init>(kotlin.String){}[0]
-
-        final val message // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.message|{}message[0]
-            final fun <get-message>(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.message.<get-message>|<get-message>(){}[0]
-
-        final fun component1(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.component1|component1(){}[0]
-        final fun copy(kotlin/String = ...): com.happycodelucky.ssdp/DescriptionResult.ParseFailed // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.copy|copy(kotlin.String){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.ParseFailed.toString|toString(){}[0]
-    }
-
-    final class Success : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.Success|null[0]
-        constructor <init>(com.happycodelucky.ssdp/DeviceDescription) // com.happycodelucky.ssdp/DescriptionResult.Success.<init>|<init>(com.happycodelucky.ssdp.DeviceDescription){}[0]
-
-        final val description // com.happycodelucky.ssdp/DescriptionResult.Success.description|{}description[0]
-            final fun <get-description>(): com.happycodelucky.ssdp/DeviceDescription // com.happycodelucky.ssdp/DescriptionResult.Success.description.<get-description>|<get-description>(){}[0]
-
-        final fun component1(): com.happycodelucky.ssdp/DeviceDescription // com.happycodelucky.ssdp/DescriptionResult.Success.component1|component1(){}[0]
-        final fun copy(com.happycodelucky.ssdp/DeviceDescription = ...): com.happycodelucky.ssdp/DescriptionResult.Success // com.happycodelucky.ssdp/DescriptionResult.Success.copy|copy(com.happycodelucky.ssdp.DeviceDescription){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.Success.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.Success.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.Success.toString|toString(){}[0]
-    }
-
-    final object NotFound : com.happycodelucky.ssdp/DescriptionResult { // com.happycodelucky.ssdp/DescriptionResult.NotFound|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // com.happycodelucky.ssdp/DescriptionResult.NotFound.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // com.happycodelucky.ssdp/DescriptionResult.NotFound.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // com.happycodelucky.ssdp/DescriptionResult.NotFound.toString|toString(){}[0]
-    }
 }
 
 sealed interface com.happycodelucky.ssdp/DeviceChange { // com.happycodelucky.ssdp/DeviceChange|null[0]
@@ -512,6 +462,29 @@ final class com.happycodelucky.ssdp/SsdpHeaders { // com.happycodelucky.ssdp/Ssd
     }
 }
 
+sealed class com.happycodelucky.ssdp/DescriptionException : kotlin/Exception { // com.happycodelucky.ssdp/DescriptionException|null[0]
+    open val message // com.happycodelucky.ssdp/DescriptionException.message|{}message[0]
+        open fun <get-message>(): kotlin/String // com.happycodelucky.ssdp/DescriptionException.message.<get-message>|<get-message>(){}[0]
+
+    final class FetchFailed : com.happycodelucky.ssdp/DescriptionException { // com.happycodelucky.ssdp/DescriptionException.FetchFailed|null[0]
+        constructor <init>(kotlin/Int?, kotlin/String, kotlin/Throwable? = ...) // com.happycodelucky.ssdp/DescriptionException.FetchFailed.<init>|<init>(kotlin.Int?;kotlin.String;kotlin.Throwable?){}[0]
+
+        final val statusCode // com.happycodelucky.ssdp/DescriptionException.FetchFailed.statusCode|{}statusCode[0]
+            final fun <get-statusCode>(): kotlin/Int? // com.happycodelucky.ssdp/DescriptionException.FetchFailed.statusCode.<get-statusCode>|<get-statusCode>(){}[0]
+    }
+
+    final class NotFound : com.happycodelucky.ssdp/DescriptionException { // com.happycodelucky.ssdp/DescriptionException.NotFound|null[0]
+        constructor <init>(kotlin/String) // com.happycodelucky.ssdp/DescriptionException.NotFound.<init>|<init>(kotlin.String){}[0]
+
+        final val usn // com.happycodelucky.ssdp/DescriptionException.NotFound.usn|{}usn[0]
+            final fun <get-usn>(): kotlin/String // com.happycodelucky.ssdp/DescriptionException.NotFound.usn.<get-usn>|<get-usn>(){}[0]
+    }
+
+    final class ParseFailed : com.happycodelucky.ssdp/DescriptionException { // com.happycodelucky.ssdp/DescriptionException.ParseFailed|null[0]
+        constructor <init>(kotlin/String, kotlin/Throwable? = ...) // com.happycodelucky.ssdp/DescriptionException.ParseFailed.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+    }
+}
+
 sealed class com.happycodelucky.ssdp/SsdpError : kotlin/Exception { // com.happycodelucky.ssdp/SsdpError|null[0]
     final class InvalidResponse : com.happycodelucky.ssdp/SsdpError { // com.happycodelucky.ssdp/SsdpError.InvalidResponse|null[0]
         constructor <init>(kotlin/String) // com.happycodelucky.ssdp/SsdpError.InvalidResponse.<init>|<init>(kotlin.String){}[0]
@@ -545,4 +518,4 @@ final object com.happycodelucky.ssdp/Ssdp { // com.happycodelucky.ssdp/Ssdp|null
 
 final fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/cachedDescription(com.happycodelucky.ssdp/SsdpClient): com.happycodelucky.ssdp/DeviceDescription? // com.happycodelucky.ssdp/cachedDescription|cachedDescription@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient){}[0]
 final fun com.happycodelucky.ssdp/SsdpClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/SsdpClient|SsdpClient(kotlin.String?){}[0]
-final suspend fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/description(com.happycodelucky.ssdp/SsdpClient, kotlin/Boolean = ...): com.happycodelucky.ssdp/DescriptionResult // com.happycodelucky.ssdp/description|description@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient;kotlin.Boolean){}[0]
+final suspend fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/description(com.happycodelucky.ssdp/SsdpClient, kotlin/Boolean = ...): com.happycodelucky.kotlinresult/Result<com.happycodelucky.ssdp/DeviceDescription> // com.happycodelucky.ssdp/description|description@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient;kotlin.Boolean){}[0]

@@ -9,7 +9,8 @@ package com.happycodelucky.ssdp.example.android
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
@@ -77,7 +78,7 @@ class ScannerViewModel(
     }
 
     /** Fetch (or return cached) the description for the device behind [row]. */
-    suspend fun describe(row: DeviceRow): DescriptionResult = client.description(row.usn)
+    suspend fun describe(row: DeviceRow): Result<DeviceDescription> = client.description(row.usn)
 
     override fun onCleared() {
         client.close()

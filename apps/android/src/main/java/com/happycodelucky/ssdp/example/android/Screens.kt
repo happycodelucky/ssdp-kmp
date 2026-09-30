@@ -37,7 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceDescription
 
 @Composable
@@ -126,10 +127,10 @@ private fun DeviceCard(
 @Composable
 fun DeviceDetailScreen(
     device: DeviceRow,
-    loadDescription: suspend () -> DescriptionResult,
+    loadDescription: suspend () -> Result<DeviceDescription>,
     onBack: () -> Unit,
 ) {
-    var result by remember { mutableStateOf<DescriptionResult?>(null) }
+    var result by remember { mutableStateOf<Result<DeviceDescription>?>(null) }
     LaunchedEffect(device.udn) { result = loadDescription() }
 
     Scaffold(
@@ -160,14 +161,20 @@ fun DeviceDetailScreen(
             DetailRow("SERVER", device.server ?: "—")
             HorizontalDivider()
 
-            when (val r = result) {
-                null -> Text("Fetching description…", style = MaterialTheme.typography.bodyMedium)
-                is DescriptionResult.Success -> DescriptionBody(r.description)
-                DescriptionResult.NotFound -> Text("No description URL for this device.")
-                is DescriptionResult.FetchFailed ->
-                    Text("Fetch failed: ${r.statusCode ?: "transport"} ${r.message}", color = MaterialTheme.colorScheme.error)
-                is DescriptionResult.ParseFailed ->
-                    Text("Parse failed: ${r.message}", color = MaterialTheme.colorScheme.error)
+            val loaded = result
+            val description = loaded?.getOrNull()
+            when (val error = loaded?.exceptionOrNull()) {
+                null ->
+                    if (description != null) {
+                        DescriptionBody(description)
+                    } else {
+                        Text("Fetching description…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                is DescriptionException.NotFound -> Text("No description URL for this device.")
+                is DescriptionException.FetchFailed ->
+                    Text("Fetch failed: ${error.statusCode ?: "transport"} ${error.message}", color = MaterialTheme.colorScheme.error)
+                is DescriptionException.ParseFailed -> Text("Parse failed: ${error.message}", color = MaterialTheme.colorScheme.error)
+                else -> Text("Failed: $error", color = MaterialTheme.colorScheme.error)
             }
         }
     }

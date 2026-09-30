@@ -1,5 +1,5 @@
 /*
- * ssdp-kmp — the Ktor client used to fetch device description documents (v1.1).
+ * ssdp-kmp — the Ktor client used to fetch device description documents.
  *
  * One factory, shared by every platform: the CIO engine is multiplatform
  * (iosArm64/iosSimulatorArm64/macosArm64/android/jvm), so there is no

@@ -1,20 +1,24 @@
 /*
- * ssdp-kmp — description fetch + cache (v1.1 feature).
+ * ssdp-kmp — description fetch + cache.
  *
  * One collaborator owning the Ktor HTTP client, the XML parser, and the cache.
- * Folds the design's three concerns:
+ * Folds the design's four concerns:
  *   - lazy fetch+parse of a device's LOCATION description document,
  *   - an in-memory cache keyed by USN, evicted via the registry's change stream,
- *   - in-flight de-duplication so N concurrent callers cause ONE HTTP fetch.
+ *   - in-flight de-duplication so N concurrent callers cause ONE HTTP fetch,
+ *   - per-network memory: a network switch parks the successful descriptions
+ *     under the network being left, and returning to it restores each one when
+ *     its device is re-found at the same LOCATION (LESSONS D-014).
  *
- * Concurrency (CLAUDE.md §6): a single Mutex guards the two maps. The
+ * Concurrency (CLAUDE.md §6): a single Mutex guards every map. The
  * `scope.async {}` launch is non-suspending, so it is safe to start under the
  * lock; the `await()` always happens OUTSIDE the lock, so a slow fetch never
  * blocks other USNs. Clock is injected for runTest virtual time (negative-TTL).
  */
 package com.happycodelucky.ssdp.internal
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
@@ -33,6 +37,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -47,6 +52,10 @@ import kotlin.time.Instant
  * @param parser injected so tests can supply a fake; defaults to the xmlutil one.
  * @param negativeTtl how long a failed fetch is remembered to avoid hammering a
  *   dead/broken device. Successes never self-expire — they die with the device.
+ * @param maxParkedNetworks how many networks' descriptions [switchNetwork] keeps;
+ *   the least recently left network is dropped first.
+ * @param parkedTtl how long a parked network's descriptions stay restorable. A
+ *   network not rejoined within it is refetched from scratch.
  */
 internal class DescriptionService(
     private val scope: CoroutineScope,
@@ -55,10 +64,12 @@ internal class DescriptionService(
     registryChanges: SharedFlow<DeviceChange>,
     private val parser: DescriptionParser = XmlDescriptionParser,
     private val negativeTtl: Duration = 30.seconds,
+    private val maxParkedNetworks: Int = DEFAULT_MAX_PARKED_NETWORKS,
+    private val parkedTtl: Duration = 24.hours,
 ) {
     private val mutex = Mutex()
     private val entries = mutableMapOf<String, Entry>() // key = usn
-    private val inFlight = mutableMapOf<String, Deferred<DescriptionResult>>() // key = usn
+    private val inFlight = mutableMapOf<String, Deferred<Result<DeviceDescription>>>() // key = usn
 
     // Lock-free snapshot of successfully-parsed descriptions (usn -> DeviceDescription),
     // mirrored from [entries] on every mutation while the [mutex] is held. Enables a
@@ -67,34 +78,55 @@ internal class DescriptionService(
     // Success descriptions are mirrored; failures and negative-cache entries are not.
     private val successSnapshot = atomic<Map<String, DeviceDescription>>(emptyMap())
 
+    // Descriptions parked by [switchNetwork], keyed by the network they were
+    // fetched on. Insertion-ordered: the first key is the least recently left
+    // network, dropped once more than [maxParkedNetworks] are held.
+    private val parked = LinkedHashMap<NetworkKey, ParkedNetwork>()
+
+    // The current network's parked descriptions (usn -> entry), restored by
+    // [switchNetwork] and waiting for their device to be re-found. Promoted into
+    // [entries] only when the device reappears at the same LOCATION, so a device
+    // that moved or never returns is never served stale.
+    private val warm = mutableMapOf<String, Entry.Success>()
+
     init {
-        // One collector handles ALL eviction: byebye, max-age expiry, and
-        // network reset (reset() emits Removed(_, NetworkChanged) per device).
+        // One collector handles ALL eviction — byebye, max-age expiry, network
+        // reset (reset() emits Removed(_, NetworkChanged) per device) and clear —
+        // and restores warm entries as their devices are re-found.
         scope.launch {
             registryChanges.collect { change ->
-                if (change is DeviceChange.Removed) evict(change.device.usn)
+                val device = change.device
+                when (change) {
+                    is DeviceChange.Removed -> evict(device.usn, change.reason)
+                    is DeviceChange.Found, is DeviceChange.Updated -> mutex.withLock { promoteWarmLocked(device.usn, device.location) }
+                }
             }
         }
     }
 
     /**
      * Get (or fetch+parse+cache) the description for [device]. Concurrent calls
-     * for the same USN share one fetch. Returns [DescriptionResult.NotFound] when
-     * the device has no LOCATION.
+     * for the same USN share one fetch. Fails with [DescriptionException.NotFound]
+     * when the device has no LOCATION; every other failure is a
+     * [DescriptionException] too, and only cancellation is thrown.
      *
      * @param refresh when true, bypass a valid cached result and force a fresh
      *   fetch. The refetch still coalesces with any in-flight fetch for this USN
      *   (a concurrent refresh won't cause two HTTP GETs). On success the cache is
-     *   replaced; on failure the previous cached [DescriptionResult.Success] (if
+     *   replaced; on failure the previous cached success (if
      *   any) is left intact rather than clobbered by a transient error — see
      *   [fetchParseAndStore].
      */
-    suspend fun describe(device: DiscoveredDevice, refresh: Boolean = false): DescriptionResult {
-        val location = device.location ?: return DescriptionResult.NotFound
+    suspend fun describe(device: DiscoveredDevice, refresh: Boolean = false): Result<DeviceDescription> {
+        val location = device.location ?: return Result.failure(DescriptionException.NotFound(device.usn))
         val usn = device.usn
 
         val deferred =
             mutex.withLock {
+                // The eviction collector may not have seen this device's Found
+                // yet; restore its parked description here so it's never refetched.
+                promoteWarmLocked(usn, location)
+
                 // A valid cache entry short-circuits the fetch — UNLESS refresh is
                 // requested, in which case we fall straight through to (join or
                 // start) a fetch, leaving the stale entry in place for now so a
@@ -103,7 +135,7 @@ internal class DescriptionService(
                     when (val cached = entries[usn]) {
                         is Entry.Success -> {
                             if (cached.sourceUrl == location) {
-                                return cached.result // still the same URL → serve cached success.
+                                return Result.success(cached.description) // still the same URL → serve cached success.
                             } else {
                                 entries.remove(usn) // device moved (new LOCATION) → stale, drop.
                                 successSnapshot.value = successSnapshot.value - usn
@@ -112,7 +144,7 @@ internal class DescriptionService(
 
                         is Entry.Failure -> {
                             if (cached.sourceUrl == location && clock.now() < cached.expiresAt) {
-                                return cached.result // negative cache still valid → don't re-hit.
+                                return Result.failure(cached.error) // negative cache still valid → don't re-hit.
                             } else {
                                 entries.remove(usn)
                             }
@@ -143,48 +175,97 @@ internal class DescriptionService(
      */
     fun cachedDescription(usn: String): DeviceDescription? = successSnapshot.value[usn]
 
-    private suspend fun fetchParseAndStore(usn: String, location: String, refresh: Boolean): DescriptionResult {
+    /**
+     * The active network changed from [previous] to [current]. Parks every
+     * successful description (active or still warm) under [previous], clears the
+     * cache, and restores [current]'s parked descriptions as warm entries.
+     *
+     * Called by the client *before* the registry reset, so it never races the
+     * `Removed(_, NetworkChanged)` events that reset emits; those then find
+     * nothing to evict. In-flight fetches are detached, not cancelled (B-006):
+     * their awaiters still get a result, but it isn't cached on the new network.
+     *
+     * A key with no subnet can't tell two LANs apart, so its descriptions are
+     * dropped rather than parked, and nothing is restored for it.
+     */
+    suspend fun switchNetwork(previous: NetworkKey, current: NetworkKey) {
+        mutex.withLock {
+            val leaving = warm + entries.mapNotNull { (usn, entry) -> (entry as? Entry.Success)?.let { usn to it } }
+            inFlight.clear()
+            entries.clear()
+            warm.clear()
+            successSnapshot.value = emptyMap()
+
+            val now = clock.now()
+            if (previous.isIdentifiable && leaving.isNotEmpty()) {
+                parked.remove(previous) // re-insert so it becomes the most recently left.
+                parked[previous] = ParkedNetwork(leaving, parkedAt = now)
+                while (parked.size > maxParkedNetworks) parked.remove(parked.keys.first())
+            }
+            val returning = parked.remove(current)
+            if (returning != null && current.isIdentifiable && now - returning.parkedAt < parkedTtl) {
+                warm.putAll(returning.entries)
+            }
+        }
+    }
+
+    /**
+     * Must hold [mutex]. Move [usn]'s warm entry into the live cache if its device
+     * is back at the same [location]. A different location means the document
+     * moved, so the entry is dropped; a `null` location (first seen via byebye)
+     * leaves it waiting for a sighting that carries one.
+     */
+    private fun promoteWarmLocked(usn: String, location: String?) {
+        if (location == null) return
+        val saved = warm.remove(usn) ?: return
+        if (saved.sourceUrl != location || usn in entries) return
+        entries[usn] = saved
+        successSnapshot.value = successSnapshot.value + (usn to saved.description)
+    }
+
+    private suspend fun fetchParseAndStore(usn: String, location: String, refresh: Boolean): Result<DeviceDescription> {
         val result = fetchAndParse(location)
         mutex.withLock {
             // Only publish if this fetch is still the one of record (a concurrent
             // evict()/reset may have cancelled+removed our slot).
             if (inFlight.remove(usn) != null) {
-                when (result) {
-                    is DescriptionResult.Success -> {
-                        entries[usn] = Entry.Success(location, result)
-                        successSnapshot.value = successSnapshot.value + (usn to result.description)
-                    }
-
-                    else -> {
+                result.fold(
+                    onSuccess = { description ->
+                        entries[usn] = Entry.Success(location, description)
+                        successSnapshot.value = successSnapshot.value + (usn to description)
+                    },
+                    onFailure = { error ->
                         // A failed *refresh* must not clobber a still-valid cached
                         // Success (a transient blip shouldn't evict good data); leave
                         // the existing entry untouched. A failed *initial* fetch (no
                         // prior Success) records a negative-cache entry as before.
                         val keepPriorSuccess = refresh && entries[usn] is Entry.Success
-                        if (!keepPriorSuccess) {
-                            entries[usn] = Entry.Failure(location, result, clock.now() + negativeTtl)
+                        if (!keepPriorSuccess && error is DescriptionException) {
+                            entries[usn] = Entry.Failure(location, error, clock.now() + negativeTtl)
                         }
-                    }
-                }
+                    },
+                )
             }
         }
         return result
     }
 
-    private suspend fun fetchAndParse(location: String): DescriptionResult {
+    private suspend fun fetchAndParse(location: String): Result<DeviceDescription> {
         // [runCancellable] rethrows CancellationException and routes any other
         // throwable to its onError mapping — so cooperative cancellation always
         // propagates (CLAUDE.md §6) from a single throw site.
         val response =
             runCancellable({ httpClient.get(location) }) { e ->
-                return DescriptionResult.FetchFailed(statusCode = null, message = e.message ?: "fetch error")
+                return Result.failure(DescriptionException.FetchFailed(statusCode = null, message = e.message ?: "fetch error", cause = e))
             }
         if (!response.status.isSuccess()) {
-            return DescriptionResult.FetchFailed(statusCode = response.status.value, message = response.status.description)
+            return Result.failure(
+                DescriptionException.FetchFailed(statusCode = response.status.value, message = response.status.description),
+            )
         }
         val body =
             runCancellable({ response.bodyAsText() }) { e ->
-                return DescriptionResult.FetchFailed(statusCode = null, message = e.message ?: "read error")
+                return Result.failure(DescriptionException.FetchFailed(statusCode = null, message = e.message ?: "read error", cause = e))
             }
         // Many LAN devices answer a path-less LOCATION (or a health endpoint) with
         // a 200 that is NOT an XML description — e.g. a plain `status=ok`. Handing
@@ -194,12 +275,12 @@ internal class DescriptionService(
         // skip the parse; a genuinely-XML body still flows through, so a real
         // malformed document keeps the parser's line:col detail (useful to debug).
         if (!looksLikeXml(body)) {
-            return DescriptionResult.ParseFailed(
-                message = "response was not an XML document (got: ${snippet(body)})",
+            return Result.failure(
+                DescriptionException.ParseFailed(message = "response was not an XML document (got: ${snippet(body)})"),
             )
         }
-        return runCancellable({ DescriptionResult.Success(parser.parse(body, sourceUrl = location)) }) { e ->
-            DescriptionResult.ParseFailed(message = e.message ?: "invalid description XML")
+        return runCancellable({ Result.success(parser.parse(body, sourceUrl = location)) }) { e ->
+            Result.failure(DescriptionException.ParseFailed(message = e.message ?: "invalid description XML", cause = e))
         }
     }
 
@@ -238,35 +319,51 @@ internal class DescriptionService(
      * Evict a USN: drop its cached entry and detach any in-flight fetch from the
      * cache so its result won't be stored (a later call refetches).
      *
+     * A byebye or expiry also drops a warm entry, since the device has left. A
+     * network reset or clear doesn't: the warm entries by then belong to the
+     * network just joined, not to the devices being removed from the old one.
+     *
      * We deliberately do NOT cancel the in-flight `Deferred`: callers already
      * awaiting it would then receive a raw `JobCancellationException` instead of
-     * a clean [DescriptionResult]. Removing the `inFlight` slot is enough —
+     * a clean `Result`. Removing the `inFlight` slot is enough —
      * [fetchParseAndStore] checks slot ownership before caching, so an evicted
      * fetch completes for its awaiters but its result is simply not cached. The
      * detached coroutine finishes quickly (the HTTP request is already in flight)
      * and is reaped by the scope on close.
      */
-    private suspend fun evict(usn: String) {
+    private suspend fun evict(usn: String, reason: DeviceChange.Removed.Reason) {
         mutex.withLock {
             inFlight.remove(usn)
             entries.remove(usn)
             successSnapshot.value = successSnapshot.value - usn
+            if (reason == DeviceChange.Removed.Reason.Byebye || reason == DeviceChange.Removed.Reason.Expired) {
+                warm.remove(usn)
+            }
         }
     }
+
+    /** One network's parked successful descriptions (usn -> entry). */
+    private class ParkedNetwork(val entries: Map<String, Entry.Success>, val parkedAt: Instant)
 
     private sealed interface Entry {
         val sourceUrl: String
 
-        data class Success(override val sourceUrl: String, val result: DescriptionResult.Success) : Entry
+        data class Success(override val sourceUrl: String, val description: DeviceDescription) : Entry
 
-        data class Failure(override val sourceUrl: String, val result: DescriptionResult, val expiresAt: Instant) : Entry
+        data class Failure(override val sourceUrl: String, val error: DescriptionException, val expiresAt: Instant) : Entry
     }
 
     private companion object {
-        /** Max characters of a non-XML body echoed back in a [DescriptionResult.ParseFailed]. */
+        /** Networks whose descriptions [switchNetwork] keeps (home, work, a couple more). */
+        const val DEFAULT_MAX_PARKED_NETWORKS = 4
+
+        /** Max characters of a non-XML body echoed back in a [DescriptionException.ParseFailed]. */
         const val SNIPPET_MAX = 40
 
         /** UTF-8 byte-order mark some devices prepend to the description document. */
         const val BOM = "\uFEFF"
     }
 }
+
+/** A key without a subnet can't tell two LANs apart, so it's never parked or restored. */
+private val NetworkKey.isIdentifiable: Boolean get() = subnet != null

@@ -26,8 +26,8 @@ import kotlin.time.Duration
  *   devices (some Hue / Roku firmware) omit it; `ext == false` means the header
  *   was absent.
  * @property location `LOCATION` — URL string of the device description document.
- *   Kept as a `String` (not a parsed URL): description-XML fetch is a v1.1
- *   feature; v1 hands the URL back verbatim.
+ *   Kept as a `String` (not a parsed URL), verbatim; fetch the document with
+ *   `SsdpClient.description`.
  * @property server `SERVER` — server identification string, e.g.
  *   `Linux/3.14 UPnP/1.0 Sonos/12.3.1`.
  * @property searchTarget `ST` — the search target the responder is matching.

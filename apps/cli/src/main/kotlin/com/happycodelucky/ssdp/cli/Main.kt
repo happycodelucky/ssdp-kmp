@@ -10,7 +10,7 @@
  */
 package com.happycodelucky.ssdp.cli
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
@@ -60,30 +60,34 @@ fun main(args: Array<String>) =
             println("    cacheCtrl:  ${d.cacheControl ?: "—"}")
         }
 
-        // v1.1: fetch + parse each device's description document. Proves the real
+        // Fetch + parse each device's description document. Proves the real
         // HTTP-fetch + XML-parse + cache path against live UPnP hardware.
         // De-duplicate by location so we don't fetch the same document once per
         // service USN a device exposes.
         val byLocation = devices.filter { it.location != null }.distinctBy { it.location }
         println("\n=== Descriptions (${byLocation.size} unique location(s)) ===")
         byLocation.sortedBy { it.location }.forEach { d ->
-            when (val result = client.description(d)) {
-                is DescriptionResult.Success -> {
-                    val dev = result.description.device
+            client.description(d).fold(
+                onSuccess = { description ->
+                    val dev = description.device
                     println("• ${d.location}")
                     println("    ${dev.friendlyName ?: "—"} — ${dev.manufacturer ?: "—"} ${dev.modelName ?: ""}".trimEnd())
                     println(
                         "    ${dev.services.size} service(s), ${dev.icons.size} icon(s), " +
                             "${dev.embeddedDevices.size} embedded device(s)",
                     )
-                }
-                is DescriptionResult.FetchFailed ->
-                    println("• ${d.location}\n    fetch failed: ${result.statusCode ?: "transport"} ${result.message}")
-                is DescriptionResult.ParseFailed ->
-                    println("• ${d.location}\n    parse failed: ${result.message}")
-                DescriptionResult.NotFound ->
-                    println("• ${d.location}\n    no description")
-            }
+                },
+                onFailure = { e ->
+                    val reason =
+                        when (e) {
+                            is DescriptionException.FetchFailed -> "fetch failed: ${e.statusCode ?: "transport"} ${e.message}"
+                            is DescriptionException.ParseFailed -> "parse failed: ${e.message}"
+                            is DescriptionException.NotFound -> "no description"
+                            else -> "failed: ${e.message}"
+                        }
+                    println("• ${d.location}\n    $reason")
+                },
+            )
         }
 
         changeJob.cancel()

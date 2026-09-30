@@ -4,7 +4,7 @@
 package com.happycodelucky.ssdp.testing
 
 import app.cash.turbine.test
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
 import com.happycodelucky.ssdp.Device
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
@@ -226,13 +226,13 @@ class FakeSsdpClientTest {
                             ),
                         sourceUrl = "http://192.168.1.5/desc.xml",
                     )
-                fake.stubDescription("usn-desc", DescriptionResult.Success(desc))
+                fake.stubDescription("usn-desc", Result.success(desc))
 
                 // Nothing cached until the (scripted) fetch runs.
                 assertEquals(null, fake.cachedDescription(d))
 
                 val result = fake.description(d, refresh = true)
-                assertTrue(result is DescriptionResult.Success)
+                assertEquals(desc, result.getOrNull())
                 // Success populated the sync cache (mirrors the real client).
                 assertEquals(desc, fake.cachedDescription(d))
                 assertEquals(desc, fake.cachedDescription("usn-desc"))

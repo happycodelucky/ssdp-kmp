@@ -9,7 +9,7 @@
  * They are @HiddenFromObjC on purpose: as free functions they would bridge to
  * Swift as awkward globals (`SsdpKt.description(device, client, …)`), defeating
  * the readability goal. Swift consumers keep the idiomatic client methods
- * (`client.description(of:)` / `client.cachedDescription(of:)`), which SKIE
+ * (`client.description(device:)` / `client.cachedDescription(device:)`), which SKIE
  * renders cleanly. The client API stays the single source of truth; this file
  * adds no behavior, only Kotlin ergonomics (CLAUDE.md §7: don't degrade the
  * Swift surface).
@@ -18,6 +18,7 @@
 
 package com.happycodelucky.ssdp
 
+import com.happycodelucky.kotlinresult.Result
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
@@ -25,13 +26,13 @@ import kotlin.native.HiddenFromObjC
 /**
  * Fetch (or return cached) this device's description via [client] — the
  * device-centric spelling of [SsdpClient.description]. Identical semantics,
- * including [refresh] and the sealed [DescriptionResult] return.
+ * including [refresh] and the `Result` return.
  *
- * Kotlin-only; Swift uses `client.description(of: device)`.
+ * Kotlin-only; Swift uses `client.description(device: device)`.
  */
 @HiddenFromObjC
 @Throws(CancellationException::class)
-public suspend fun DiscoveredDevice.description(client: SsdpClient, refresh: Boolean = false): DescriptionResult =
+public suspend fun DiscoveredDevice.description(client: SsdpClient, refresh: Boolean = false): Result<DeviceDescription> =
     client.description(this, refresh)
 
 /**
@@ -39,7 +40,7 @@ public suspend fun DiscoveredDevice.description(client: SsdpClient, refresh: Boo
  * if none is cached — the device-centric spelling of
  * [SsdpClient.cachedDescription]. Synchronous; never fetches.
  *
- * Kotlin-only; Swift uses `client.cachedDescription(of: device)`.
+ * Kotlin-only; Swift uses `client.cachedDescription(device: device)`.
  */
 @HiddenFromObjC
 public fun DiscoveredDevice.cachedDescription(client: SsdpClient): DeviceDescription? = client.cachedDescription(this)

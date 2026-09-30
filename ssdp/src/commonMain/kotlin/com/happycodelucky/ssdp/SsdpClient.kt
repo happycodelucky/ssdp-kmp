@@ -15,6 +15,7 @@
 
 package com.happycodelucky.ssdp
 
+import com.happycodelucky.kotlinresult.Result
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.experimental.ExperimentalObjCName
@@ -120,20 +121,25 @@ public interface SsdpClient : AutoCloseable {
      * consumer decides *when* to pay the HTTP cost (e.g. only for a device the
      * user taps). The result is cached per device; concurrent calls for the same
      * device share a single fetch. The cache is evicted when the device leaves
-     * (byebye / cache-control expiry) or the network changes.
+     * (byebye / cache-control expiry) or the network changes; descriptions from a
+     * network you left are restored when you return and the device is re-found at
+     * the same `LOCATION`.
      *
-     * Never throws domain failures — every outcome is a [DescriptionResult] case
-     * (only `CancellationException` propagates). From Swift this is
-     * `try await client.description(of: device)`.
+     * Returns a KotlinResult [Result]: the [DeviceDescription] on success, or a
+     * failure holding a [DescriptionException] ([DescriptionException.NotFound],
+     * [DescriptionException.FetchFailed] or [DescriptionException.ParseFailed]).
+     * It never throws a domain failure; only cancellation propagates.
      *
      * ```kotlin
-     * when (val r = client.description(device)) {
-     *     is DescriptionResult.Success -> show(r.description.device.friendlyName)
-     *     DescriptionResult.NotFound -> showUnknown()
-     *     is DescriptionResult.FetchFailed -> retryLater()
-     *     is DescriptionResult.ParseFailed -> logBadDevice(r.message)
-     * }
+     * client.description(device)
+     *     .onSuccess { show(it.device.friendlyName) }
+     *     .onFailure { e -> if (e is DescriptionException.FetchFailed) retryLater() }
      * ```
+     *
+     * From Swift this is `client.description(device: device)`, returning
+     * `KotlinResult<DeviceDescription>`: `let d: DeviceDescription = try await
+     * client.description(device: device).get()` throws the [DescriptionException]
+     * itself.
      *
      * @param refresh when `true`, ignore any cached result and force a fresh
      *   fetch — for a manual "reload" of a device whose description may have
@@ -144,19 +150,19 @@ public interface SsdpClient : AutoCloseable {
      */
     @Throws(kotlin.coroutines.cancellation.CancellationException::class)
     @ObjCName("description")
-    public suspend fun description(device: DiscoveredDevice, refresh: Boolean = false): DescriptionResult
+    public suspend fun description(device: DiscoveredDevice, refresh: Boolean = false): Result<DeviceDescription>
 
     /**
      * Like [description], but looks the device up by [usn] in the current
-     * registry first. Returns [DescriptionResult.NotFound] if no device with that
-     * USN is currently tracked. From Swift this is
-     * `try await client.description(forUsn: usn)`.
+     * registry first. Fails with [DescriptionException.NotFound] if no device with
+     * that USN is currently tracked. From Swift this is
+     * `client.description(forUsn: usn)`.
      *
      * @param refresh see [description]; forces a fresh fetch past the cache.
      */
     @Throws(kotlin.coroutines.cancellation.CancellationException::class)
     @ObjCName("descriptionForUsn")
-    public suspend fun description(usn: String, refresh: Boolean = false): DescriptionResult
+    public suspend fun description(usn: String, refresh: Boolean = false): Result<DeviceDescription>
 
     /**
      * The already-fetched device description for [device], or `null` if none is
@@ -167,7 +173,7 @@ public interface SsdpClient : AutoCloseable {
      * Synchronous and side-effect-free: this **never** triggers a fetch, so it is
      * safe to call from a UI render path to decide whether to show details now or
      * kick off a [description] load. To *fetch*, call [description]. From Swift
-     * this is `client.cachedDescription(of: device)`.
+     * this is `client.cachedDescription(device: device)`.
      */
     @ObjCName("cachedDescription")
     public fun cachedDescription(device: DiscoveredDevice): DeviceDescription?

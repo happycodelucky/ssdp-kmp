@@ -12,7 +12,8 @@
  */
 package com.happycodelucky.ssdp.internal
 
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.kotlinresult.Result
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
@@ -57,7 +58,7 @@ import kotlin.time.TimeSource
  *   that don't exercise it, or platforms without a reachable dependency).
  * @param subnetProbe resolves the active interface's IPv4 subnet; defaults to
  *   the platform [localSubnetKey]. Injected so tests drive it deterministically.
- * @param httpClient Ktor client for fetching device description documents (v1.1).
+ * @param httpClient Ktor client for fetching device description documents.
  *   Owned by this impl and closed in [close]. The platform factories pass
  *   [descriptionHttpClient]; tests pass a MockEngine-backed client.
  */
@@ -78,7 +79,7 @@ internal class SsdpClientImpl(
 
     private val registry = DeviceRegistry(scope, clock)
 
-    // v1.1 description fetch + cache. Built after `registry` so it can subscribe
+    // Description fetch + cache. Built after `registry` so it can subscribe
     // to registry.changes for eviction. Shares the client's child scope, so its
     // eviction collector and fetch coroutines are cancelled on close().
     private val descriptionService =
@@ -139,7 +140,7 @@ internal class SsdpClientImpl(
                 scope = scope,
                 transportTags = networkTransportTags,
                 subnetProbe = subnetProbe,
-                onChange = { onNetworkChanged() },
+                onChange = { previous, current -> onNetworkChanged(previous, current) },
             ).start()
         }
     }
@@ -199,12 +200,12 @@ internal class SsdpClientImpl(
         synchronized(listenerLock) { listeners.remove(listener) }
     }
 
-    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): DescriptionResult =
-        if (closed.value) DescriptionResult.NotFound else descriptionService.describe(device, refresh)
+    override suspend fun description(device: DiscoveredDevice, refresh: Boolean): Result<DeviceDescription> =
+        if (closed.value) Result.failure(DescriptionException.NotFound(device.usn)) else descriptionService.describe(device, refresh)
 
-    override suspend fun description(usn: String, refresh: Boolean): DescriptionResult {
-        if (closed.value) return DescriptionResult.NotFound
-        val device = registry.deviceSet.value[usn] ?: return DescriptionResult.NotFound
+    override suspend fun description(usn: String, refresh: Boolean): Result<DeviceDescription> {
+        if (closed.value) return Result.failure(DescriptionException.NotFound(usn))
+        val device = registry.deviceSet.value[usn] ?: return Result.failure(DescriptionException.NotFound(usn))
         return descriptionService.describe(device, refresh)
     }
 
@@ -256,13 +257,14 @@ internal class SsdpClientImpl(
     }
 
     /**
-     * Reset the registry — invoked by the platform network-change wiring
-     * (task #5) when the active network's identity changes. Exposed internally
-     * so the platform `SsdpClient()` factory can connect a reachable-driven
-     * trigger without widening the public API.
+     * Reset the registry — invoked by [NetworkMonitor] when the active network's
+     * identity changes from [previous] to [current]. The description cache parks
+     * the old network's descriptions (and restores the new one's) *before* the
+     * reset, so the reset's `Removed(_, NetworkChanged)` events can't race it.
      */
-    internal suspend fun onNetworkChanged() {
+    internal suspend fun onNetworkChanged(previous: NetworkKey, current: NetworkKey) {
         if (closed.value) return
+        descriptionService.switchNetwork(previous, current)
         registry.reset()
     }
 

@@ -97,11 +97,15 @@ final class ScannerModel: ObservableObject {
 
     /// Fetch (or return cached) the description for [row]. The USN overload is
     /// `descriptionForUsn` in Swift (the @ObjCName that disambiguates it from the
-    /// device overload), and it's throwing.
-    func describe(_ row: DeviceRow) async -> DescriptionResult {
-        // DescriptionResult.NotFound is a Kotlin `data object` → top-level
-        // `DescriptionResultNotFound.shared` singleton in Swift.
-        (try? await client.descriptionForUsn(usn: row.usn)) ?? DescriptionResultNotFound.shared
+    /// device overload). It returns a `KotlinResult`; KotlinResult's `get()` throws
+    /// the Kotlin `DescriptionException` itself, which lands in `.failure` here.
+    func describe(_ row: DeviceRow) async -> Swift.Result<DeviceDescription, Error> {
+        do {
+            let description: DeviceDescription = try await client.descriptionForUsn(usn: row.usn).get()
+            return .success(description)
+        } catch {
+            return .failure(error)
+        }
     }
 
     private let scanWindowSeconds: TimeInterval = 6

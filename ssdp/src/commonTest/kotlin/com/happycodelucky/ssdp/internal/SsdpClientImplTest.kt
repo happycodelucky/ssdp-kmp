@@ -6,7 +6,7 @@
 package com.happycodelucky.ssdp.internal
 
 import app.cash.turbine.test
-import com.happycodelucky.ssdp.DescriptionResult
+import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DiscoveredDevice
 import com.happycodelucky.ssdp.SearchTarget
@@ -186,7 +186,7 @@ class SsdpClientImplTest {
                 runCurrent()
                 assertTrue(awaitItem() is DeviceChange.Found)
 
-                client.onNetworkChanged()
+                client.onNetworkChanged(NetworkKey("Wifi", "192.168.1.0/24"), NetworkKey("Wifi", "10.0.0.0/24"))
                 val change = awaitItem()
                 assertTrue(change is DeviceChange.Removed)
                 assertEquals(DeviceChange.Removed.Reason.NetworkChanged, change.reason)
@@ -242,8 +242,7 @@ class SsdpClientImplTest {
                     .single()
 
             val result = client.description(device)
-            assertTrue(result is DescriptionResult.Success)
-            assertEquals("Sonos Arc Ultra", result.description.device.modelName)
+            assertEquals("Sonos Arc Ultra", result.assertSuccess().device.modelName)
 
             client.close()
         }
@@ -261,10 +260,10 @@ class SsdpClientImplTest {
                     .single()
 
             val result = client.description(usn)
-            assertTrue(result is DescriptionResult.Success)
+            result.assertSuccess()
 
             // Unknown USN → NotFound.
-            assertEquals(DescriptionResult.NotFound, client.description("uuid:does-not-exist"))
+            client.description("uuid:does-not-exist").assertFailure<DescriptionException.NotFound>()
 
             client.close()
         }
@@ -282,7 +281,7 @@ class SsdpClientImplTest {
                     .single()
 
             client.close()
-            assertEquals(DescriptionResult.NotFound, client.description(device))
+            client.description(device).assertFailure<DescriptionException.NotFound>()
         }
 
     // A device built directly (not via the registry) with NO cache-control, so no
@@ -319,12 +318,12 @@ class SsdpClientImplTest {
 
             // After an explicit fetch, the synchronous peek returns the parsed doc.
             val fetched = client.description(device)
-            assertTrue(fetched is DescriptionResult.Success)
+            fetched.assertSuccess()
             val cached = client.cachedDescription(device)
-            assertEquals(fetched.description, cached)
-            assertEquals(fetched.description, client.cachedDescription(device.usn))
+            assertEquals(fetched.assertSuccess(), cached)
+            assertEquals(fetched.assertSuccess(), client.cachedDescription(device.usn))
             // The device-centric Kotlin extension reads the same cached value.
-            assertEquals(fetched.description, device.cachedDescription(client))
+            assertEquals(fetched.assertSuccess(), device.cachedDescription(client))
 
             client.close()
         }

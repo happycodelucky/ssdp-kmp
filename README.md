@@ -19,6 +19,8 @@ Android, and the JVM:
   (via `byebye`, `CACHE-CONTROL: max-age` expiry, or a network change)
 - Lazily fetches and caches each device's **UPnP description document** (the
   XML at its `LOCATION`), parsed into a friendly-name / manufacturer / model / services / icons tree.
+  Descriptions are remembered per network, so returning to a network restores
+  them without refetching.
 
 ## Modules
 
@@ -55,6 +57,14 @@ ssdp-testing = { module = "com.happycodelucky.ssdp:ssdp-testing", version = "0.7
 commonMain.dependencies { implementation(libs.ssdp) }
 commonTest.dependencies { implementation(libs.ssdp.testing) }
 ```
+
+`ssdp` brings [KotlinResult](https://github.com/happycodelucky/kotlinresult-kmp)
+(`com.happycodelucky.kotlinresult:kotlinresult`) with it: `description()`
+returns its `Result`. If you link `ssdp` into your **own** Apple framework (a KMP
+app or library with SKIE), `export` KotlinResult into that framework, or its link
+fails with "cannot find type 'KotlinResult' in scope". See
+[KotlinResult's setup notes](https://github.com/happycodelucky/kotlinresult-kmp#using-it-from-a-kmp-library-required-setup).
+SPM consumers of `SsdpKit` need nothing; it already exports it.
 
 ### Swift (SPM)
 
@@ -96,13 +106,21 @@ client.changes.collect { change ->
     }
 }
 
-// Fetch a device's description on demand (cached; concurrent calls share one fetch).
-when (val result = client.description(device)) {
-    is DescriptionResult.Success -> show(result.description.device.friendlyName)
-    DescriptionResult.NotFound -> showUnknown()
-    is DescriptionResult.FetchFailed -> retryLater(result.statusCode)
-    is DescriptionResult.ParseFailed -> log(result.message)
-}
+// Fetch a device's description on demand (cached; concurrent calls share one
+// fetch). A KotlinResult `Result` — the standard kotlin.Result API — failing with
+// a sealed DescriptionException.
+import com.happycodelucky.kotlinresult.Result // not kotlin.Result
+
+client.description(device)
+    .onSuccess { show(it.device.friendlyName) }
+    .onFailure { e ->
+        when (e as? DescriptionException) {
+            is DescriptionException.NotFound -> showUnknown()
+            is DescriptionException.FetchFailed -> retryLater(e.statusCode)
+            is DescriptionException.ParseFailed -> log(e.message)
+            null -> throw e
+        }
+    }
 
 client.close()
 ```
@@ -134,18 +152,24 @@ for await byUsn in client.devices {
     render(Array(byUsn.values))
 }
 
-switch onEnum(of: try await client.description(device: device)) {
-case .success(let s): show(s.description_.device.friendlyName)
-case .notFound: showUnknown()
-case .fetchFailed(let f): retryLater(f.statusCode)
-case .parseFailed(let p): log(p.message)
+// `description(device:)` returns a `KotlinResult<DeviceDescription>`; `get()` throws
+// the Kotlin DescriptionException itself (or use `result(as:)` for a Swift.Result).
+do {
+    let description: DeviceDescription = try await client.description(device: device).get()
+    show(description.device.friendlyName)
+} catch let e as DescriptionException {
+    switch onEnum(of: e) {
+    case .notFound: showUnknown()
+    case .fetchFailed(let f): retryLater(f.statusCode)
+    case .parseFailed(let p): log(p.message)
+    }
 }
 ```
 
 > `onEnum(of:)` is how you switch a Kotlin sealed type in Swift — it's SKIE's
 > intended API, not a workaround. SKIE already generates an exhaustive Swift enum
 > for every sealed type (`DeviceChange`, `SearchTarget`, `Notification`,
-> `DescriptionResult`); a Kotlin sealed value arrives as a class instance, and
+> `DescriptionException`); a Kotlin sealed value arrives as a class instance, and
 > `onEnum(of:)` maps it to that enum so the `switch` is exhaustive with no
 > `default`. There's no SKIE setting that removes the call.
 
@@ -230,7 +254,7 @@ Plain `MulticastSocket`; on multi-homed hosts pass `bindInterface`.
 ```kotlin
 withFakeSsdpClient { fake ->
     fake.emitFound(sampleDevice)
-    fake.stubDescription(sampleDevice.usn, DescriptionResult.Success(sampleDescription))
+    fake.stubDescription(sampleDevice.usn, Result.success(sampleDescription))
     val vm = DeviceListViewModel(fake)   // takes an SsdpClient
     assertEquals(1, vm.devices.value.size)
 }

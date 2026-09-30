@@ -8,23 +8,22 @@ contract a contributor (human or agent) reads first. Start here, then
 ## 1. Scope
 
 - **Shared (in `:ssdp`):** SSDP wire parsing, multicast send/receive, M-SEARCH
-  with retransmit, NOTIFY (alive/byebye/update) handling, and a live device
-  registry. Headless — no UI dependencies.
+  with retransmit, NOTIFY (alive/byebye/update) handling, a live device
+  registry, and a lazy, cached description-XML fetch/parse
+  (`SsdpClient.description`). Headless — no UI dependencies.
 - **Not shared:** UI. Each platform app has its own native UI and consumes the
   library's `StateFlow`/`SharedFlow`.
 - **Client only.** No SSDP *server*/responder. We discover; we don't advertise.
 - **Behavioral source of truth:** the Swift client at `/Users/paulbates/Developer/swift-ssdp`.
   ssdp-kmp ports its parser, retransmit cadence, and lifecycle, and goes
   *further* with a built-in device registry and per-network reset.
-- **Deferred to v1.1 (not in scope now):** description-XML fetch/parse and a
-  per-network XML cache. The registry already resets on network change; the XML
-  cache builds on that later.
 
-## 2. Decisions (load-bearing — see `.claude/lessons/LESSONS.md` D-001..D-003)
+## 2. Decisions (load-bearing — see `.claude/lessons/LESSONS.md` D-001..D-004, D-014)
 
-1. **v1 = core + registry, defer XML.** Discovery + retransmit + NOTIFY + a
+1. **Core + registry + lazy description.** Discovery + retransmit + NOTIFY + a
    device registry (`StateFlow<Map<USN, DiscoveredDevice>>` + `SharedFlow<DeviceChange>`)
-   with byebye + `max-age` expiry. No description-XML fetch yet.
+   with byebye + `max-age` expiry. Description XML is fetched only when asked
+   (`description()`), cached by USN, and evicted with the device (D-004).
 2. **Apple socket = POSIX BSD sockets** (`platform.posix`/`platform.darwin`),
    shared 1:1 by iOS+macOS. NOT Network.framework (`NWConnectionGroup` isn't in
    K/N cinterop). See `MulticastSocket.apple.kt`.
@@ -33,7 +32,8 @@ contract a contributor (human or agent) reads first. Start here, then
 4. **Per-network reset via reachable + subnet.** Depend on
    `com.happycodelucky.reachable` for the change *signal*; derive the *key* from
    the local IPv4 subnet (no SSID entitlement). The registry resets when the key
-   changes (`NetworkMonitor`).
+   changes (`NetworkMonitor`); the description cache parks the old network's
+   descriptions and restores them on return (D-014).
 
 ## 3. Versions
 
@@ -71,9 +71,10 @@ which our `jvm()` target needs (D-003).
 
 ## 5. Libraries — Kotlin-first
 
-Ktor/Ktorfit for HTTP (v1.1 XML fetch), kotlinx.* family (coroutines, atomicfu,
-io), Kermit for logging (`implementation` in `:ssdp`, never `api` and never
-injected by the convention plugin — a library mustn't force a logger onto its
+Ktor for HTTP (the description fetch), kotlinx.* family (coroutines, atomicfu,
+io), KotlinResult for results (`api` — it's in the public API, §7), Kermit for
+logging (`implementation` in `:ssdp`, never `api` and never injected by the
+convention plugin — a library mustn't force a logger onto its
 consumers' classpath), `kotlin.time` for `Duration`/`Instant`/`Clock` (NOT
 `java.time` in common — and `kotlin.time.Instant`/`Clock` are stable since
 2.3.x, no opt-in needed). Testing: `kotlin.test` + Turbine + `kotlinx-coroutines-test` +
@@ -101,11 +102,26 @@ Koin/service locator inside `:ssdp`.
 
 SKIE mandatory (convention plugin configures it; `produceDistributableFramework()`
 in `:ssdp`). `Flow`/`StateFlow` → `AsyncSequence`. Sealed types
-(`SearchTarget`, `Notification`, `DeviceChange`, `SsdpError`) → exhaustive Swift
-enums. **`@Throws` on an `expect` must be replicated verbatim on every `actual`**,
-and a `@Throws` on a `suspend fun` must list `CancellationException`
-(LESSONS B-001/B-002). Never `kotlin.Result<T>` at the boundary. Apple casing
-everywhere (`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()`).
+(`SearchTarget`, `Notification`, `DeviceChange`, `SsdpError`,
+`DescriptionException`) → exhaustive Swift enums. **`@Throws` on an `expect` must
+be replicated verbatim on every `actual`**, and a `@Throws` on a `suspend fun`
+must list `CancellationException` (LESSONS B-001/B-002). Apple casing everywhere
+(`iOS`, `macOS`) except JetBrains spellings (`iosArm64`, `withMacos()`).
+
+**Results: KotlinResult's `Result<T>` + a sealed exception** (LESSONS D-015,
+shared with wake-kmp). A fallible public API that returns a value returns
+`com.happycodelucky.kotlinresult.Result<T>` (`api(libs.kotlinresult)`) and fails
+with a project `sealed class …Exception` — `description()` →
+`Result<DeviceDescription>` / `DescriptionException`. Kotlin gets the
+`kotlin.Result` API; Swift gets `KotlinResult<T>` with `try r.get()` /
+`r.result(as:)`, which throws the Kotlin exception itself. Never `kotlin.Result<T>`
+in a Swift-visible signature (a value class, erased to `Any?`); internals may use
+it and convert with `toResult()`. Build failures from the specific exceptions you
+handle and let everything else — cancellation included — propagate: no catch-all
+(`runCatching`, `catch (e: Throwable)`) around a suspending call without
+rethrowing `CancellationException`. Every framework that links KotlinResult must
+`export(libs.kotlinresult)` and run SKIE with Swift bundling on, or its Swift
+helpers don't compile in (`ssdp/` and `ssdp-testing/build.gradle.kts`).
 
 **Hand-written Swift** goes in `ssdp/src/<sourceSet>/swift/`. SKIE Swift bundling
 is off by default: the Swift reaches only this module's own framework. Enabling
@@ -156,7 +172,7 @@ retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
 - **iOS — multicast:** joining `239.255.255.250` needs the
   `com.apple.developer.networking.multicast` entitlement (Apple gates it behind
   a request form). Without it, `IP_ADD_MEMBERSHIP` fails → `MulticastJoinFailed`.
-- **iOS/macOS — description fetch (v1.1) & App Transport Security:** UPnP
+- **iOS/macOS — description fetch & App Transport Security:** UPnP
   `LOCATION` URLs are plain `http://` to a LAN IP. iOS/macOS ATS blocks
   arbitrary plain-HTTP by default, so `description()` will fail with
   `FetchFailed` unless the **host app** adds to its `Info.plist`:
@@ -236,5 +252,5 @@ only). No x86/Intel Macs/watchOS/tvOS. No `GlobalScope`, no `!!` in production,
 no `java.time` in common, no `kotlin.synchronized`/`@Synchronized`/`volatile`.
 No callback-based public APIs — **except** the one sanctioned `SsdpDeviceListener`
 (additive fan-out over `changes`; the Flow API stays primary — see §6 and LESSONS
-D-008); don't add others. No `kotlin.Result<T>` at the Swift boundary. No
+D-008); don't add others. No `kotlin.Result<T>` at the Swift boundary (return KotlinResult's `Result<T>`). No
 SSDP server. No EAP/RC/Beta on `main`. `reachable` ≥ 0.14.0.
