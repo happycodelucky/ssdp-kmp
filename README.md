@@ -83,14 +83,14 @@ a GitHub Release asset (see [`.github/PUBLISHING.md`](.github/PUBLISHING.md)).
 ### Kotlin
 
 ```kotlin
-// One factory for all platforms.
-// Note: Android it captures the application Context at startup, so no argument is needed (
-//       emulators: see "Emulator bridge" below).
-val client: SsdpClient = Ssdp.createClient()
+// One factory for all platforms. On Android the library captures the application
+// Context at startup, so no argument is needed (emulators: see "Android emulators").
+val client: SsdpClient = SsdpClient()
 
 // Search every SSDP target; stop broadcasting after 6s (passive listening and
-// the discovered devices persist). Omit `timeout` to broadcast indefinitely.
-client.search(setOf(SearchTarget.All), timeout = 6.seconds)
+// the discovered devices persist). Omit `timeout` to broadcast until you close
+// the returned session.
+val search: SearchSession = client.search(setOf(SearchTarget.All), timeout = 6.seconds)
 
 // The always-current device set, keyed by USN.
 client.devices.collect { byUsn ->
@@ -122,6 +122,7 @@ client.description(device)
         }
     }
 
+search.close() // optional here: the 6s timeout ends it anyway
 client.close()
 ```
 
@@ -137,6 +138,35 @@ client.search(
 )
 ```
 
+### Sharing one client: searches are additive
+
+`search()` adds to the searches already running rather than replacing them. It
+returns a `SearchSession` that contributes its targets until it ends: when you
+`close()` it, its `timeout` elapses, `stopSearch()` runs, or the client closes. The
+client M-SEARCHes for the union of every active session's targets, so independent
+parts of an app can share one client (one NOTIFY listener, one socket pair) without
+cancelling each other:
+
+```kotlin
+val roku = SearchTarget.Custom("roku:ecp")
+val renderers = SearchTarget.DeviceType("schemas-upnp-org", "MediaRenderer", 1)
+
+val tvScan = client.search(setOf(roku, renderers))
+val rokuScan = client.search(setOf(roku), timeout = 10.seconds)
+
+tvScan.close() // MediaRenderer stops; roku:ecp keeps its cadence for rokuScan
+```
+
+- A target in several active sessions has **one** retransmit loop, kept until the
+  last of them ends. Each M-SEARCH advertises the largest `maxWaitSeconds` among them.
+- A new session never restarts the cadence of targets already being searched. A
+  target new to the client starts at the 1s step; a target that is already being
+  searched gets one extra M-SEARCH right away and then keeps its shared cadence.
+- `search(emptySet())` returns an inactive session and leaves the others alone.
+  `stopSearch()` ends every session.
+- A session with no `timeout` keeps searching until you close it, so keep the
+  handle (`use { }` works: it's `AutoCloseable`).
+
 ### Swift
 
 The same flows bridge to `AsyncSequence` and the sealed types to exhaustive Swift
@@ -146,7 +176,8 @@ enums via SKIE:
 import SsdpKit
 
 let client = try SsdpClient(bindInterface: nil)
-try await client.search(targets: [SearchTargetAll.shared], maxWaitSeconds: 1, timeout: nil)
+let search = try await client.search(targets: [SearchTargetAll.shared], maxWaitSeconds: 1, timeout: nil)
+defer { search.close() } // a SearchSession; ends only this search
 
 for await byUsn in client.devices {
     render(Array(byUsn.values))
@@ -212,15 +243,15 @@ A sandboxed app needs **both** `com.apple.security.network.client` (outbound) **
 
 ### Android
 
-The library manifest contributes `INTERNET` / `ACCESS_WIFI_STATE` / `CHANGE_WIFI_MULTICAST_STATE`. Use `Ssdp.createClient()` — the library captures the application `Context` at startup (an androidx.startup `SsdpInitializer`) and holds a `WifiManager.MulticastLock` for you, so no `Context` argument is needed. (The explicit `SsdpClient(context)` factory remains for callers who disable androidx.startup.) Without the lock Android drops inbound multicast. Apps on Android 13+ also declare `NEARBY_WIFI_DEVICES`.
+The library manifest contributes `INTERNET` / `ACCESS_WIFI_STATE` / `CHANGE_WIFI_MULTICAST_STATE`. Use `SsdpClient()` — the library captures the application `Context` at startup (an androidx.startup `SsdpInitializer`) and holds a `WifiManager.MulticastLock` for you, so no `Context` argument is needed. Without the lock Android drops inbound multicast. If your app disables androidx.startup's `InitializationProvider`, use `SsdpClient(context)`: a plain `SsdpClient()` then opens without the lock and logs a warning saying so. Apps on Android 13+ also declare `NEARBY_WIFI_DEVICES`.
 
 #### Android emulators
 
-Emulators sit behind a user-mode NAT and **never receive inbound UDP multicast**, so normal discovery hears nothing there. Run the bridge daemon on your host (`mise run app:bridge`) and build the client with `Ssdp.createBridgeAwareClient()` — its `useBridge` defaults to `isSsdpBridgeNeeded()`, so on an emulator it tunnels SSDP over TCP to the daemon (which does the real multicast on the host LAN) and on a device it's a normal multicast client. The client is otherwise identical (same registry, retransmit, `search`/`description`). The library never silently swaps transport on a plain `createClient()` — but `createBridgeAwareClient()` opts into the auto-decision, pass `useBridge = false`/`true` to override, and either way it logs a warning if you build a multicast client on a likely emulator.
+Emulators sit behind a user-mode NAT and **never receive inbound UDP multicast**, so normal discovery hears nothing there. Run the bridge daemon on your host (`mise run app:bridge`) and build the client with `SsdpClient.bridgeAware()` — its `useBridge` defaults to `isSsdpBridgeNeeded()`, so on an emulator it tunnels SSDP over TCP to the daemon (which does the real multicast on the host LAN) and on a device it's a normal multicast client. The client is otherwise identical (same registry, retransmit, `search`/`description`). The library never silently swaps transport on a plain `SsdpClient()` — but `bridgeAware()` opts into the auto-decision, pass `useBridge = false`/`true` to override, and every multicast client (`SsdpClient()`, `SsdpClient(context)`, `bridgeAware(useBridge = false)`) logs a warning on a likely emulator.
 
 ```kotlin
 // Android: one line, zero args — bridge on an emulator, multicast on a device.
-val client = Ssdp.createBridgeAwareClient()
+val client = SsdpClient.bridgeAware()
 ```
 
 Start the host daemon first (it does the real multicast on your LAN):
@@ -230,10 +261,10 @@ mise run app:bridge            # listen on 1901
 mise run app:bridge -- 1901    # explicit port
 ```
 
-`createBridgeAwareClient(useBridge = isSsdpBridgeNeeded(), host = "10.0.2.2", port = 1901)`
+`SsdpClient.bridgeAware(useBridge = isSsdpBridgeNeeded(), host = "10.0.2.2", port = 1901)`
 is the full signature; `useBridge` and the host/port all default, so the common
 call takes no arguments. The lower-level `SsdpClient.bridged(host, port)` is the
-building block it delegates to.
+always-bridge form, for when you've made the call yourself.
 
 The daemon is a **dumb pipe**: the app keeps owning retransmit and the registry,
 so the emulator path is byte-identical to a physical device — only the wire hop

@@ -19,8 +19,8 @@
   2. Register `SsdpInitializer` with androidx.startup's `InitializationProvider`
      so the library captures the application Context during the ContentProvider
      startup pass — before `Application.onCreate`. The Context-free
-     `Ssdp.createClient()` factory then acquires the MulticastLock without the
-     caller passing a Context.
+     `SsdpClient()` factory then acquires the MulticastLock without the caller
+     passing a Context.
 
      `tools:node="merge"` is critical: reachable also declares
      `InitializationProvider` at the same authority, and without the merge node

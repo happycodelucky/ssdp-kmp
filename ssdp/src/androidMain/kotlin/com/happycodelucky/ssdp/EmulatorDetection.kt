@@ -3,7 +3,7 @@
  *
  * Android emulators sit behind a user-mode NAT and never receive inbound UDP
  * multicast, so normal SSDP discovery hears nothing there — the host bridge is
- * needed instead (see `Ssdp.createBridgeAwareClient` / `SsdpClient.bridged`).
+ * needed instead (see `SsdpClient.bridgeAware` / `SsdpClient.bridged`).
  * This is a best-effort heuristic over `android.os.Build`, exposed publicly so
  * consumers can drive the same decision the library does without re-deriving it.
  */
@@ -16,8 +16,8 @@ import android.os.Build
  * bridge is needed for discovery to work.
  *
  * Emulators NAT inbound UDP multicast away, so the normal multicast client hears
- * nothing; pass the result to `Ssdp.createBridgeAwareClient(useBridge = …)` (or
- * branch to `SsdpClient.bridged()`) to tunnel discovery through a host daemon.
+ * nothing; `SsdpClient.bridgeAware()` uses this as its `useBridge` default to
+ * tunnel discovery through a host daemon (or branch to `SsdpClient.bridged()`).
  *
  * Best-effort: matches the standard emulator's `ranchu`/`goldfish` virtual
  * hardware and the `generic` / `sdk_gphone` build fingerprints. A custom ROM or

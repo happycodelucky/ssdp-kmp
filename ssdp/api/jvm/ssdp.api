@@ -217,6 +217,12 @@ public final class com/happycodelucky/ssdp/Notification$Update : com/happycodelu
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class com/happycodelucky/ssdp/SearchSession : java/lang/AutoCloseable {
+	public abstract fun close ()V
+	public abstract fun getTargets ()Ljava/util/Set;
+	public abstract fun isActive ()Z
+}
+
 public abstract interface class com/happycodelucky/ssdp/SearchTarget {
 	public static final field Companion Lcom/happycodelucky/ssdp/SearchTarget$Companion;
 	public static final field UPNP_ORG_SCHEMA Ljava/lang/String;
@@ -319,12 +325,6 @@ public final class com/happycodelucky/ssdp/SpecVersion {
 	public final fun getMinor ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final class com/happycodelucky/ssdp/Ssdp {
-	public static final field INSTANCE Lcom/happycodelucky/ssdp/Ssdp;
-	public final fun createClient (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SsdpClient;
-	public static synthetic fun createClient$default (Lcom/happycodelucky/ssdp/Ssdp;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SsdpClient;
 }
 
 public abstract interface class com/happycodelucky/ssdp/SsdpClient : java/lang/AutoCloseable {

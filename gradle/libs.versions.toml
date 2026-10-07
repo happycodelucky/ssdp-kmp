@@ -112,8 +112,8 @@ slf4j = "2.0.18"
 # --- Android startup --------------------------------------------------------
 # androidx.startup — hosts the bundled `SsdpInitializer` that captures the
 # application Context during the ContentProvider startup pass (before
-# Application.onCreate), so the Android `Ssdp.createClient()` factory needs no
-# Context argument. Same version reachable pins. Consumed only in :ssdp's
+# Application.onCreate), so the Android `SsdpClient()` factory needs no
+# Context argument to hold its multicast lock. Same version reachable pins. Consumed only in :ssdp's
 # androidMain. Verified on Maven Central 2026-06-28.
 androidx-startup = "1.2.0"
 
