@@ -34,6 +34,7 @@ import platform.posix.sockaddr_in
 import platform.posix.socket
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -103,4 +104,12 @@ class AppleSsdpTransportTest {
             withTimeout(CLOSE_TIMEOUT_MILLIS) { search.receiveJob.join() }
             assertTrue(search.receiveJob.isCompleted)
         }
+
+    @Test
+    fun enumeratesLoopbackAsAnIpv4LoopbackInterface() {
+        val loopback = appleLocalInterfaces().single { it.ipv4 == "127.0.0.1" }
+
+        assertTrue(loopback.isLoopback && loopback.isUp)
+        assertFalse(loopback in selectMulticastInterfaces(appleLocalInterfaces(), null))
+    }
 }

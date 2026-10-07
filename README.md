@@ -273,7 +273,10 @@ streams every reply/NOTIFY it sees back.
 
 ### JVM
 
-Plain `MulticastSocket`; on multi-homed hosts pass `bindInterface`.
+Plain `MulticastSocket`. Like every platform, the client listens and searches on
+each up, multicast-capable IPv4 interface (Wi-Fi, Ethernet, a VM bridge), skipping
+loopback and VPN tunnels. Pass `bindInterface` (`"en0"` or an IPv4 address) to
+limit discovery to one.
 
 
 

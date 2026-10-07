@@ -121,4 +121,19 @@ class JvmSsdpTransportTest {
         thread.join(5_000)
         assertFalse(thread.isAlive, "${thread.name} still blocked in receive() after close()")
     }
+
+    @Test
+    fun enumeratesLoopbackAsAnIpv4LoopbackInterface() {
+        val loopback =
+            java.net.NetworkInterface
+                .getNetworkInterfaces()
+                .toList()
+                .mapNotNull { it.toLocalInterface() }
+                .single { it.ipv4 == "127.0.0.1" }
+
+        assertTrue(loopback.isLoopback && loopback.isUp)
+        // The default policy never searches on it; naming it explicitly does.
+        assertEquals(listOf(loopback.name), selectJvmInterfaces(loopback.name).map { it.name })
+        assertFalse(loopback.name in selectJvmInterfaces(null).map { it.name })
+    }
 }

@@ -66,10 +66,8 @@ internal interface MulticastSocket {
  * Open and join the SSDP transport on the current platform: an [SsdpSocketPair]
  * of a NOTIFY listener bound to 1900 and an M-SEARCH socket on an ephemeral port.
  *
- * @param bindInterface optional hint for which local interface/address joins the
- *   group (platform-interpreted; `null` lets the OS choose the default route).
- *   Apple uses it as the IPv4 `imr_interface` of `IP_ADD_MEMBERSHIP`; the
- *   JVM/Android side uses it to pick a `NetworkInterface`.
+ * @param bindInterface the one interface (name or IPv4 address) to join and
+ *   search on; `null` uses every interface [selectMulticastInterfaces] picks.
  * @throws com.happycodelucky.ssdp.SsdpError.MulticastJoinFailed if the group
  *   can't be joined (e.g. missing entitlement on iOS, no multicast lock on
  *   Android).

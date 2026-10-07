@@ -204,7 +204,12 @@ retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
   only `network.client`, `bind()` fails `EPERM` at launch (LESSONS B-008).
   Entitlements only apply to a *signed* app. No multicast-specific entitlement is
   needed on macOS (only iOS needs the multicast entitlement).
-- **JVM:** plain `MulticastSocket`; on multi-homed hosts pass `bindInterface`.
+- **Every platform — interfaces:** the transport joins the group and sends each
+  M-SEARCH on every up, multicast-capable interface with an IPv4 address,
+  skipping loopback and point-to-point (VPN) tunnels; `bindInterface` narrows it
+  to one (`LocalInterface.kt`, LESSONS B-015). IPv4 only: SSDP over IPv6
+  (`ff02::c`) isn't implemented, and no TV-class device seen so far answers it.
+- **JVM:** plain `MulticastSocket`.
 - Android compile task is `:ssdp:compileAndroidMain` (LESSONS N-001).
 
 ## 10. Testing

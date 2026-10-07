@@ -42,8 +42,9 @@ private const val DEFAULT_BRIDGE_PORT = 1901
  *
  * @param context any Context (the application Context is used internally) — the
  *   `WifiManager.MulticastLock` source.
- * @param bindInterface optional interface name/address hint; `null` lets the OS
- *   pick the default route.
+ * @param bindInterface limits discovery to one interface, by name or IPv4
+ *   address; `null` uses every multicast-capable IPv4 interface (see the common
+ *   `SsdpClient(bindInterface)`).
  * @throws SsdpError if the multicast group cannot be joined.
  */
 @Throws(SsdpError::class)

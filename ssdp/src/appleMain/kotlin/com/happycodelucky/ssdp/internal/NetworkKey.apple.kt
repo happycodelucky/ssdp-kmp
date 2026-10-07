@@ -68,7 +68,7 @@ internal actual fun localSubnetKey(): String? =
     }
 
 /** Network-order (big-endian) s_addr → dotted-quad. octet[0] is the LSB on LE hosts. */
-private fun networkOrderToDotted(networkOrder: UInt): String {
+internal fun networkOrderToDotted(networkOrder: UInt): String {
     val b0 = networkOrder and 0xFFu
     val b1 = (networkOrder shr 8) and 0xFFu
     val b2 = (networkOrder shr 16) and 0xFFu
