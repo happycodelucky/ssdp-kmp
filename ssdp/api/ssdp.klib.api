@@ -6,6 +6,15 @@
 // - Show declarations: true
 
 // Library unique name: <com.happycodelucky.ssdp:ssdp>
+abstract interface com.happycodelucky.ssdp/SearchSession : kotlin/AutoCloseable { // com.happycodelucky.ssdp/SearchSession|null[0]
+    abstract val isActive // com.happycodelucky.ssdp/SearchSession.isActive|{}isActive[0]
+        abstract fun <get-isActive>(): kotlin/Boolean // com.happycodelucky.ssdp/SearchSession.isActive.<get-isActive>|<get-isActive>(){}[0]
+    abstract val targets // com.happycodelucky.ssdp/SearchSession.targets|{}targets[0]
+        abstract fun <get-targets>(): kotlin.collections/Set<com.happycodelucky.ssdp/SearchTarget> // com.happycodelucky.ssdp/SearchSession.targets.<get-targets>|<get-targets>(){}[0]
+
+    abstract fun close() // com.happycodelucky.ssdp/SearchSession.close|close(){}[0]
+}
+
 abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { // com.happycodelucky.ssdp/SsdpClient|null[0]
     abstract val changes // com.happycodelucky.ssdp/SsdpClient.changes|{}changes[0]
         abstract fun <get-changes>(): kotlinx.coroutines.flow/SharedFlow<com.happycodelucky.ssdp/DeviceChange> // com.happycodelucky.ssdp/SsdpClient.changes.<get-changes>|<get-changes>(){}[0]
@@ -20,7 +29,7 @@ abstract interface com.happycodelucky.ssdp/SsdpClient : kotlin/AutoCloseable { /
     abstract suspend fun clearDevices() // com.happycodelucky.ssdp/SsdpClient.clearDevices|clearDevices(){}[0]
     abstract suspend fun description(com.happycodelucky.ssdp/DiscoveredDevice, kotlin/Boolean = ...): com.happycodelucky.kotlinresult/Result<com.happycodelucky.ssdp/DeviceDescription> // com.happycodelucky.ssdp/SsdpClient.description|description(com.happycodelucky.ssdp.DiscoveredDevice;kotlin.Boolean){}[0]
     abstract suspend fun description(kotlin/String, kotlin/Boolean = ...): com.happycodelucky.kotlinresult/Result<com.happycodelucky.ssdp/DeviceDescription> // com.happycodelucky.ssdp/SsdpClient.description|description(kotlin.String;kotlin.Boolean){}[0]
-    abstract suspend fun search(kotlin.collections/Set<com.happycodelucky.ssdp/SearchTarget>, kotlin/Int = ..., kotlin.time/Duration? = ...) // com.happycodelucky.ssdp/SsdpClient.search|search(kotlin.collections.Set<com.happycodelucky.ssdp.SearchTarget>;kotlin.Int;kotlin.time.Duration?){}[0]
+    abstract suspend fun search(kotlin.collections/Set<com.happycodelucky.ssdp/SearchTarget>, kotlin/Int = ..., kotlin.time/Duration? = ...): com.happycodelucky.ssdp/SearchSession // com.happycodelucky.ssdp/SsdpClient.search|search(kotlin.collections.Set<com.happycodelucky.ssdp.SearchTarget>;kotlin.Int;kotlin.time.Duration?){}[0]
     abstract suspend fun stopSearch() // com.happycodelucky.ssdp/SsdpClient.stopSearch|stopSearch(){}[0]
 
     final object Companion { // com.happycodelucky.ssdp/SsdpClient.Companion|null[0]

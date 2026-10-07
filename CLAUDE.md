@@ -27,8 +27,11 @@ contract a contributor (human or agent) reads first. Start here, then
 2. **Apple socket = POSIX BSD sockets** (`platform.posix`/`platform.darwin`),
    shared 1:1 by iOS+macOS. NOT Network.framework (`NWConnectionGroup` isn't in
    K/N cinterop). See `MulticastSocket.apple.kt`.
-3. **Multi-target search in one session.** `search(targets: Set<SearchTarget>)`
+3. **Multi-target, additive search.** `search(targets: Set<SearchTarget>)`
    fans out one M-SEARCH per target over the shared socket and merges results.
+   Searches are additive: each call returns a `SearchSession` that contributes
+   its targets until it ends, and the client searches for the union, with one
+   reference-counted retransmit loop per distinct target (LESSONS D-016).
 5. **Two sockets per client.** NOTIFY is heard on a socket bound to 1900 and
    joined to the group; M-SEARCH goes out on a second, unjoined socket on an
    ephemeral port, so the devices' unicast replies reach only that client

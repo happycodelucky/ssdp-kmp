@@ -89,8 +89,9 @@ a GitHub Release asset (see [`.github/PUBLISHING.md`](.github/PUBLISHING.md)).
 val client: SsdpClient = Ssdp.createClient()
 
 // Search every SSDP target; stop broadcasting after 6s (passive listening and
-// the discovered devices persist). Omit `timeout` to broadcast indefinitely.
-client.search(setOf(SearchTarget.All), timeout = 6.seconds)
+// the discovered devices persist). Omit `timeout` to broadcast until you close
+// the returned session.
+val search: SearchSession = client.search(setOf(SearchTarget.All), timeout = 6.seconds)
 
 // The always-current device set, keyed by USN.
 client.devices.collect { byUsn ->
@@ -122,6 +123,7 @@ client.description(device)
         }
     }
 
+search.close() // optional here: the 6s timeout ends it anyway
 client.close()
 ```
 
@@ -137,6 +139,35 @@ client.search(
 )
 ```
 
+### Sharing one client: searches are additive
+
+`search()` adds to the searches already running rather than replacing them. It
+returns a `SearchSession` that contributes its targets until it ends: when you
+`close()` it, its `timeout` elapses, `stopSearch()` runs, or the client closes. The
+client M-SEARCHes for the union of every active session's targets, so independent
+parts of an app can share one client (one NOTIFY listener, one socket pair) without
+cancelling each other:
+
+```kotlin
+val roku = SearchTarget.Custom("roku:ecp")
+val renderers = SearchTarget.DeviceType("schemas-upnp-org", "MediaRenderer", 1)
+
+val tvScan = client.search(setOf(roku, renderers))
+val rokuScan = client.search(setOf(roku), timeout = 10.seconds)
+
+tvScan.close() // MediaRenderer stops; roku:ecp keeps its cadence for rokuScan
+```
+
+- A target in several active sessions has **one** retransmit loop, kept until the
+  last of them ends. Each M-SEARCH advertises the largest `maxWaitSeconds` among them.
+- A new session never restarts the cadence of targets already being searched. A
+  target new to the client starts at the 1s step; a target that is already being
+  searched gets one extra M-SEARCH right away and then keeps its shared cadence.
+- `search(emptySet())` returns an inactive session and leaves the others alone.
+  `stopSearch()` ends every session.
+- A session with no `timeout` keeps searching until you close it, so keep the
+  handle (`use { }` works: it's `AutoCloseable`).
+
 ### Swift
 
 The same flows bridge to `AsyncSequence` and the sealed types to exhaustive Swift
@@ -146,7 +177,8 @@ enums via SKIE:
 import SsdpKit
 
 let client = try SsdpClient(bindInterface: nil)
-try await client.search(targets: [SearchTargetAll.shared], maxWaitSeconds: 1, timeout: nil)
+let search = try await client.search(targets: [SearchTargetAll.shared], maxWaitSeconds: 1, timeout: nil)
+defer { search.close() } // a SearchSession; ends only this search
 
 for await byUsn in client.devices {
     render(Array(byUsn.values))
