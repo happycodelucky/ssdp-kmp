@@ -13,10 +13,13 @@ import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
+import com.happycodelucky.ssdp.SearchSession
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
 import com.happycodelucky.ssdp.SsdpDeviceListener
 import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -35,6 +38,13 @@ import kotlin.native.ObjCName
  * [setDevices]. Records every [search] / [stopSearch] / [close] call so a test can
  * assert the unit under test drove discovery as expected.
  *
+ * Searches are modeled as [SearchSession]s, additive like the real client's:
+ * [search] returns a session that stays in [openSessions] until it is closed,
+ * [stopSearch] or [close] runs, and [searchingTargets] is the union the real client
+ * would be M-SEARCHing for. The fake sends nothing and keeps no clock, so a
+ * session's `timeout` is only recorded (in [searchedTimeouts]); to model it
+ * elapsing, close the session.
+ *
  * Registered [SsdpDeviceListener]s are driven in lockstep with the emit helpers —
  * each `emit*` (and [clearDevices]) synchronously invokes the matching listener
  * callback right after emitting on [changes], so a test asserting on a listener
@@ -51,9 +61,12 @@ import kotlin.native.ObjCName
  * ### Asserting calls
  *
  * ```kotlin
- * fake.search(setOf(SearchTarget.All))
+ * val search = fake.search(setOf(SearchTarget.All))
  * assertEquals(listOf(setOf(SearchTarget.All)), fake.searchedTargets)
  * assertEquals(1, fake.searchCallCount)
+ * assertEquals(setOf(SearchTarget.All), fake.searchingTargets)
+ * search.close()
+ * assertEquals(emptySet(), fake.searchingTargets)
  * ```
  *
  * Renames cleanly across the Swift bridge: in Swift the class reads as
@@ -86,6 +99,27 @@ public class FakeSsdpClient : SsdpClient {
 
     /** Timeout passed to each [search] call, in order (`null` = no timeout). */
     public val searchedTimeouts: MutableList<kotlin.time.Duration?> = mutableListOf()
+
+    // Every session [search] returned, in order. Guarded by `sessionLock`, so a
+    // unit under test may open and close sessions from several threads.
+    private val sessionLock = SynchronizedObject()
+    private val sessions = mutableListOf<FakeSearchSession>()
+
+    /**
+     * Every [SearchSession] returned by [search], in call order, whether still
+     * active or not. Check [SearchSession.isActive] to see which have ended.
+     */
+    public val openedSessions: List<SearchSession> get() = synchronized(sessionLock) { sessions.toList() }
+
+    /** The sessions that are still active (not closed, stopped or ended by [close]), in open order. */
+    public val openSessions: List<SearchSession> get() = synchronized(sessionLock) { sessions.filter { it.active } }
+
+    /**
+     * The union of every active session's targets: what the real client would be
+     * M-SEARCHing for right now. Empty when no session is active.
+     */
+    public val searchingTargets: Set<SearchTarget>
+        get() = synchronized(sessionLock) { sessions.filter { it.active }.flatMapTo(mutableSetOf()) { it.targets } }
 
     /** Number of [search] invocations. */
     public val searchCallCount: Int get() = _searchCallCount.value
@@ -183,14 +217,38 @@ public class FakeSsdpClient : SsdpClient {
 
     // --- SsdpClient ---------------------------------------------------------
 
-    override suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int, timeout: kotlin.time.Duration?) {
+    override suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int, timeout: kotlin.time.Duration?): SearchSession {
         _searchCallCount.incrementAndGet()
         searchedTargets.add(targets)
         searchedTimeouts.add(timeout)
+        // Like the real client: an empty target set, or a closed client, yields a
+        // session that is inactive from the start.
+        val session = FakeSearchSession(targets, active = targets.isNotEmpty() && !wasClosed)
+        synchronized(sessionLock) { sessions.add(session) }
+        return session
     }
 
     override suspend fun stopSearch() {
         _stopSearchCallCount.incrementAndGet()
+        endAllSessions()
+    }
+
+    /** End every active session, as the real client's stopSearch() and close() do. */
+    private fun endAllSessions() {
+        synchronized(sessionLock) { sessions.forEach { it.active = false } }
+    }
+
+    /** The fake's [SearchSession]: an active flag guarded by [sessionLock]. */
+    private inner class FakeSearchSession(override val targets: Set<SearchTarget>, active: Boolean) : SearchSession {
+        var active: Boolean = active
+
+        override val isActive: Boolean get() = synchronized(sessionLock) { active }
+
+        override fun close() {
+            synchronized(sessionLock) { active = false }
+        }
+
+        override fun toString(): String = "FakeSearchSession(targets=$targets, isActive=$isActive)"
     }
 
     override suspend fun clearDevices() {
@@ -247,6 +305,7 @@ public class FakeSsdpClient : SsdpClient {
 
     override fun close() {
         _closeCallCount.incrementAndGet()
+        endAllSessions()
         listeners.clear()
     }
 }

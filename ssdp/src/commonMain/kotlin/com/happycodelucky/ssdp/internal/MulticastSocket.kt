@@ -5,8 +5,9 @@
  *
  * All orchestration (retransmit, parsing, the registry) lives in commonMain and
  * talks only to this interface. Each platform supplies one `actual`
- * implementation via [openMulticastSocket]:
- *   - appleMain : POSIX BSD multicast socket (platform.posix)
+ * implementation via [openMulticastSocket], an [SsdpSocketPair] of two UDP
+ * sockets (a NOTIFY listener on 1900 and an ephemeral-port M-SEARCH sender):
+ *   - appleMain : POSIX BSD sockets (platform.posix)
  *   - androidMain: java.net.MulticastSocket + WifiManager.MulticastLock
  *   - jvmMain   : java.net.MulticastSocket
  */
@@ -23,13 +24,20 @@ internal data class Datagram(
 )
 
 /**
- * A joined SSDP multicast socket (`239.255.255.250:1900`).
+ * The SSDP transport the client talks to: a joined multicast group
+ * (`239.255.255.250:1900`) plus the socket M-SEARCH goes out on.
  *
  * Lifecycle: construct (which joins the group and starts receiving), [send]
  * M-SEARCH datagrams to the group as many times as the retransmit scheduler
- * asks, observe [incoming] for every datagram the socket sees (NOTIFY
- * broadcasts *and* unicast M-SEARCH replies — the kernel delivers both to the
- * bound port), and [close] to leave the group and stop.
+ * asks, observe [incoming] for every datagram the transport sees (NOTIFY
+ * broadcasts *and* unicast M-SEARCH replies), and [close] to leave the group
+ * and stop.
+ *
+ * The platform transports are an [SsdpSocketPair]: M-SEARCH is sent from an
+ * ephemeral port, so the unicast replies addressed to that port reach only
+ * this transport, never a different socket sharing 1900 (see [SsdpSocketPair]).
+ * The same interface also describes each half of the pair, and the emulator
+ * bridge (`BridgeMulticastSocket`), which tunnels both directions over TCP.
  *
  * Implementations must be safe to [close] exactly once; [send] after [close] is
  * a no-op or throws [com.happycodelucky.ssdp.SsdpError.TransportFailed].
@@ -37,8 +45,8 @@ internal data class Datagram(
 internal interface MulticastSocket {
     /**
      * A cold-ish [Flow] of received datagrams. Backed by the platform receive
-     * loop; collection starts delivery. Implementations should fan out so the
-     * single socket serves all collectors (the client collects this once).
+     * loop(s); collection starts delivery. Implementations should fan out so the
+     * transport serves all collectors (the client collects this once).
      */
     val incoming: Flow<Datagram>
 
@@ -55,14 +63,17 @@ internal interface MulticastSocket {
 }
 
 /**
- * Open and join an SSDP multicast socket on the current platform.
+ * Open and join the SSDP transport on the current platform: an [SsdpSocketPair]
+ * of a NOTIFY listener bound to 1900 and an M-SEARCH socket on an ephemeral port.
  *
- * @param bindInterface optional hint for which local interface/address to bind
- *   (platform-interpreted; `null` lets the OS choose the default route). Apple
- *   uses it as an IPv4 address for `IP_MULTICAST_IF`; the JVM/Android side uses
- *   it to pick a `NetworkInterface`.
+ * @param bindInterface optional hint for which local interface/address joins the
+ *   group (platform-interpreted; `null` lets the OS choose the default route).
+ *   Apple uses it as the IPv4 `imr_interface` of `IP_ADD_MEMBERSHIP`; the
+ *   JVM/Android side uses it to pick a `NetworkInterface`.
  * @throws com.happycodelucky.ssdp.SsdpError.MulticastJoinFailed if the group
  *   can't be joined (e.g. missing entitlement on iOS, no multicast lock on
  *   Android).
+ * @throws com.happycodelucky.ssdp.SsdpError.TransportFailed if the M-SEARCH
+ *   socket can't be opened.
  */
 internal expect fun openMulticastSocket(bindInterface: String?): MulticastSocket

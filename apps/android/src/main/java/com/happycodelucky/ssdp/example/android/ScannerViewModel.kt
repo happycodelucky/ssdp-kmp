@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.happycodelucky.kotlinresult.Result
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
+import com.happycodelucky.ssdp.SearchSession
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,10 +61,15 @@ class ScannerViewModel(
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
 
+    // The current scan's search. Searches are additive, so a re-scan closes the
+    // previous session rather than leaving it to run out its window alongside.
+    private var search: SearchSession? = null
+
     /** Start (or restart) a bounded search for all SSDP targets. */
     fun scan() {
         viewModelScope.launch {
             _scanning.value = true
+            search?.close()
             // Clear first so refresh visibly empties the list and then re-populates;
             // stale devices that have gone but not yet hit their max-age deadline
             // drop immediately. The `devices` projection reacts to client.devices
@@ -71,7 +77,7 @@ class ScannerViewModel(
             client.clearDevices()
             // Bounded — broadcasting stops after the window; passive listening
             // continues so late responders still appear.
-            client.search(setOf(SearchTarget.All), timeout = SEARCH_WINDOW)
+            search = client.search(setOf(SearchTarget.All), timeout = SEARCH_WINDOW)
             kotlinx.coroutines.delay(SEARCH_WINDOW)
             _scanning.value = false
         }

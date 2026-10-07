@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -156,20 +157,23 @@ class SsdpClientImplTest {
         }
 
     @Test
-    fun emptyTargetSetStopsActiveSearch() =
+    fun emptyTargetSetOpensAnInactiveSessionAndLeavesOthersSearching() =
         runTest {
             val socket = FakeMulticastSocket()
             val client = newClient(socket)
             runCurrent()
 
-            client.search(setOf(SearchTarget.All))
+            val all = client.search(setOf(SearchTarget.All))
             runCurrent()
             assertEquals(1, socket.sent.size)
 
-            client.search(emptySet())
-            advanceTimeBy(10.seconds)
+            // Searches are additive, so an empty set no longer stops the others.
+            val empty = client.search(emptySet())
+            assertFalse(empty.isActive)
+            advanceTimeBy(1.seconds)
             runCurrent()
-            assertEquals(1, socket.sent.size)
+            assertEquals(2, socket.sent.size)
+            assertTrue(all.isActive)
 
             client.close()
         }

@@ -83,7 +83,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.android)
             // androidx.startup hosts the bundled SsdpInitializer, which captures
             // the application Context at process startup so the Android
-            // Ssdp.createClient() factory needs no Context argument. `api`:
+            // SsdpClient() factory needs no Context argument. `api`:
             // the public SsdpInitializer implements androidx.startup's
             // Initializer, so that supertype is part of the Android API.
             api(libs.androidx.startup.runtime)

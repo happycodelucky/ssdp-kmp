@@ -101,6 +101,61 @@ class FakeSsdpClientTest {
         }
 
     @Test
+    fun sessionsAreAdditiveAndCloseWithdrawsOnlyTheirTargets() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val roku = SearchTarget.Custom("roku:ecp")
+                val a = fake.search(setOf(SearchTarget.All, roku))
+                val b = fake.search(setOf(roku))
+                assertEquals(setOf(SearchTarget.All, roku), fake.searchingTargets)
+                assertEquals(listOf(a, b), fake.openSessions)
+
+                a.close()
+                assertFalse(a.isActive)
+                assertEquals(setOf(roku), fake.searchingTargets)
+                assertEquals(listOf(b), fake.openSessions)
+                assertEquals(listOf(a, b), fake.openedSessions)
+
+                a.close() // idempotent
+                b.close()
+                assertTrue(fake.searchingTargets.isEmpty())
+                assertTrue(fake.openSessions.isEmpty())
+            }
+        }
+
+    @Test
+    fun emptyTargetsYieldAnInactiveSession() =
+        runTest {
+            withFakeSsdpClient { fake ->
+                val all = fake.search(setOf(SearchTarget.All))
+                val empty = fake.search(emptySet())
+                assertFalse(empty.isActive)
+                assertTrue(all.isActive)
+                assertEquals(setOf(SearchTarget.All), fake.searchingTargets)
+            }
+        }
+
+    @Test
+    fun stopSearchAndCloseEndEverySession() =
+        runTest {
+            val fake = FakeSsdpClient()
+            val a = fake.search(setOf(SearchTarget.All))
+            fake.stopSearch()
+            assertFalse(a.isActive)
+            assertTrue(fake.searchingTargets.isEmpty())
+
+            val b = fake.search(setOf(SearchTarget.RootDevice))
+            assertTrue(b.isActive)
+            fake.close()
+            assertFalse(b.isActive)
+            b.close() // a no-op after the client closed
+
+            val late = fake.search(setOf(SearchTarget.All))
+            assertFalse(late.isActive, "a session opened on a closed client is born inactive")
+            assertEquals(3, fake.openedSessions.size)
+        }
+
+    @Test
     fun withFakeSsdpClientClosesOnExit() =
         runTest {
             lateinit var captured: FakeSsdpClient

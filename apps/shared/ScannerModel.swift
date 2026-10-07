@@ -67,11 +67,12 @@ final class ScannerModel: ObservableObject {
     }
 
     /// Start a bounded scan for all SSDP targets. We drive the window from Swift
-    /// (search → sleep → stopSearch) rather than the Kotlin `timeout:` parameter:
-    /// that param is a `kotlin.time.Duration`, an inline value class SKIE can't
-    /// bridge cleanly (it surfaces as `Any?`), so the idiomatic Swift path is an
-    /// explicit stopSearch(). Passive listening continues after stopSearch, so
-    /// late responders still appear.
+    /// (search → sleep → close the session) rather than the Kotlin `timeout:`
+    /// parameter: that param is a `kotlin.time.Duration`, an inline value class
+    /// SKIE can't bridge cleanly (it surfaces as `Any?`), so the idiomatic Swift
+    /// path is closing the returned `SearchSession`. Searches are additive, so
+    /// closing ends only this scan's search, not any other on the same client.
+    /// Passive listening continues afterwards, so late responders still appear.
     ///
     /// We clear the registry first so refresh visibly empties the list and then
     /// re-populates — stale devices that have gone but not yet hit their max-age
@@ -84,13 +85,13 @@ final class ScannerModel: ObservableObject {
             try? await client.clearDevices()
             // SearchTarget.All is a Kotlin `data object` → SKIE flattens it to the
             // top-level `SearchTargetAll.shared` singleton (not a nested `.All`).
-            try? await client.search(
+            let search = try? await client.search(
                 targets: [SearchTargetAll.shared],
                 maxWaitSeconds: 1,
                 timeout: nil
             )
             try? await Task.sleep(for: .seconds(scanWindowSeconds))
-            try? await client.stopSearch()
+            search?.close()
             scanning = false
         }
     }

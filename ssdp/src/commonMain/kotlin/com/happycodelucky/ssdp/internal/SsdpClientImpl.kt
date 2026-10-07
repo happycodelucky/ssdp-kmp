@@ -17,6 +17,7 @@ import com.happycodelucky.ssdp.DescriptionException
 import com.happycodelucky.ssdp.DeviceChange
 import com.happycodelucky.ssdp.DeviceDescription
 import com.happycodelucky.ssdp.DiscoveredDevice
+import com.happycodelucky.ssdp.SearchSession
 import com.happycodelucky.ssdp.SearchTarget
 import com.happycodelucky.ssdp.SsdpClient
 import com.happycodelucky.ssdp.SsdpDeviceListener
@@ -32,9 +33,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.TimeSource
@@ -95,19 +93,20 @@ internal class SsdpClientImpl(
 
     private val closed = atomic(false)
 
-    // The single joined socket. Opened eagerly so passive NOTIFY listening is on
-    // from construction, independent of any active search.
+    // The transport — on every platform an SsdpSocketPair: NOTIFY on 1900,
+    // M-SEARCH and its unicast replies on an ephemeral port. Opened eagerly so
+    // passive NOTIFY listening is on from construction, independent of any
+    // active search.
     private val socket: MulticastSocket = socketFactory()
 
-    // Guards the active-search state (target set + retransmit jobs) against
-    // concurrent search()/stopSearch()/close() calls.
-    private val searchMutex = Mutex()
-    private var retransmitJobs: List<Job> = emptyList()
+    // The additive search sessions (LESSONS D-016) and their per-target
+    // retransmit loops, on the client's own scope so close() cancels them.
+    private val searches = SearchSessions(scope, timeSource, send = { socket.send(it) })
 
     // Registered callback listeners (SsdpClient.addListener). A thin fan-out over
     // registry.changes — no separate emission path (CLAUDE.md §6/§12). Mutation
     // and iteration are non-suspending critical sections, so they use the
-    // atomicfu synchronized tier (not searchMutex/registry's Mutex, which are for
+    // atomicfu synchronized tier (not the registry's Mutex, which is for
     // suspend boundaries — CLAUDE.md §6). Guarded by `listenerLock`; kept as a
     // copy-on-read list so callbacks fire outside the lock.
     private val listenerLock = SynchronizedObject()
@@ -145,43 +144,11 @@ internal class SsdpClientImpl(
         }
     }
 
-    override suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int, timeout: Duration?) {
-        if (closed.value) return
-        searchMutex.withLock {
-            // Replace any prior search.
-            cancelRetransmitLocked()
-            if (targets.isEmpty()) return@withLock
-
-            val started = timeSource.markNow()
-            retransmitJobs =
-                targets.map { target ->
-                    val request = MSearchRequest(target, maxWaitSeconds)
-                    scope.launch {
-                        // First M-SEARCH immediately, then the stepped cadence.
-                        runCatching { socket.send(request.bytes()) }
-                        // With a timeout, retransmission stops once it elapses —
-                        // withTimeoutOrNull lets the coroutine complete cleanly
-                        // (no thrown TimeoutCancellationException to surface).
-                        // The socket stays joined and passive NOTIFY listening
-                        // continues; only this target's broadcasting ends.
-                        val retransmit: suspend () -> Unit = {
-                            RetransmitScheduler.run(
-                                elapsedSince = { started.elapsedNow() },
-                                retransmit = { socket.send(request.bytes()) },
-                            )
-                        }
-                        if (timeout == null) {
-                            retransmit()
-                        } else {
-                            withTimeoutOrNull(timeout) { retransmit() }
-                        }
-                    }
-                }
-        }
-    }
+    override suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int, timeout: Duration?): SearchSession =
+        searches.open(targets, maxWaitSeconds, timeout)
 
     override suspend fun stopSearch() {
-        searchMutex.withLock { cancelRetransmitLocked() }
+        searches.endAll()
     }
 
     override suspend fun clearDevices() {
@@ -218,11 +185,13 @@ internal class SsdpClientImpl(
 
     override fun close() {
         if (!closed.compareAndSet(expect = false, update = true)) return
-        // Tear down the socket first so no further datagrams arrive, then close
-        // the HTTP client, then cancel the client's own job (receive loop,
-        // retransmit loops, expiry timers, description eviction collector).
-        // Cancelling `job` — not the parent scope — leaves the caller's scope
-        // (e.g. a runTest TestScope) untouched.
+        // End the search sessions first, so each handle reports inactive and no
+        // retransmit loop sends on a closing socket. Then tear down the socket so
+        // no further datagrams arrive, close the HTTP client, and cancel the
+        // client's own job (receive loop, expiry timers, description eviction
+        // collector). Cancelling `job` — not the parent scope — leaves the
+        // caller's scope (e.g. a runTest TestScope) untouched.
+        searches.close()
         runCatching { socket.close() }
         runCatching { httpClient.close() }
         job.cancel()
@@ -250,12 +219,6 @@ internal class SsdpClientImpl(
         }
     }
 
-    /** Must hold [searchMutex]. */
-    private fun cancelRetransmitLocked() {
-        retransmitJobs.forEach { it.cancel() }
-        retransmitJobs = emptyList()
-    }
-
     /**
      * Reset the registry — invoked by [NetworkMonitor] when the active network's
      * identity changes from [previous] to [current]. The description cache parks
@@ -269,6 +232,12 @@ internal class SsdpClientImpl(
     }
 
     internal fun isActive(): Boolean = !closed.value && job.isActive
+
+    /**
+     * The union of every active session's targets: exactly the targets with a
+     * running retransmit loop. For tests asserting the reference counting.
+     */
+    internal val searchingTargets: Set<SearchTarget> get() = searches.searchingTargets
 }
 
 /**

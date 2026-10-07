@@ -5,36 +5,27 @@
  * WifiManager.MulticastLock. Rather than thread a Context through every factory
  * call, [SsdpInitializer] captures the application Context once at process
  * startup (via androidx.startup, before Application.onCreate) and stashes it
- * here. The Android `Ssdp.createClient()` factory then reads it on demand — so
- * the public factory needs no Context argument.
- *
- * Read [androidApplicationContext] lazily, at the point the socket is actually
- * created, not earlier — by then startup has long since run.
+ * here. The Context-free Android `SsdpClient()` factory then reads it when it
+ * builds a client, so it needs no Context argument.
  */
 package com.happycodelucky.ssdp.internal
 
 import android.content.Context
+import kotlinx.atomicfu.atomic
 
-private var captured: Context? = null
+// Written once during startup, read later from whichever thread builds a client:
+// the atomic reference publishes the write safely across threads.
+private val captured = atomic<Context?>(null)
 
 /**
- * The application Context captured by [SsdpInitializer] at startup.
- *
- * @throws IllegalStateException if accessed before the initializer ran — which
- *   only happens if the consumer disabled androidx.startup's
- *   `InitializationProvider` (or removed the `SsdpInitializer` meta-data). In
- *   that case, use the explicit `SsdpClient(context)` factory instead.
+ * The application Context captured by [SsdpInitializer] at startup, or `null` if
+ * it never ran — the consumer disabled androidx.startup's `InitializationProvider`
+ * or removed the `SsdpInitializer` meta-data. Without it, only the explicit
+ * `SsdpClient(context)` factory can hold a multicast lock.
  */
-internal val androidApplicationContext: Context
-    get() =
-        captured
-            ?: error(
-                "Android Context not initialized. The SsdpInitializer (androidx.startup) " +
-                    "captures it at process startup; if you disabled InitializationProvider, " +
-                    "construct the client with the explicit SsdpClient(context) factory instead.",
-            )
+internal val capturedApplicationContext: Context? get() = captured.value
 
 /** Capture the application Context. Called by [SsdpInitializer]; idempotent. */
 internal fun initAndroidContext(context: Context) {
-    captured = context.applicationContext
+    captured.value = context.applicationContext
 }

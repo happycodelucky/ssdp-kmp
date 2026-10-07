@@ -35,9 +35,11 @@ import kotlin.time.Duration
  * every response and advertisement into the registry.
  *
  * ```kotlin
- * val client: SsdpClient = SsdpClient()           // platform factory
- * client.search(setOf(SearchTarget.All))          // or specific targets
+ * val client: SsdpClient = SsdpClient()                 // platform factory
+ * val search = client.search(setOf(SearchTarget.All))   // or specific targets
  * client.devices.collect { byUsn -> render(byUsn.values) }
+ * // …
+ * search.close()                                        // stop this search
  * ```
  *
  * From Swift the same flows read as `AsyncSequence`s via SKIE.
@@ -48,6 +50,15 @@ import kotlin.time.Duration
  * fans out one M-SEARCH per target over the shared socket, merging matches into
  * the one registry — so an app watching for several device types issues a
  * single call.
+ *
+ * ### Sharing one client
+ *
+ * Searches are additive. Each [search] call returns a [SearchSession] that
+ * contributes its targets until it ends, and the client searches for the union of
+ * every active session's targets. Two parts of an app can each open a session on
+ * one shared client and close it independently; neither cancels the other. One
+ * client per process is the intended shape: it holds one NOTIFY listener and one
+ * socket pair however many sessions are open.
  *
  * ### Lifecycle
  *
@@ -69,33 +80,66 @@ public interface SsdpClient : AutoCloseable {
     public val changes: SharedFlow<DeviceChange>
 
     /**
-     * Begin (or replace) the active search. Sends an M-SEARCH for each target
-     * in [targets] and keeps retransmitting on the stepped cadence. Calling
-     * again replaces the target set. Passive NOTIFY listening is always on once
-     * the client is constructed, independent of any active search.
+     * Open a search session for [targets] and return its handle. The client sends
+     * an M-SEARCH for each target right away and keeps retransmitting on the
+     * stepped cadence until the session ends. Passive NOTIFY listening is always on
+     * once the client is constructed, independent of any search.
      *
-     * `search` returns as soon as the first M-SEARCH round has been sent — it
-     * does not block for the [timeout]. Retransmission runs in the background;
-     * observe [devices] / [changes] for results.
+     * Searches are additive: this call adds to the searches already open instead
+     * of replacing them. While several sessions are active, the client searches
+     * for the union of their targets:
+     *
+     * - A target in more than one active session has **one** retransmit loop,
+     *   kept until the last of those sessions ends.
+     * - A target new to the client starts its own cadence at the 1s step. Targets
+     *   already being searched keep their cadence; nothing is restarted.
+     * - A target that is already being searched gets one extra M-SEARCH right away,
+     *   so the new session hears fresh replies without waiting for the shared
+     *   loop's next step.
+     * - Each M-SEARCH for a target advertises the largest [maxWaitSeconds] among
+     *   the active sessions that include it.
+     *
+     * The session ends on [SearchSession.close], when [timeout] elapses, on
+     * [stopSearch], or when the client is closed. Keep the handle and close it
+     * when you're done: a session opened with no [timeout] that is never closed
+     * keeps its targets searched until [stopSearch] or [close].
+     *
+     * `search` returns as soon as the session is registered; it does not wait for
+     * the [timeout] or for replies. Retransmission runs in the background, so
+     * observe [devices] / [changes] for results. From Swift this is
+     * `try await client.search(targets:maxWaitSeconds:timeout:)`, returning a
+     * `SearchSession`.
      *
      * @param targets the search targets; use `setOf(SearchTarget.All)` for a
-     *   wildcard. An empty set stops active searching (equivalent to
-     *   [stopSearch]) but leaves passive listening on.
+     *   wildcard. An empty set searches for nothing: the returned session is
+     *   already inactive and other sessions are unaffected. (Use [stopSearch] to
+     *   end every session.)
      * @param maxWaitSeconds the `MX` value advertised to responders (1–5 per
      *   UPnP); devices reply after a random delay in `[0, MX]`.
-     * @param timeout how long to keep retransmitting before stopping
-     *   automatically. After it elapses, broadcasting stops but passive NOTIFY
-     *   listening continues and already-discovered devices stay in [devices]
-     *   (until they leave / expire / the network changes). `null` (the default)
-     *   retransmits indefinitely until [stopSearch] or [close]. A finite timeout
-     *   is the common case — devices on the LAN are usually found within a few
-     *   seconds, after which continued broadcasting is just noise.
+     * @param timeout how long this session lasts before it ends on its own. Its
+     *   targets are then withdrawn as if [SearchSession.close] had been called,
+     *   and retransmission stops for each one no other active session includes.
+     *   Passive NOTIFY listening continues and already-discovered devices stay in
+     *   [devices] (until they leave / expire / the network changes). `null` (the
+     *   default) keeps the session until it is closed, [stopSearch] or [close]. A
+     *   finite timeout is the common case — devices on the LAN are usually found
+     *   within a few seconds, after which continued broadcasting is just noise.
+     * @return the session's handle. On a closed client it is already inactive.
      * @throws SsdpError if the multicast group cannot be joined.
      */
     @Throws(SsdpError::class, kotlin.coroutines.cancellation.CancellationException::class)
-    public suspend fun search(targets: Set<SearchTarget>, maxWaitSeconds: Int = DEFAULT_MAX_WAIT_SECONDS, timeout: Duration? = null)
+    public suspend fun search(
+        targets: Set<SearchTarget>,
+        maxWaitSeconds: Int = DEFAULT_MAX_WAIT_SECONDS,
+        timeout: Duration? = null,
+    ): SearchSession
 
-    /** Stop active M-SEARCH retransmission. Passive NOTIFY listening continues. */
+    /**
+     * End every open [SearchSession] and stop all M-SEARCH retransmission. Each
+     * session's [SearchSession.isActive] becomes `false`, and closing it later is
+     * a no-op. Passive NOTIFY listening continues, and a later [search] opens a
+     * new session as usual.
+     */
     public suspend fun stopSearch()
 
     /**
@@ -209,7 +253,8 @@ public interface SsdpClient : AutoCloseable {
     /**
      * Stop all discovery, leave the multicast group, and cancel internal
      * coroutines. Idempotent; [devices] retains its last value but stops
-     * updating. All registered listeners are dropped.
+     * updating. Every open [SearchSession] ends (closing one afterwards is a
+     * no-op), and all registered listeners are dropped.
      */
     override fun close()
 

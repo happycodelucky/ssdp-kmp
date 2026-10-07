@@ -7,8 +7,10 @@
  * reset. The expect/actual seam is intentionally one function (CLAUDE.md §4).
  *
  * Apple: `SsdpClient()` — no arguments, self-contained.
- * Android: `SsdpClient(context)` — needs a Context for the WifiManager
- *          MulticastLock; declared in androidMain only.
+ * Android: `SsdpClient()` — takes the WifiManager MulticastLock from the
+ *          application Context captured at startup; androidMain adds
+ *          `SsdpClient(context)`, `SsdpClient.bridgeAware()` and
+ *          `SsdpClient.bridged()`.
  * JVM: `SsdpClient()` — no arguments.
  */
 package com.happycodelucky.ssdp
@@ -17,8 +19,11 @@ package com.happycodelucky.ssdp
  * Create an [SsdpClient] for the current platform.
  *
  * Passive NOTIFY listening starts immediately; call [SsdpClient.search] to begin
- * active discovery. On Apple and JVM this takes no arguments; Android provides
- * an overload taking a `Context` (see the `androidMain` factory).
+ * active discovery. It's the one factory on every platform. On Android it holds a
+ * `WifiManager.MulticastLock` from the application Context the library captures
+ * at startup; Android also provides an overload taking a `Context`, for apps that
+ * disable that capture, and `SsdpClient.bridgeAware()` for emulators (see the
+ * `androidMain` factories).
  *
  * @param bindInterface optional local interface/address hint for the multicast
  *   socket; `null` lets the OS pick the default route. Useful on multi-homed
