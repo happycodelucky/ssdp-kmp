@@ -327,12 +327,6 @@ public final class com/happycodelucky/ssdp/SpecVersion {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class com/happycodelucky/ssdp/Ssdp {
-	public static final field INSTANCE Lcom/happycodelucky/ssdp/Ssdp;
-	public final fun createClient (Ljava/lang/String;)Lcom/happycodelucky/ssdp/SsdpClient;
-	public static synthetic fun createClient$default (Lcom/happycodelucky/ssdp/Ssdp;Ljava/lang/String;ILjava/lang/Object;)Lcom/happycodelucky/ssdp/SsdpClient;
-}
-
 public abstract interface class com/happycodelucky/ssdp/SsdpClient : java/lang/AutoCloseable {
 	public static final field Companion Lcom/happycodelucky/ssdp/SsdpClient$Companion;
 	public static final field DEFAULT_MAX_WAIT_SECONDS I

@@ -521,10 +521,6 @@ sealed class com.happycodelucky.ssdp/SsdpError : kotlin/Exception { // com.happy
     }
 }
 
-final object com.happycodelucky.ssdp/Ssdp { // com.happycodelucky.ssdp/Ssdp|null[0]
-    final fun createClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/Ssdp.createClient|createClient(kotlin.String?){}[0]
-}
-
 final fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/cachedDescription(com.happycodelucky.ssdp/SsdpClient): com.happycodelucky.ssdp/DeviceDescription? // com.happycodelucky.ssdp/cachedDescription|cachedDescription@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient){}[0]
 final fun com.happycodelucky.ssdp/SsdpClient(kotlin/String? = ...): com.happycodelucky.ssdp/SsdpClient // com.happycodelucky.ssdp/SsdpClient|SsdpClient(kotlin.String?){}[0]
 final suspend fun (com.happycodelucky.ssdp/DiscoveredDevice).com.happycodelucky.ssdp/description(com.happycodelucky.ssdp/SsdpClient, kotlin/Boolean = ...): com.happycodelucky.kotlinresult/Result<com.happycodelucky.ssdp/DeviceDescription> // com.happycodelucky.ssdp/description|description@com.happycodelucky.ssdp.DiscoveredDevice(com.happycodelucky.ssdp.SsdpClient;kotlin.Boolean){}[0]

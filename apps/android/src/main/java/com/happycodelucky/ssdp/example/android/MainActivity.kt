@@ -6,7 +6,7 @@
  * Tapping a device fetches its description document via client.description() and
  * shows manufacturer / model / services / icons.
  *
- * Client construction is one line: `Ssdp.createBridgeAwareClient()`. Its
+ * Client construction is one line: `SsdpClient.bridgeAware()`. Its
  * `useBridge` defaults to the library's `isSsdpBridgeNeeded()`, so on a physical
  * device that's a normal multicast client; on an EMULATOR — which can't receive
  * inbound UDP multicast — it tunnels over TCP to a host-side bridge daemon (start
@@ -30,7 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.happycodelucky.ssdp.Ssdp
+import com.happycodelucky.ssdp.SsdpClient
+import com.happycodelucky.ssdp.bridgeAware
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +44,7 @@ class MainActivity : ComponentActivity() {
                             // Zero-arg: useBridge defaults to isSsdpBridgeNeeded(),
                             // so this bridges over TCP on an emulator and uses
                             // normal multicast on a physical device.
-                            val client = Ssdp.createBridgeAwareClient()
+                            val client = SsdpClient.bridgeAware()
                             ScannerViewModel(client)
                         }
                     ScannerApp(model)

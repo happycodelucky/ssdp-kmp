@@ -11,12 +11,11 @@
  * when it closes. The M-SEARCH replies are unicast, which the lock doesn't
  * gate, but it's held for the transport's whole life anyway.
  *
- * The lock requires a Context, so the Android transport is created via the
- * Context-taking SsdpClient(context) factory (see SsdpClient.android.kt). The
- * commonMain expect `openMulticastSocket(bindInterface)` is satisfied here too,
- * but without a Context it cannot take the lock — it falls back to no-lock
- * behavior and logs nothing (discovery may be unreliable). Production callers
- * should use SsdpClient(context).
+ * The lock requires a Context. The public factories choose it (see
+ * AndroidTransport.kt): the startup-captured application Context for
+ * `SsdpClient()`, the caller's for `SsdpClient(context)`. The commonMain expect
+ * `openMulticastSocket(bindInterface)` is satisfied here too, with the captured
+ * Context when there is one.
  */
 package com.happycodelucky.ssdp.internal
 
@@ -176,7 +175,8 @@ private fun selectInterface(bindInterface: String?): NetworkInterface? {
     }.getOrNull()
 }
 
-// The Context-less expect actual: usable, but without the multicast lock Android
-// may not deliver inbound datagrams. SsdpClient(context) wires a Context through
-// openAndroidMulticastSocket directly for reliable discovery.
-internal actual fun openMulticastSocket(bindInterface: String?): MulticastSocket = openAndroidMulticastSocket(bindInterface, context = null)
+// The Context-less expect actual. The factories don't use it (they open through
+// AndroidTransport, which also warns when no Context was captured), but it takes
+// the multicast lock from the startup-captured Context all the same.
+internal actual fun openMulticastSocket(bindInterface: String?): MulticastSocket =
+    openAndroidMulticastSocket(bindInterface, context = capturedApplicationContext)

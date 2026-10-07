@@ -189,8 +189,13 @@ retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
   doesn't help; ATS applies regardless. Document this in the iOS host-app setup
   guide next to the multicast entitlement.
 - **Android:** needs a `WifiManager.MulticastLock` (held by the transport) or
-  inbound multicast is dropped. Prefer `SsdpClient(context)`. The library
-  manifest contributes `INTERNET`/`ACCESS_WIFI_STATE`/`CHANGE_WIFI_MULTICAST_STATE`.
+  inbound multicast is dropped. `SsdpClient()` takes it from the application
+  Context `SsdpInitializer` (androidx.startup) captures; with that capture
+  disabled it opens lock-less and warns, and `SsdpClient(context)` is the fix.
+  Emulators get no inbound multicast at all: `SsdpClient.bridgeAware()` bridges
+  there. The type-named factories are the only way to build a client (LESSONS
+  D-017). The library manifest contributes
+  `INTERNET`/`ACCESS_WIFI_STATE`/`CHANGE_WIFI_MULTICAST_STATE`.
 - **macOS — App Sandbox:** a sandboxed macOS app needs BOTH
   `com.apple.security.network.client` (outbound: the description fetch + sending
   M-SEARCH) AND `com.apple.security.network.server` (the sandbox treats `bind()`

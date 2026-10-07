@@ -4,11 +4,12 @@
  * Wired by the library's AndroidManifest.xml into the merged manifest's
  * `androidx.startup.InitializationProvider` ContentProvider, which runs early in
  * process startup — before Application.onCreate. We stash the application Context
- * (via initAndroidContext) so the Context-free Android `Ssdp.createClient()`
- * factory can acquire the WifiManager.MulticastLock without the caller passing a
+ * (via initAndroidContext) so the Context-free Android `SsdpClient()` factory
+ * can acquire the WifiManager.MulticastLock without the caller passing a
  * Context. Mirrors reachable's ReachabilityInitializer.
  *
- * Consumers who disable InitializationProvider won't get auto-capture; they must
+ * Consumers who disable InitializationProvider won't get auto-capture: a plain
+ * `SsdpClient()` then opens without the lock and logs a warning, so they should
  * use the explicit `SsdpClient(context)` factory instead.
  */
 package com.happycodelucky.ssdp
