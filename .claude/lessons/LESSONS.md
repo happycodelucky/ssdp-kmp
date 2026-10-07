@@ -32,7 +32,7 @@ point of use already explains belongs in that comment, not here.
 - **B-001** — `@Throws` on an `expect` must be repeated verbatim on every `actual`, or `compileKotlinJvm` fails; it's also what makes the Apple slice `throws` in Swift.
 - **B-002** — `@Throws` on a `suspend fun` must list `CancellationException`. Only the Native compile catches it.
 - **B-003** — `close()` must cancel the client's own `SupervisorJob` (a child of the injected scope), never the injected scope itself; `runTest` forbids cancelling its `TestScope`.
-- **B-004** — `sortedMapOf` is JVM-only and `Dispatchers.IO` is internal on K/N. The JVM compile is not a sufficient gate for common code: always compile a Native target too.
+- **B-004** — `sortedMapOf` is JVM-only, and on K/N `Dispatchers.IO` exists only as the `kotlinx.coroutines.IO` extension (import it; it is not in common). The JVM compile is not a sufficient gate for common code: always compile a Native target too.
 - **B-005** — A perpetual `collect {}` launched on the `TestScope` hangs `runTest` (`UncompletedCoroutinesError`). Give such components `backgroundScope`, which shares the scheduler and is cancelled at test end.
 - **B-006** — Never `cancel()` a shared `Deferred` that external callers await: every awaiter gets the cancellation. To drop unwanted in-flight work, detach it (remove it from the map) and let it finish uncached.
 - **B-007** — `:ssdp:check` is the real gate: it compiles test sources for every target and runs detekt, which `jvmTest` doesn't. Kotest's `Arb.stringPattern` is JVM-only and breaks the native test compile; use multiplatform arbs.
@@ -42,6 +42,7 @@ point of use already explains belongs in that comment, not here.
 - **B-011** — `runTest` auto-advances virtual time while every coroutine is idle, so a `max-age` expiry timer can fire between two calls and evict the description cache. In tests asserting state across suspend points, build devices with `cacheControl = null`.
 - **B-012** — AGP stamps an AAR's `minCompileSdk` with the compileSdk it was built with, and consumers' `check<Variant>AarMetadata` enforces it: our 37 (raised for the sample, N-009) was forced on every consumer through v0.7.0. Fixed by `android { aarMetadata { minCompileSdk } }` from its own catalog key, `android-min-compile-sdk`.
 - **B-013** — A test on real dispatchers (`Dispatchers.IO`, own `SupervisorJob` scopes) must `cancelAndJoin` its scopes BEFORE closing sockets: closing first lets a read loop throw on EOF with no handler, and kotlinx-coroutines-test reports that uncaught exception against the NEXT `runTest` (`UncaughtExceptionsBeforeTest`), failing an unrelated, order-dependent test (`BridgeEndToEndTcpTest` → `BridgePipeTest`).
+- **B-014** — Send M-SEARCH from its own unjoined, ephemeral-port socket, never from the 1900 socket: devices reply by unicast to the request's source port, and when several sockets share 1900 through address reuse (two clients in one process, a browser, a media server) the kernel hands a unicast datagram to only one of them. A JVM consumer running three clients found a Roku in 1 of 5 scans. Each platform actual returns an `SsdpSocketPair`; NOTIFY stays on 1900.
 
 ## Notes
 

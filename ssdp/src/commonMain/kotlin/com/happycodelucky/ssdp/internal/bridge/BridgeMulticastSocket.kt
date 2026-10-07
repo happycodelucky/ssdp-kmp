@@ -14,8 +14,8 @@
  * the emulator path is byte-identical to a physical device, only the transport
  * hop differs.
  *
- * Lifecycle mirrors the platform sockets (AppleMulticastSocket / JvmMulticast-
- * Socket): the socket owns its own SupervisorJob-rooted scope on Dispatchers.
+ * Lifecycle mirrors the platform sockets (AppleUdpSocket / JvmUdpSocket): the
+ * socket owns its own SupervisorJob-rooted scope on Dispatchers.
  * Default and a connection loop that reconnects with capped backoff. `close()`
  * cancels that scope (LESSONS B-003 in spirit — own job, not the caller's).
  * Everything is `delay`-driven so the backoff runs under `runTest` virtual time

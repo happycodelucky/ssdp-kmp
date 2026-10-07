@@ -29,6 +29,10 @@ contract a contributor (human or agent) reads first. Start here, then
    K/N cinterop). See `MulticastSocket.apple.kt`.
 3. **Multi-target search in one session.** `search(targets: Set<SearchTarget>)`
    fans out one M-SEARCH per target over the shared socket and merges results.
+5. **Two sockets per client.** NOTIFY is heard on a socket bound to 1900 and
+   joined to the group; M-SEARCH goes out on a second, unjoined socket on an
+   ephemeral port, so the devices' unicast replies reach only that client
+   (`SsdpSocketPair`, LESSONS B-014). Every platform actual returns the pair.
 4. **Per-network reset via reachable + subnet.** Depend on
    `com.happycodelucky.reachable` for the change *signal*; derive the *key* from
    the local IPv4 subnet (no SSID entitlement). The registry resets when the key
@@ -187,7 +191,8 @@ retries: dispatch `release.yml` with a `version` (e.g. `0.7.0-rc.1`), or
 - **macOS — App Sandbox:** a sandboxed macOS app needs BOTH
   `com.apple.security.network.client` (outbound: the description fetch + sending
   M-SEARCH) AND `com.apple.security.network.server` (the sandbox treats `bind()`
-  as a server op, and SSDP must bind UDP 1900 to receive NOTIFY/replies). With
+  as a server op, and SSDP binds UDP 1900 for NOTIFY plus an ephemeral port for
+  M-SEARCH replies). With
   only `network.client`, `bind()` fails `EPERM` at launch (LESSONS B-008).
   Entitlements only apply to a *signed* app. No multicast-specific entitlement is
   needed on macOS (only iOS needs the multicast entitlement).

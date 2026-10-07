@@ -17,11 +17,11 @@
 package com.happycodelucky.ssdp
 
 import com.happycodelucky.reachable.Reachability
-import com.happycodelucky.ssdp.internal.AndroidMulticastSocket
 import com.happycodelucky.ssdp.internal.SsdpClientImpl
 import com.happycodelucky.ssdp.internal.androidApplicationContext
 import com.happycodelucky.ssdp.internal.bridge.BridgeMulticastSocket
 import com.happycodelucky.ssdp.internal.newClientScope
+import com.happycodelucky.ssdp.internal.openAndroidMulticastSocket
 import com.happycodelucky.ssdp.internal.reachableTransportTags
 import com.happycodelucky.ssdp.internal.ssdpLog
 import kotlin.time.Clock
@@ -88,7 +88,7 @@ public object Ssdp {
 
     private fun multicastClient(bindInterface: String?): SsdpClient =
         SsdpClientImpl(
-            socketFactory = { AndroidMulticastSocket(bindInterface, androidApplicationContext) },
+            socketFactory = { openAndroidMulticastSocket(bindInterface, androidApplicationContext) },
             parentScope = newClientScope(),
             clock = Clock.System,
             timeSource = TimeSource.Monotonic,

@@ -6,9 +6,10 @@
  * the host LAN, and relays it to one or more emulator clients over TCP. The
  * emulator app connects with `SsdpClient.bridged(host = "10.0.2.2", port = …)`.
  *
- * It is a DUMB PIPE: per connected client it opens a raw [JvmMulticastSocket]
- * (the same transport the JVM `SsdpClient` uses — no registry, no retransmit) and
- * relays bytes both ways:
+ * It is a DUMB PIPE: per connected client it opens a raw transport via
+ * [openMulticastSocket] (the same NOTIFY + ephemeral-port M-SEARCH socket pair the
+ * JVM `SsdpClient` uses — no registry, no retransmit), so each emulator client's
+ * M-SEARCH replies come back to its own socket, and relays bytes both ways:
  *   client → daemon: DATAGRAM_OUT frames → re-multicast verbatim on the LAN.
  *   daemon → client: every datagram the real socket saw → DATAGRAM_IN frames.
  * The app keeps owning retransmit and the registry, so its `SsdpClient` behaves

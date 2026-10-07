@@ -95,8 +95,10 @@ internal class SsdpClientImpl(
 
     private val closed = atomic(false)
 
-    // The single joined socket. Opened eagerly so passive NOTIFY listening is on
-    // from construction, independent of any active search.
+    // The transport — on every platform an SsdpSocketPair: NOTIFY on 1900,
+    // M-SEARCH and its unicast replies on an ephemeral port. Opened eagerly so
+    // passive NOTIFY listening is on from construction, independent of any
+    // active search.
     private val socket: MulticastSocket = socketFactory()
 
     // Guards the active-search state (target set + retransmit jobs) against

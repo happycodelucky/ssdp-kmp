@@ -208,7 +208,7 @@ joining `239.255.255.250` requires the `com.apple.developer.networking.multicast
 
 ### macOS
 
-A sandboxed app needs **both** `com.apple.security.network.client` (outbound) **and** `com.apple.security.network.server` (the sandbox treats `bind()` on port 1900 as a server op). No multicast entitlement needed.
+A sandboxed app needs **both** `com.apple.security.network.client` (outbound) **and** `com.apple.security.network.server` (the sandbox treats `bind()` as a server op: the client binds port 1900 for NOTIFY and an ephemeral port for M-SEARCH replies). No multicast entitlement needed.
 
 ### Android
 

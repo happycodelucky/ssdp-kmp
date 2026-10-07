@@ -16,10 +16,10 @@ package com.happycodelucky.ssdp
 
 import android.content.Context
 import com.happycodelucky.reachable.Reachability
-import com.happycodelucky.ssdp.internal.AndroidMulticastSocket
 import com.happycodelucky.ssdp.internal.SsdpClientImpl
 import com.happycodelucky.ssdp.internal.bridge.BridgeMulticastSocket
 import com.happycodelucky.ssdp.internal.newClientScope
+import com.happycodelucky.ssdp.internal.openAndroidMulticastSocket
 import com.happycodelucky.ssdp.internal.openMulticastSocket
 import com.happycodelucky.ssdp.internal.reachableTransportTags
 import kotlin.time.Clock
@@ -44,7 +44,7 @@ public const val EMULATOR_HOST_LOOPBACK: String = "10.0.2.2"
 @Throws(SsdpError::class)
 public fun SsdpClient(context: Context, bindInterface: String? = null): SsdpClient =
     SsdpClientImpl(
-        socketFactory = { AndroidMulticastSocket(bindInterface, context.applicationContext) },
+        socketFactory = { openAndroidMulticastSocket(bindInterface, context.applicationContext) },
         parentScope = newClientScope(),
         clock = Clock.System,
         timeSource = TimeSource.Monotonic,
