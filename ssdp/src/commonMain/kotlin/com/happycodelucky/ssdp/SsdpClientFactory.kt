@@ -25,10 +25,12 @@ package com.happycodelucky.ssdp
  * disable that capture, and `SsdpClient.bridgeAware()` for emulators (see the
  * `androidMain` factories).
  *
- * @param bindInterface optional local interface/address hint for the multicast
- *   socket; `null` lets the OS pick the default route. Useful on multi-homed
- *   hosts (a server with several NICs) to pin discovery to one LAN.
- * @throws SsdpError if the multicast group cannot be joined.
+ * @param bindInterface limits discovery to one local interface, by name (`en0`)
+ *   or IPv4 address. `null` (the default) listens and searches on every interface
+ *   that is up, multicast-capable and has an IPv4 address, skipping loopback and
+ *   point-to-point tunnels such as VPNs.
+ * @throws SsdpError if the multicast group cannot be joined on any interface, or
+ *   [bindInterface] names no local IPv4 interface.
  */
 @Throws(SsdpError::class)
 public expect fun SsdpClient(bindInterface: String? = null): SsdpClient

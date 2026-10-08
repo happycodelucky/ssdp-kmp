@@ -9,7 +9,9 @@
  * a multicast lock — without it the NOTIFY socket would hear nothing. The lock
  * belongs to the NOTIFY socket's lifetime: acquired before it joins, released
  * when it closes. The M-SEARCH replies are unicast, which the lock doesn't
- * gate, but it's held for the transport's whole life anyway.
+ * gate, but it's held for the transport's whole life anyway. As on the JVM, the
+ * group is joined and every M-SEARCH sent on each interface
+ * selectMulticastInterfaces picks (LocalInterface.kt).
  *
  * The lock requires a Context. The public factories choose it (see
  * AndroidTransport.kt): the startup-captured application Context for
@@ -22,11 +24,14 @@ package com.happycodelucky.ssdp.internal
 import android.content.Context
 import android.net.wifi.WifiManager
 import com.happycodelucky.ssdp.SsdpError
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import java.net.DatagramPacket
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
@@ -50,10 +55,20 @@ private const val EPHEMERAL_PORT = 0
  *
  * @param onClose extra teardown run before the socket closes (the NOTIFY socket
  *   leaves the group and releases the multicast lock here).
+ * @param sendInterfaces the interfaces [send] goes out on, one datagram each;
+ *   empty sends once on the OS default route.
  */
-internal class AndroidUdpSocket(private val socket: JdkMulticastSocket, threadName: String, private val onClose: () -> Unit = {}) :
-    MulticastSocket {
+internal class AndroidUdpSocket(
+    private val socket: JdkMulticastSocket,
+    threadName: String,
+    private val onClose: () -> Unit = {},
+    private val sendInterfaces: List<NetworkInterface> = emptyList(),
+) : MulticastSocket {
     private val group = InetAddress.getByName(SSDP_GROUP)
+
+    // The outgoing multicast interface is a socket option, so choosing it and
+    // sending must not interleave with another retransmit loop's send.
+    private val sendLock = SynchronizedObject()
 
     private val _incoming =
         MutableSharedFlow<Datagram>(
@@ -86,10 +101,16 @@ internal class AndroidUdpSocket(private val socket: JdkMulticastSocket, threadNa
     }
 
     override suspend fun send(bytes: ByteArray) {
-        try {
-            socket.send(DatagramPacket(bytes, bytes.size, group, SSDP_PORT))
-        } catch (e: Exception) {
-            throw SsdpError.TransportFailed(details = e.message ?: e.toString(), cause = e)
+        val packet = DatagramPacket(bytes, bytes.size, group, SSDP_PORT)
+        synchronized(sendLock) {
+            onEachInterface(
+                sendInterfaces,
+                action = { networkInterface ->
+                    if (networkInterface != null) socket.networkInterface = networkInterface
+                    socket.send(packet)
+                },
+                wrap = { details, cause -> SsdpError.TransportFailed(details = details, cause = cause) },
+            )
         }
     }
 
@@ -109,9 +130,11 @@ internal class AndroidUdpSocket(private val socket: JdkMulticastSocket, threadNa
  * @throws SsdpError.MulticastJoinFailed if the NOTIFY socket can't join.
  * @throws SsdpError.TransportFailed if the M-SEARCH socket can't be opened.
  */
-internal fun openAndroidMulticastSocket(bindInterface: String?, context: Context?): MulticastSocket =
-    openSsdpSocketPair(
-        openNotify = { openAndroidNotifySocket(bindInterface, context) },
+internal fun openAndroidMulticastSocket(bindInterface: String?, context: Context?): MulticastSocket {
+    // Chosen once, so the NOTIFY joins and the M-SEARCH sends cover the same set.
+    val interfaces = selectAndroidInterfaces(bindInterface)
+    return openSsdpSocketPair(
+        openNotify = { openAndroidNotifySocket(interfaces, context) },
         openSearch = {
             val socket =
                 try {
@@ -119,14 +142,14 @@ internal fun openAndroidMulticastSocket(bindInterface: String?, context: Context
                 } catch (e: Exception) {
                     throw SsdpError.TransportFailed(details = e.message ?: e.toString(), cause = e)
                 }
-            // Not joined: it only ever receives the unicast replies to its port.
-            // Outgoing interface and TTL stay at the OS defaults, as they were
-            // when M-SEARCH went out on the NOTIFY socket.
-            AndroidUdpSocket(socket, threadName = "ssdp-search-recv")
+            // Not joined: it only ever receives the unicast replies to its port,
+            // whichever interface each M-SEARCH left on. TTL stays at the OS default.
+            AndroidUdpSocket(socket, threadName = "ssdp-search-recv", sendInterfaces = interfaces)
         },
     )
+}
 
-private fun openAndroidNotifySocket(bindInterface: String?, context: Context?): AndroidUdpSocket {
+private fun openAndroidNotifySocket(interfaces: List<NetworkInterface>, context: Context?): AndroidUdpSocket {
     // Acquire the multicast lock before joining — Android won't deliver
     // multicast datagrams to the socket otherwise.
     val multicastLock =
@@ -139,40 +162,67 @@ private fun openAndroidNotifySocket(bindInterface: String?, context: Context?): 
         }
     val releaseLock = { multicastLock?.let { runCatching { if (it.isHeld) it.release() } } }
 
-    val networkInterface = selectInterface(bindInterface)
     val groupAddress = InetSocketAddress(InetAddress.getByName(SSDP_GROUP), SSDP_PORT)
     val socket =
         try {
-            JdkMulticastSocket(SSDP_PORT).apply {
-                reuseAddress = true
-                joinGroup(groupAddress, networkInterface)
-            }
+            JdkMulticastSocket(SSDP_PORT).apply { reuseAddress = true }
         } catch (e: Exception) {
             releaseLock()
             throw SsdpError.MulticastJoinFailed(details = e.message ?: e.toString(), cause = e)
         }
+    // One membership per interface; a join that fails on one is skipped.
+    val joined = mutableListOf<NetworkInterface?>()
+    runCatching {
+        onEachInterface(
+            interfaces,
+            action = { networkInterface ->
+                socket.joinGroup(groupAddress, networkInterface)
+                joined += networkInterface
+            },
+            wrap = { details, cause -> SsdpError.MulticastJoinFailed(details = details, cause = cause) },
+        )
+    }.onFailure {
+        socket.close()
+        releaseLock()
+        throw it
+    }
     return AndroidUdpSocket(
         socket,
         threadName = "ssdp-notify-recv",
         onClose = {
-            runCatching { socket.leaveGroup(groupAddress, networkInterface) }
+            joined.forEach { runCatching { socket.leaveGroup(groupAddress, it) } }
             releaseLock()
         },
     )
 }
 
-private fun selectInterface(bindInterface: String?): NetworkInterface? {
-    if (bindInterface != null) {
-        runCatching { NetworkInterface.getByName(bindInterface) }.getOrNull()?.let { return it }
-        runCatching { NetworkInterface.getByInetAddress(InetAddress.getByName(bindInterface)) }
-            .getOrNull()
-            ?.let { return it }
-    }
-    return runCatching {
-        NetworkInterface.getNetworkInterfaces().toList().firstOrNull {
-            it.isUp && !it.isLoopback && it.supportsMulticast()
-        }
+/** This interface as a [LocalInterface], or `null` when it has no IPv4 address. */
+private fun NetworkInterface.toLocalInterface(): LocalInterface? =
+    runCatching {
+        val ipv4 = inetAddresses.toList().filterIsInstance<Inet4Address>().firstOrNull() ?: return null
+        LocalInterface(
+            name = name,
+            ipv4 = ipv4.hostAddress ?: return null,
+            isUp = isUp,
+            isLoopback = isLoopback,
+            isPointToPoint = isPointToPoint,
+            supportsMulticast = supportsMulticast(),
+        )
     }.getOrNull()
+
+/**
+ * The interfaces to join and search on (see [selectMulticastInterfaces]). An
+ * interface that vanishes between listing and lookup is dropped.
+ *
+ * @throws SsdpError.MulticastJoinFailed if [bindInterface] matches no interface.
+ */
+private fun selectAndroidInterfaces(bindInterface: String?): List<NetworkInterface> {
+    val byName =
+        runCatching { NetworkInterface.getNetworkInterfaces()?.toList().orEmpty() }
+            .getOrDefault(emptyList())
+            .associateBy { it.name }
+    val candidates = byName.values.mapNotNull { it.toLocalInterface() }
+    return selectMulticastInterfaces(candidates, bindInterface).mapNotNull { byName[it.name] }
 }
 
 // The Context-less expect actual. The factories don't use it (they open through

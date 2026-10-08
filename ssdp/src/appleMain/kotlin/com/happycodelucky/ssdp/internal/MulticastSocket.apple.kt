@@ -17,7 +17,9 @@
  * bound to 1900 and joined to the group, plus an M-SEARCH socket on an
  * ephemeral port whose unicast replies no other 1900 socket on the host can
  * steal. Each socket's blocking recvfrom loop runs on Dispatchers.IO so it never
- * blocks the caller; received datagrams are emitted into a SharedFlow.
+ * blocks the caller; received datagrams are emitted into a SharedFlow. The group
+ * is joined, and every M-SEARCH sent, on each interface selectMulticastInterfaces
+ * picks (LocalInterface.kt) from the getifaddrs listing.
  */
 @file:OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
 
@@ -25,6 +27,8 @@ package com.happycodelucky.ssdp.internal
 
 import com.happycodelucky.ssdp.SsdpError
 import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.UnsafeNumber
@@ -51,6 +55,7 @@ import kotlinx.coroutines.launch
 import platform.posix.AF_INET
 import platform.posix.IPPROTO_IP
 import platform.posix.IP_ADD_MEMBERSHIP
+import platform.posix.IP_MULTICAST_IF
 import platform.posix.SOCK_DGRAM
 import platform.posix.SOL_SOCKET
 import platform.posix.SO_REUSEADDR
@@ -58,6 +63,7 @@ import platform.posix.SO_REUSEPORT
 import platform.posix.bind
 import platform.posix.close
 import platform.posix.getsockname
+import platform.posix.in_addr
 import platform.posix.ip_mreq
 import platform.posix.recvfrom
 import platform.posix.sendto
@@ -112,8 +118,15 @@ private fun ipv4ToNetworkOrder(dotted: String): UInt {
  * [SsdpSocketPair] are one of these; only how [fd] was bound and joined
  * differs ([openAppleNotifySocket], [openAppleSearchSocket]). Takes ownership
  * of [fd] and starts receiving immediately.
+ *
+ * @param sendInterfaces the interfaces [send] goes out on, one datagram each;
+ *   empty sends once on the OS default route.
  */
-internal class AppleUdpSocket(private val fd: Int) : MulticastSocket {
+internal class AppleUdpSocket(private val fd: Int, private val sendInterfaces: List<LocalInterface> = emptyList()) : MulticastSocket {
+    // IP_MULTICAST_IF is a socket option, so choosing the interface and sending
+    // must not interleave with another retransmit loop's send.
+    private val sendLock = SynchronizedObject()
+
     // Each recvfrom loop parks a thread for the socket's whole life, and a
     // client now runs two. Dispatchers.IO is elastic for exactly this; parking
     // them on Default (sized to the CPU count) could starve the client's own
@@ -184,6 +197,28 @@ internal class AppleUdpSocket(private val fd: Int) : MulticastSocket {
         }
 
     override suspend fun send(bytes: ByteArray) {
+        synchronized(sendLock) {
+            onEachInterface(
+                sendInterfaces,
+                action = { networkInterface ->
+                    if (networkInterface != null) selectOutgoingInterface(networkInterface)
+                    sendToGroup(bytes)
+                },
+                wrap = { details, cause -> SsdpError.TransportFailed(details = details, cause = cause) },
+            )
+        }
+    }
+
+    private fun selectOutgoingInterface(networkInterface: LocalInterface) {
+        memScoped {
+            val addr = alloc<in_addr>().apply { s_addr = ipv4ToNetworkOrder(networkInterface.ipv4) }
+            if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, addr.ptr, sizeOf<in_addr>().convert()) != 0) {
+                throw SsdpError.TransportFailed(details = "IP_MULTICAST_IF failed (errno=${platform.posix.errno})")
+            }
+        }
+    }
+
+    private fun sendToGroup(bytes: ByteArray) {
         memScoped {
             val dest =
                 alloc<sockaddr_in>().apply {
@@ -255,12 +290,13 @@ private fun openBoundSocket(portBe: UShort, configure: MemScope.(fd: Int) -> Uni
 
 /**
  * Open the NOTIFY socket: `0.0.0.0:1900` with SO_REUSEADDR + SO_REUSEPORT (other
- * SSDP apps on the host share the port), joined to the group on [bindInterface]
- * (an IPv4 address) or on any interface when it is `null`.
+ * SSDP apps on the host share the port), joined to the group on each of
+ * [interfaces], or on the OS default (`INADDR_ANY`) when there are none. A join
+ * that fails on one interface is skipped.
  *
- * @throws SsdpError.MulticastJoinFailed if the bind or join fails.
+ * @throws SsdpError.MulticastJoinFailed if the bind fails or no join succeeds.
  */
-internal fun openAppleNotifySocket(bindInterface: String?): AppleUdpSocket {
+internal fun openAppleNotifySocket(interfaces: List<LocalInterface>): AppleUdpSocket {
     val fd =
         openBoundSocket(
             portBe = SSDP_PORT_BE,
@@ -272,19 +308,26 @@ internal fun openAppleNotifySocket(bindInterface: String?): AppleUdpSocket {
             afterBind = { fd ->
                 // Join the multicast group. On iOS this is where a missing
                 // com.apple.developer.networking.multicast entitlement surfaces.
-                val mreq =
-                    alloc<ip_mreq>().apply {
-                        imr_multiaddr.s_addr = ipv4ToNetworkOrder(SSDP_GROUP)
-                        imr_interface.s_addr =
-                            if (bindInterface != null) ipv4ToNetworkOrder(bindInterface) else IN_ADDR_ANY
-                    }
-                if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq.ptr, sizeOf<ip_mreq>().convert()) != 0) {
-                    throw SsdpError.MulticastJoinFailed(
-                        details =
-                            "IP_ADD_MEMBERSHIP failed (errno=${platform.posix.errno}); " +
-                                "on iOS check the com.apple.developer.networking.multicast entitlement",
-                    )
-                }
+                // Memberships end when the fd closes, so close() needn't leave.
+                onEachInterface(
+                    interfaces,
+                    action = { networkInterface ->
+                        val mreq =
+                            alloc<ip_mreq>().apply {
+                                imr_multiaddr.s_addr = ipv4ToNetworkOrder(SSDP_GROUP)
+                                imr_interface.s_addr = networkInterface?.let { ipv4ToNetworkOrder(it.ipv4) } ?: IN_ADDR_ANY
+                            }
+                        if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq.ptr, sizeOf<ip_mreq>().convert()) != 0) {
+                            throw SsdpError.MulticastJoinFailed(details = "IP_ADD_MEMBERSHIP failed (errno=${platform.posix.errno})")
+                        }
+                    },
+                    wrap = { details, cause ->
+                        SsdpError.MulticastJoinFailed(
+                            details = "$details; on iOS check the com.apple.developer.networking.multicast entitlement",
+                            cause = cause,
+                        )
+                    },
+                )
             },
         )
     return AppleUdpSocket(fd)
@@ -292,13 +335,13 @@ internal fun openAppleNotifySocket(bindInterface: String?): AppleUdpSocket {
 
 /**
  * Open the M-SEARCH socket: `0.0.0.0` on an ephemeral port, never joined, so it
- * receives only the unicast replies addressed to it. The outgoing multicast
- * interface and TTL are left at the OS defaults, exactly as they were when
- * M-SEARCH went out on the NOTIFY socket.
+ * receives only the unicast replies addressed to it. Each M-SEARCH goes out once
+ * per interface in [interfaces] (once on the OS default route when empty); the
+ * replies all come back to the one port. TTL is left at the OS default.
  *
  * @throws SsdpError.TransportFailed if the socket can't be opened or bound.
  */
-internal fun openAppleSearchSocket(): AppleUdpSocket {
+internal fun openAppleSearchSocket(interfaces: List<LocalInterface> = emptyList()): AppleUdpSocket {
     val fd =
         runCatching { openBoundSocket(portBe = EPHEMERAL_PORT_BE) }.getOrElse { failure ->
             // openBoundSocket reports a bind failure as a join failure (right for
@@ -309,11 +352,14 @@ internal fun openAppleSearchSocket(): AppleUdpSocket {
                 failure
             }
         }
-    return AppleUdpSocket(fd)
+    return AppleUdpSocket(fd, sendInterfaces = interfaces)
 }
 
-internal actual fun openMulticastSocket(bindInterface: String?): MulticastSocket =
-    openSsdpSocketPair(
-        openNotify = { openAppleNotifySocket(bindInterface) },
-        openSearch = ::openAppleSearchSocket,
+internal actual fun openMulticastSocket(bindInterface: String?): MulticastSocket {
+    // Chosen once, so the NOTIFY joins and the M-SEARCH sends cover the same set.
+    val interfaces = selectMulticastInterfaces(appleLocalInterfaces(), bindInterface)
+    return openSsdpSocketPair(
+        openNotify = { openAppleNotifySocket(interfaces) },
+        openSearch = { openAppleSearchSocket(interfaces) },
     )
+}
