@@ -209,8 +209,8 @@ synced = "2026-09-24"
 
 [[decision]]
 change = "a09b8a2, 5abb508, 98a2a83, 7d3ed37 (bumps) — toolchain + library bumps (Gradle 9.7.1, AGP 9.4.1, Kotlin 2.4.10/SKIE 0.10.14, kotest, kermit, …)"
-status = "deferred"
-reason = "Owner chose a separate paul-update-repo pass. Only forced pieces taken: DAGP 3.19.2, VCU 1.1.1, compileSdk 37. Carry N-002/N-003 (JDK 21 hold, KGP support gap) with it."
+status = "adopted"
+reason = "Resolved 2026-11-27 by a paul-update-repo pass: every catalog entry to latest stable (see that commit). Original deferral: owner chose a separate pass."
 synced = "2026-09-24"
 
 [[decision]]
@@ -347,8 +347,8 @@ synced = "2026-11-27"
 
 [[decision]]
 change = "b1dbf2e — Dokka 2.2.0 -> 2.3.0 (CVE-2026-84939, path traversal)"
-status = "adapted"
-reason = "Only the security-forced bump taken; llms:generate green on Gradle 9.5.1 / Kotlin 2.4.0 (LlmsTxt.kt's internal-API opt-in still compiles). The rest of b1dbf2e (DAGP 3.20.4, ben-manes, VCU, Kotest, Lifecycle) stays with the toolchain pass. Build-only: PR takes `no-changeset`."
+status = "adopted"
+reason = "Dokka 2.3.0 first (security); then the rest (DAGP 3.20.4, ben-manes 0.67.0 with outputFormatter pinned to plain, VCU 1.1.2, Kotest 6.2.7, Lifecycle 2.11.1) in the update pass. Compose BOM held at 2026.09.00 (LESSONS N-020)."
 synced = "2026-11-27"
 
 [[decision]]
@@ -371,8 +371,8 @@ synced = "2026-11-27"
 
 [[decision]]
 change = "66931a2 — Kotlin 2.4.21 / SKIE 0.10.16 / AGP 9.5.3 / Gradle 9.9.2 (+ android ABI dumps, LESSONS N-012/N-013)"
-status = "deferred"
-reason = "Toolchain: stays with the separate paul-update-repo pass (still on Kotlin 2.4.0/AGP 9.2.1/Gradle 9.5.1). That pass must also add ssdp/api/android dumps (jvm dumps move to api/jvm/ on 2.4.20+) and update CLAUDE.md §8."
+status = "adopted"
+reason = "Kotlin 2.4.21, SKIE 0.10.16, AGP 9.5.3, Gradle 9.9.2 (mise pin too); ssdp/api/android dump added. LESSONS N-018..N-020. Language/api version stays KOTLIN_2_3."
 synced = "2026-11-27"
 
 [[decision]]
