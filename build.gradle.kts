@@ -213,6 +213,9 @@ val stableVersion = "^[0-9][0-9.]*$".toRegex()
 tasks.withType<DependencyUpdatesTask>().configureEach {
     // Read the stable release channel, not integration/milestone metadata.
     revision = "release"
+    // 0.66 changed the default formatter to "plain,problems"; pin it so the
+    // console output doesn't change under a future bump.
+    outputFormatter = "plain"
     rejectVersionIf {
         // Only candidate upgrades pass through here; the current version is never
         // rejected.
