@@ -7,8 +7,8 @@
 [template]
 repo = "https://github.com/happycodelucky/kmp-template"
 branch = "main"
-last_synced = "3c348be806dced96c5d5a98809f73ff9d8f82f2b"
-last_synced_date = "2026-09-27"
+last_synced = "d630f0d4db51bfc6900ee247d1f3289d46179c56"
+last_synced_date = "2026-11-27"
 
 # Render map: how template paths and text read in this repo. Generated from the template's
 # scripts/init.sh rules; edit it where this repo deliberately differs. Replacements are
@@ -338,3 +338,45 @@ change = "b16e4c4 — remove Renovate"
 status = "adopted"
 reason = "renovate.json5 deleted; Renovate mentions removed from mise.toml, build.gradle.kts, changeset.yml, .changeset/README.md."
 synced = "2026-09-27"
+
+[[decision]]
+change = "6a98e22 — jdx/mise-action v4 -> v5 (supply-chain security fix)"
+status = "adopted"
+reason = "ci.yml (2 uses) + release.yml. mise.toml pins every tool, so v5's 24h minimum_release_age default doesn't apply. First exercised by the sync PR's CI."
+synced = "2026-11-27"
+
+[[decision]]
+change = "b1dbf2e — Dokka 2.2.0 -> 2.3.0 (CVE-2026-84939, path traversal)"
+status = "adapted"
+reason = "Only the security-forced bump taken; llms:generate green on Gradle 9.5.1 / Kotlin 2.4.0 (LlmsTxt.kt's internal-API opt-in still compiles). The rest of b1dbf2e (DAGP 3.20.4, ben-manes, VCU, Kotest, Lifecycle) stays with the toolchain pass. Build-only: PR takes `no-changeset`."
+synced = "2026-11-27"
+
+[[decision]]
+change = "01a8656 — Dependabot version updates"
+status = "skipped"
+reason = "Owner declined: dependency bumps stay manual via paul-update-repo and mise dependencies:* tasks."
+synced = "2026-11-27"
+
+[[decision]]
+change = "f7e3b33 — androidx.startup initializer (+ LESSONS D-006, CLAUDE.md §9 note)"
+status = "skipped"
+reason = "ssdp already ships SsdpInitializer with the tools:node=merge provider (LESSONS D-017); template's lesson/note describe its placeholder SrcInitializer."
+synced = "2026-11-27"
+
+[[decision]]
+change = "3d7c12c — fix stale apiCheck/apiDump names in comments"
+status = "skipped"
+reason = "No stale names in ssdp (grep clean)."
+synced = "2026-11-27"
+
+[[decision]]
+change = "66931a2 — Kotlin 2.4.21 / SKIE 0.10.16 / AGP 9.5.3 / Gradle 9.9.2 (+ android ABI dumps, LESSONS N-012/N-013)"
+status = "deferred"
+reason = "Toolchain: stays with the separate paul-update-repo pass (still on Kotlin 2.4.0/AGP 9.2.1/Gradle 9.5.1). That pass must also add ssdp/api/android dumps (jvm dumps move to api/jvm/ on 2.4.20+) and update CLAUDE.md §8."
+synced = "2026-11-27"
+
+[[decision]]
+change = "2bf7704, 90d2af4, f2bc787 — mkdocs pins, init.sh Src*.kt rename, template changeset"
+status = "skipped"
+reason = "Docs-site / init.sh / template-only."
+synced = "2026-11-27"

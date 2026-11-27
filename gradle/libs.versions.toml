@@ -36,7 +36,7 @@ kotlin = "2.4.0"
 agp = "9.2.1"                  # com.android.kotlin.multiplatform.library variant (CLAUDE.md §2).
 skie = "0.10.13"               # Supports Kotlin 2.4.0 (changelog 2026-06-24).
 kmmbridge = "1.2.1"            # XCFramework → GitHub Release asset → SPM (CLAUDE.md §9).
-dokka = "2.2.0"                # Kotlin API doc generator; Dokka v2 task layout.
+dokka = "2.3.0"                # Kotlin API doc generator; Dokka v2 task layout.
 # vanniktech's gradle-maven-publish-plugin — publishes signed artifacts to the
 # Sonatype Central Portal (central.sonatype.com). 0.36.0 pins the JDK17 /
 # Gradle 9 / AGP 9 floor and supports com.android.kotlin.multiplatform.library
